@@ -274,7 +274,7 @@ GITHUBURL https://github.com/Blackstone-SS13/BLACKSTONE
 ## from https://github.com/rg3/youtube-dl/releases
 ## or your package manager
 ## The default value assumes youtube-dl is in your system PATH
-INVOKE_YOUTUBEDL yt-dlp
+#INVOKE_YOUTUBEDL yt-dlp
 
 ## In-game features
 ##Toggle for having jobs load up from the .txt
