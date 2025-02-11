@@ -84,17 +84,17 @@ make
 mv src/BSQL/libBSQL.so $1/
 
 #run deploy.sh
-echo 'Deploying tgstation compilation...'
+# echo 'Deploying tgstation compilation...'
 
-cd $1
+# cd $1
 
-mkdir build
+# mkdir build
 
-shopt -s extglob dotglob
-mv !(build) build
-shopt -u dotglob
+# shopt -s extglob dotglob
+# mv !(build) build
+# shopt -u dotglob
 
-chmod +x build/tools/deploy.sh
-build/tools/deploy.sh $1 $1/build
+# chmod +x build/tools/deploy.sh
+# build/tools/deploy.sh $1 $1/build
 
-rm -rf build
+# rm -rf build
