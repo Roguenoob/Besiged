@@ -11,34 +11,40 @@ fi
 
 mkdir -p \
     $1/_maps \
-    $1/icons/effects \
-    $1/icons/mob/clothing \
-    $1/icons/mob/inhands \
-    $1/icons/mob/simple \
-    $1/icons/obj \
-    $1/icons/runtime \
-    $1/sound/runtime \
+    $1/code \
+    $1/config \
+    $1/goon \
+    $1/html \
+    $1/icons \
+    $1/interface \
+    $1/modular \
+    $1/modular_azurepeak \
+    $1/modular_causticcove \
+    $1/modular_hearthstone \
+    $1/sound \
     $1/strings \
-    $1/tgui/public \
-    $1/tgui/packages/tgfont/dist
+    $1/tgui
 
 if [ -d ".git" ]; then
   mkdir -p $1/.git/logs
   cp -r .git/logs/* $1/.git/logs/
 fi
 
-cp tgstation.dmb tgstation.rsc $1/
+cp roguetown.dmb roguetown.rsc $1/
 cp -r _maps/* $1/_maps/
-cp -r icons/effects/* $1/icons/effects/
-cp -r icons/mob/clothing/* $1/icons/mob/clothing/
-cp -r icons/mob/inhands/* $1/icons/mob/inhands/
-cp -r icons/mob/simple/* $1/icons/mob/simple/
-cp -r icons/obj/* $1/icons/obj/
-cp -r icons/runtime/* $1/icons/runtime/
-cp -r sound/runtime/* $1/sound/runtime/
+cp -r code/* $1/code/
+cp -r config/* $1/config/
+cp -r goon/* $1/goon/
+cp -r html/* $1/html/
+cp -r icons/* $1/icons/
+cp -r interface/* $1/interface/
+cp -r modular/* $1/modular/
+cp -r modular_azurepeak/* $1/modular_azurepeak/
+cp -r modular_causticcove/* $1/modular_causticcove/
+cp -r modular_hearthstone/* $1/modular_hearthstone/
+cp -r sound/* $1/sound/
 cp -r strings/* $1/strings/
-cp -r tgui/public/* $1/tgui/public/
-cp -r tgui/packages/tgfont/dist/* $1/tgui/packages/tgfont/dist/
+cp -r tgui/* $1/tgui/
 
 #remove .dm files from _maps
 
