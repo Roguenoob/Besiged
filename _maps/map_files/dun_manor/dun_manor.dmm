@@ -1773,6 +1773,13 @@
 	},
 /turf/open/floor/rogue/ruinedwood/herringbone,
 /area/rogue/indoors/town/manor)
+"cCA" = (
+/obj/structure/mineral_door/wood/donjon{
+	locked = 1;
+	lockid = "steward"
+	},
+/turf/closed/wall/mineral/rogue/craftstone,
+/area/rogue/under/town/basement)
 "cDo" = (
 /obj/structure/mineral_door/wood{
 	icon_state = "wcv";
@@ -4847,6 +4854,14 @@
 "hcg" = (
 /turf/closed/wall/mineral/rogue/craftstone,
 /area/rogue/under/cave)
+"hck" = (
+/obj/structure/table/wood{
+	dir = 1;
+	icon_state = "longtable_mid"
+	},
+/obj/item/roguekey/roomi,
+/turf/open/floor/rogue/ruinedwood/spiral,
+/area/rogue/indoors/town/tavern)
 "hcO" = (
 /obj/structure/table/wood{
 	dir = 1;
@@ -6142,6 +6157,10 @@
 	icon_state = "weird1"
 	},
 /area/rogue/indoors/town)
+"jac" = (
+/obj/item/roguekey/houses/house2,
+/turf/open/floor/rogue/cobblerock,
+/area/rogue/outdoors/town)
 "jaI" = (
 /obj/structure/chair/wood/rogue/fancy{
 	dir = 1
@@ -7782,6 +7801,7 @@
 /obj/effect/decal/cobbleedge{
 	dir = 1
 	},
+/obj/item/roguekey/houses/house3,
 /turf/open/floor/rogue/cobblerock,
 /area/rogue/indoors/town)
 "lwh" = (
@@ -9308,6 +9328,14 @@
 /obj/structure/closet/crate/chest/neu,
 /turf/open/floor/rogue/blocks/platform,
 /area/rogue/indoors)
+"nId" = (
+/obj/structure/table/wood{
+	dir = 1;
+	icon_state = "longtable_mid"
+	},
+/obj/item/roguekey/roomii,
+/turf/open/floor/rogue/ruinedwood/spiral,
+/area/rogue/indoors/town/tavern)
 "nIp" = (
 /obj/structure/rack/rogue/shelf/big{
 	icon_state = "shelf_biggest";
@@ -10573,6 +10601,12 @@
 "pvt" = (
 /turf/open/floor/rogue/cobble,
 /area/rogue/indoors/town/shop)
+"pvy" = (
+/obj/item/roguekey/houses/house1,
+/turf/open/floor/rogue/ruinedwood{
+	icon_state = "weird1"
+	},
+/area/rogue/outdoors/town)
 "pvH" = (
 /obj/structure/roguemachine/atm,
 /turf/open/floor/rogue/hexstone,
@@ -15070,6 +15104,7 @@
 /turf/open/floor/rogue/cobble,
 /area/rogue/under/town/basement)
 "wgY" = (
+/obj/item/roguecoin/gold/pile,
 /turf/open/floor/rogue/tile{
 	icon_state = "glyph3"
 	},
@@ -16343,6 +16378,14 @@
 	},
 /turf/open/floor/rogue/cobble,
 /area/rogue/indoors/town/garrison)
+"ycH" = (
+/obj/structure/table/wood{
+	dir = 1;
+	icon_state = "longtable_mid"
+	},
+/obj/item/roguekey/roomiii,
+/turf/open/floor/rogue/ruinedwood/spiral,
+/area/rogue/indoors/town/tavern)
 "ycV" = (
 /obj/structure/mineral_door/wood{
 	locked = 1;
@@ -26574,7 +26617,7 @@ hWI
 pNQ
 oyZ
 bqt
-xdH
+nxc
 nxc
 nxc
 xdH
@@ -26732,7 +26775,7 @@ pNQ
 oyZ
 aIt
 maP
-xdH
+evG
 evG
 nxc
 xdH
@@ -26889,7 +26932,7 @@ pNQ
 oyZ
 rnW
 wWI
-nxc
+evG
 nxc
 nxc
 nxc
@@ -27205,7 +27248,7 @@ jVK
 xdH
 nxc
 xdH
-xdH
+evG
 jVK
 oyZ
 nPZ
@@ -29575,8 +29618,8 @@ oyZ
 oyZ
 oyZ
 oyZ
-pNQ
-pNQ
+hcg
+hcg
 oyZ
 lnY
 bda
@@ -29731,10 +29774,10 @@ bda
 wgU
 bda
 bda
-oyZ
-oyZ
-oyZ
-oyZ
+bda
+cCA
+bda
+bda
 bda
 bda
 bda
@@ -32096,7 +32139,7 @@ ruh
 ruh
 ruh
 hCP
-vwF
+ycH
 eTN
 iQY
 kMN
@@ -32253,7 +32296,7 @@ ruh
 ruh
 ruh
 hCP
-vwF
+nId
 eTN
 iQY
 kMN
@@ -32410,7 +32453,7 @@ ruh
 ruh
 ruh
 hCP
-vwF
+hck
 eTN
 iQY
 kMN
@@ -55813,7 +55856,7 @@ auG
 uBD
 gjN
 jnI
-gqA
+pvy
 jwK
 inW
 inW
@@ -56133,7 +56176,7 @@ inW
 inW
 inW
 inW
-inW
+jac
 inW
 inW
 ppp
