@@ -2200,13 +2200,12 @@
 /turf/open/floor/rogue/blocks,
 /area/rogue/indoors/town/tavern)
 "dll" = (
-/obj/structure/bars/passage{
-	density = 0;
-	icon_state = "passage1";
-	redstone_id = "keepgate_outer"
+/obj/machinery/light/rogue/wallfire/candle{
+	pixel_x = -2;
+	pixel_y = -30
 	},
-/turf/open/floor/rogue/cobblerock,
-/area/rogue/indoors/town)
+/turf/open/floor/rogue/carpet/lord/right,
+/area/rogue/indoors/town/manor)
 "dls" = (
 /obj/structure/stationary_bell{
 	density = 0
@@ -5710,6 +5709,10 @@
 /obj/structure/flora/newtree,
 /turf/open/floor/rogue/grasscold,
 /area/rogue/outdoors/rtfield)
+"inq" = (
+/obj/structure/mineral_door/wood/window,
+/turf/open/floor/rogue/ruinedwood/herringbone,
+/area/rogue/indoors/town/manor)
 "inW" = (
 /turf/open/floor/rogue/cobblerock,
 /area/rogue/outdoors/town)
@@ -50129,7 +50132,7 @@ uBV
 npa
 xsN
 tOl
-tOl
+dll
 wLa
 wfx
 eLm
@@ -54255,7 +54258,7 @@ jQO
 mTN
 pfl
 pfl
-dll
+pfl
 pfl
 mTN
 pov
@@ -73690,7 +73693,7 @@ lWm
 lWm
 lrC
 lWm
-lWm
+inq
 lWm
 lWm
 xKn
@@ -73996,7 +73999,7 @@ geV
 geV
 lWm
 lWm
-knW
+lWm
 knW
 pNT
 pNT
