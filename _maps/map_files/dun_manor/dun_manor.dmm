@@ -554,12 +554,6 @@
 	},
 /turf/open/floor/rogue/ruinedwood/spiral,
 /area/rogue/indoors/town/physician)
-"aNP" = (
-/obj/machinery/light/rogue/wallfire/candle{
-	pixel_y = -32
-	},
-/turf/open/floor/rogue/grass,
-/area/rogue/outdoors/town)
 "aNS" = (
 /obj/structure/closet/crate/chest{
 	base_icon_state = "woodchestalt";
@@ -6450,6 +6444,12 @@
 	},
 /turf/open/floor/rogue/dirt/road,
 /area/rogue/indoors/town/church)
+"jzl" = (
+/obj/machinery/light/rogue/wallfire/candle{
+	pixel_y = -32
+	},
+/turf/open/floor/rogue/grass,
+/area/rogue/outdoors/town)
 "jAC" = (
 /obj/structure/rack/rogue,
 /obj/item/rogueweapon/stoneaxe/woodcut/steel,
@@ -6737,12 +6737,11 @@
 /turf/open/floor/rogue/woodturned,
 /area/rogue/indoors/town)
 "jRH" = (
-/obj/structure/winch{
-	gid = "townin";
-	redstone_id = "townin"
+/obj/machinery/light/rogue/wallfire/candle{
+	pixel_y = -32
 	},
-/turf/open/floor/rogue/blocks,
-/area/rogue/indoors/town)
+/turf/open/floor/rogue/cobblerock,
+/area/rogue/outdoors/town)
 "jSe" = (
 /obj/structure/fluff/railing/wood{
 	dir = 1;
@@ -7885,10 +7884,6 @@
 	},
 /turf/open/transparent/openspace,
 /area/rogue/outdoors/mountains)
-"lDs" = (
-/mob/living/simple_animal/hostile/retaliate/rogue/chicken,
-/turf/open/floor/rogue/hay,
-/area/rogue/indoors)
 "lEH" = (
 /turf/closed/wall/mineral/rogue/wooddark/end{
 	dir = 1;
@@ -11399,10 +11394,6 @@
 /obj/machinery/light/rogue/wallfire/candle/r,
 /turf/open/transparent/openspace,
 /area/rogue/outdoors/town/roofs)
-"qsD" = (
-/obj/machinery/light/rogue/wallfire/candle,
-/turf/open/floor/rogue/grass,
-/area/rogue/outdoors/town)
 "qub" = (
 /obj/structure/stairs{
 	dir = 8
@@ -11766,6 +11757,10 @@
 /obj/machinery/light/rogue/torchholder/l,
 /turf/open/floor/rogue/blocks,
 /area/rogue/indoors/town/garrison)
+"qUs" = (
+/mob/living/simple_animal/hostile/retaliate/rogue/chicken,
+/turf/open/floor/rogue/hay,
+/area/rogue/indoors)
 "qUU" = (
 /obj/structure/stairs{
 	dir = 4
@@ -12882,7 +12877,9 @@
 /area/rogue/indoors/town/tavern)
 "sGC" = (
 /obj/structure/bars/passage{
-	redstone_id = "keepgate_inner"
+	density = 0;
+	icon_state = "passage1";
+	redstone_id = "keepgate_outer"
 	},
 /turf/open/floor/rogue/cobble,
 /area/rogue/indoors/town)
@@ -13037,12 +13034,6 @@
 /obj/item/toy/cards/deck/syndicate,
 /turf/open/floor/rogue/cobble,
 /area/rogue/indoors/town)
-"sWl" = (
-/obj/machinery/light/rogue/wallfire/candle{
-	pixel_y = -32
-	},
-/turf/open/floor/rogue/cobblerock,
-/area/rogue/outdoors/town)
 "sWv" = (
 /obj/structure/fluff/statue/astrata,
 /turf/open/floor/rogue/church,
@@ -13528,14 +13519,7 @@
 /area/rogue/outdoors/mountains)
 "tRO" = (
 /obj/structure/bars/passage{
-	density = 0;
-	icon_state = "passage1";
-	redstone_id = "keepgate_outer"
-	},
-/obj/structure/bars/passage{
-	density = 0;
-	icon_state = "passage1";
-	redstone_id = "keepgate_outer"
+	redstone_id = "keepgate_inner"
 	},
 /turf/open/floor/rogue/cobblerock,
 /area/rogue/indoors/town)
@@ -14833,6 +14817,10 @@
 "vIZ" = (
 /turf/closed/wall/mineral/rogue/roofwall/middle,
 /area/rogue/outdoors/town/roofs)
+"vJa" = (
+/obj/machinery/light/rogue/wallfire/candle,
+/turf/open/floor/rogue/grass,
+/area/rogue/outdoors/town)
 "vJD" = (
 /turf/open/floor/rogue/woodturned,
 /area/rogue/indoors/town/church/chapel)
@@ -51120,7 +51108,7 @@ inW
 qKZ
 qsh
 oJa
-lDs
+qUs
 xey
 pxP
 qKZ
@@ -52214,7 +52202,7 @@ vFb
 vFb
 uAT
 aaM
-sWl
+jRH
 vgZ
 cPe
 eIv
@@ -53799,7 +53787,7 @@ pfl
 pfl
 pfl
 pfl
-dll
+tRO
 aMV
 dpX
 aMV
@@ -54113,7 +54101,7 @@ pfl
 pfl
 pfl
 pfl
-dll
+tRO
 gdK
 pUA
 gdK
@@ -54267,7 +54255,7 @@ jQO
 mTN
 pfl
 pfl
-pfl
+dll
 pfl
 mTN
 pov
@@ -54733,14 +54721,14 @@ jls
 jls
 jls
 ccX
-qsD
+vJa
 inW
 inW
 jQO
 ufp
 pAC
 cXY
-jRH
+cXY
 jQO
 xOC
 xOC
@@ -55206,7 +55194,7 @@ jFQ
 jKt
 ppp
 ppp
-aNP
+jzl
 jQO
 mTN
 udI
