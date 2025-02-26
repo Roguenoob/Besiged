@@ -18,6 +18,3 @@ map dun_manor
 	votable
 endmap
 
-map covuscruiser
-	votable
-endmap
