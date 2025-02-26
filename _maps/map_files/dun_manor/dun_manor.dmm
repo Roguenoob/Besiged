@@ -6564,6 +6564,13 @@
 	icon_state = "weird1"
 	},
 /area/rogue/indoors/town/manor)
+"jJI" = (
+/obj/machinery/light/rogue/wallfire/candle/r{
+	pixel_x = -1;
+	pixel_y = -28
+	},
+/turf/open/floor/rogue/blocks/stonered/tiny,
+/area/rogue/indoors/town/bath)
 "jKp" = (
 /obj/effect/decal/cobbleedge{
 	dir = 5
@@ -7485,6 +7492,10 @@
 /obj/machinery/light/rogue/firebowl/standing,
 /turf/open/floor/rogue/wood,
 /area/rogue/indoors/town/manor)
+"ldJ" = (
+/obj/machinery/light/rogue/wallfire/candle/r,
+/turf/open/floor/rogue/ruinedwood/spiral,
+/area/rogue/indoors/town/tavern)
 "leI" = (
 /obj/structure/rack/rogue/shelf/big,
 /obj/item/clothing/suit/roguetown/shirt/robe/noc{
@@ -8665,14 +8676,15 @@
 /turf/open/floor/rogue/tile/masonic/single,
 /area/rogue/indoors/town/manor)
 "mPd" = (
-/obj/structure/underworld/barrier,
-/obj/structure/underworld/carriage_normal{
-	pixel_x = -64;
-	pixel_y = -32
+/obj/structure/stairs/stone{
+	dir = 4
 	},
-/obj/machinery/light/rogue/chand,
-/turf/open/floor/rogue/cobblerock,
-/area/rogue/outdoors/rtfield)
+/obj/structure/fluff/railing/border{
+	dir = 1;
+	icon_state = "border"
+	},
+/turf/open/floor/rogue/cobble,
+/area/rogue/under/town/basement)
 "mPA" = (
 /turf/closed/wall/mineral/rogue/wooddark/end{
 	dir = 8
@@ -9080,7 +9092,8 @@
 /obj/structure/stairs/stone{
 	dir = 4
 	},
-/turf/closed/mineral/random/rogue/med,
+/obj/structure/fluff/railing/border,
+/turf/open/floor/rogue/cobble,
 /area/rogue/under/town/basement)
 "nwC" = (
 /obj/structure/plough,
@@ -10556,6 +10569,13 @@
 /obj/structure/roguemachine/atm,
 /turf/open/floor/rogue/hexstone,
 /area/rogue/under/town/basement)
+"pwD" = (
+/obj/machinery/light/rogue/wallfire/candle/r{
+	pixel_x = 40;
+	pixel_y = -8
+	},
+/turf/open/floor/rogue/ruinedwood/spiral,
+/area/rogue/indoors/town/tavern)
 "pwJ" = (
 /turf/open/floor/rogue/wood,
 /area/rogue/indoors/town/garrison)
@@ -14112,9 +14132,8 @@
 /turf/open/floor/rogue/cobble,
 /area/rogue/indoors/town)
 "uRA" = (
-/obj/structure/mineral_door/wood{
-	locked = 1;
-	lockid = "nightmaiden"
+/obj/structure/mineral_door/wood/window{
+	lockid = "tavern"
 	},
 /turf/open/floor/rogue/ruinedwood/spiral,
 /area/rogue/indoors/town/tavern)
@@ -26085,7 +26104,7 @@ mKb
 mvc
 mvc
 mvc
-eJJ
+isF
 mvc
 mvc
 mvc
@@ -26584,7 +26603,7 @@ wdh
 wTS
 wTS
 wTS
-wdh
+jJI
 dVc
 etD
 etD
@@ -27840,7 +27859,7 @@ wnj
 cQQ
 wdh
 wdh
-wdh
+sSL
 dVc
 uBR
 uBR
@@ -28133,7 +28152,7 @@ oyZ
 oyZ
 lcH
 oor
-nwv
+mPd
 nwv
 bda
 bda
@@ -31124,7 +31143,7 @@ kuP
 vbO
 ruh
 ruh
-ruh
+pwD
 ruh
 ruh
 ruh
@@ -32529,7 +32548,7 @@ pNQ
 pNQ
 uBR
 uYu
-ruh
+ldJ
 ruh
 ruh
 ruh
@@ -48787,8 +48806,8 @@ biI
 biI
 jIk
 hlu
-mPd
-uvf
+scb
+ylN
 ylN
 bXj
 wDa
@@ -53445,7 +53464,7 @@ mTN
 mTN
 mTN
 mTN
-aBP
+uvf
 jQO
 xOC
 xOC
