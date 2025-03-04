@@ -8,11 +8,11 @@ SUBSYSTEM_DEF(nightshift)
 	var/current_tod = null
 
 	var/nightshift_active = FALSE
-	var/nightshift_start_time = 576000	//4pm	//702000=7:30 PM, station time
-	var/nightshift_end_time = 360000	//10am	//270000=7:30 AM, station time
-	var/nightshift_dawn_start = 288000		//198000=530am
-	var/nightshift_day_start = 360000		//270000=730am
-	var/nightshift_dusk_start = 504000		//630000=530pm
+	var/nightshift_start_time = 702000    //4pm    //702000=7:30 PM, station time
+    var/nightshift_end_time = 270000    //10am    //270000=7:30 AM, station time
+    var/nightshift_dawn_start = 198000        //198000=530am
+    var/nightshift_day_start = 270000        //270000=730am
+    var/nightshift_dusk_start = 630000        //630000=530pm
 
 	//1hr = 36000
 	//30m = 18000
