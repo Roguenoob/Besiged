@@ -4479,6 +4479,10 @@
 "goN" = (
 /turf/open/floor/rogue/blocks/stonered,
 /area/rogue/indoors/town/dwarfin)
+"goZ" = (
+/obj/effect/landmark/observer_start,
+/turf/open/floor/rogue/cobblerock,
+/area/rogue/outdoors/town)
 "gpx" = (
 /obj/structure/table/wood{
 	dir = 1;
@@ -5004,7 +5008,7 @@
 /obj/item/rope/chain,
 /obj/machinery/light/rogue/wallfire/candle,
 /obj/item/reagent_containers/food/snacks/rogue/meat/salami,
-/obj/item/reagent_containers/glass/bottle/rogue/healthpot,
+/obj/item/reagent_containers/glass/bottle/rogue/healthpotnew,
 /turf/open/floor/rogue/ruinedwood/herringbone,
 /area/rogue/indoors/town/manor)
 "hbU" = (
@@ -14655,6 +14659,11 @@
 "vgZ" = (
 /turf/closed/wall/mineral/rogue/wooddark/horizontal,
 /area/rogue/indoors)
+"vha" = (
+/obj/structure/flora/roguegrass,
+/obj/structure/well,
+/turf/open/floor/rogue/grass,
+/area/rogue/outdoors/town)
 "vhq" = (
 /obj/effect/decal/cobbleedge,
 /turf/open/floor/rogue/cobblerock,
@@ -51632,7 +51641,7 @@ ppp
 ppp
 ppp
 dQr
-hwN
+vha
 vFb
 veM
 veM
@@ -53837,7 +53846,7 @@ nLU
 inW
 inW
 inW
-inW
+goZ
 inW
 inW
 inW
