@@ -1417,7 +1417,7 @@
 	icon_state = "border"
 	},
 /turf/open/floor/rogue/cobblerock,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "bXE" = (
 /obj/structure/bed/rogue/inn/wool,
 /obj/item/bedsheet/rogue/fabric,
@@ -2404,7 +2404,7 @@
 	pixel_y = -6
 	},
 /turf/open/floor/rogue/cobblerock,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "duc" = (
 /obj/structure/roguemachine/vendor{
 	keycontrol = "blacksmith"
@@ -3474,7 +3474,7 @@
 	icon_state = "torchwall1"
 	},
 /turf/open/floor/rogue/cobble,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "fdB" = (
 /obj/effect/landmark/start/servant{
 	dir = 8;
@@ -4749,6 +4749,9 @@
 	},
 /turf/open/floor/rogue/cobble,
 /area/rogue/indoors/town/church)
+"gKU" = (
+/turf/open/floor/rogue/cobble,
+/area/rogue/outdoors/town/dwarf)
 "gMQ" = (
 /obj/structure/handcart{
 	dir = 4
@@ -5758,7 +5761,7 @@
 	pixel_y = -6
 	},
 /turf/open/floor/rogue/cobble,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "hZv" = (
 /turf/open/floor/rogue/tile/masonic{
 	dir = 1
@@ -7348,7 +7351,7 @@
 	dir = 1
 	},
 /turf/open/floor/rogue/cobblerock,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "kwk" = (
 /turf/open/water/sewer,
 /area/rogue/under/town/sewer)
@@ -8069,7 +8072,7 @@
 /area/rogue/indoors/town/church)
 "lBQ" = (
 /turf/open/floor/rogue/cobblerock,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "lCE" = (
 /obj/structure/chair/wood/rogue/fancy,
 /turf/open/floor/rogue/ruinedwood{
@@ -8761,7 +8764,7 @@
 	pixel_y = -6
 	},
 /turf/open/floor/rogue/dirt,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "mIS" = (
 /obj/machinery/light/rogue/torchholder{
 	dir = 4;
@@ -8953,7 +8956,7 @@
 "mUp" = (
 /obj/machinery/light/rogue/torchholder/l,
 /turf/open/floor/rogue/grass,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "mUz" = (
 /obj/structure/fluff/psycross/copper,
 /turf/open/floor/rogue/church,
@@ -9281,6 +9284,14 @@
 /area/rogue/indoors)
 "ntC" = (
 /obj/structure/closet/crate/chest/old_crate,
+/turf/open/floor/rogue/ruinedwood/herringbone,
+/area/rogue/indoors/town/tavern)
+"ntE" = (
+/obj/structure/table/wood{
+	dir = 1;
+	icon_state = "largetable"
+	},
+/obj/structure/fermenting_barrel/hagwoodbitter,
 /turf/open/floor/rogue/ruinedwood/herringbone,
 /area/rogue/indoors/town/tavern)
 "ntF" = (
@@ -13232,6 +13243,12 @@
 	},
 /obj/item/reagent_containers/food/snacks/grown/wheat,
 /obj/item/reagent_containers/food/snacks/grown/wheat,
+/obj/item/reagent_containers/food/snacks/grown/wheat,
+/obj/item/reagent_containers/food/snacks/grown/wheat,
+/obj/item/reagent_containers/food/snacks/grown/wheat,
+/obj/item/reagent_containers/food/snacks/grown/wheat,
+/obj/item/reagent_containers/food/snacks/grown/wheat,
+/obj/item/reagent_containers/food/snacks/grown/wheat,
 /turf/open/floor/rogue/cobble,
 /area/rogue/indoors/town/tavern)
 "sOl" = (
@@ -13413,6 +13430,14 @@
 	icon_state = "weird1"
 	},
 /area/rogue/indoors/town/manor)
+"tee" = (
+/obj/structure/table/wood{
+	dir = 1;
+	icon_state = "largetable"
+	},
+/obj/structure/fermenting_barrel/blackgoat,
+/turf/open/floor/rogue/ruinedwood/herringbone,
+/area/rogue/indoors/town/tavern)
 "ten" = (
 /obj/item/storage/roguebag,
 /turf/open/floor/rogue/cobble,
@@ -13487,7 +13512,7 @@
 /area/rogue/under/town/basement)
 "tox" = (
 /turf/open/floor/rogue/grass,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "tpG" = (
 /obj/structure/chair/wood/rogue/chair3{
 	dir = 8
@@ -14050,7 +14075,7 @@
 "ujZ" = (
 /obj/effect/landmark/events/haunts,
 /turf/open/floor/rogue/cobblerock,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "uks" = (
 /obj/structure/roguewindow/openclose{
 	dir = 4
@@ -14938,7 +14963,7 @@
 /area/rogue/indoors/town)
 "vyM" = (
 /turf/open/floor/rogue/dirt,
-/area/rogue/indoors/town/dwarfin)
+/area/rogue/outdoors/town/dwarf)
 "vzk" = (
 /obj/machinery/light/rogue/oven/south,
 /turf/open/floor/rogue/hexstone,
@@ -15750,6 +15775,14 @@
 	icon_state = "weird1"
 	},
 /area/rogue/indoors/town/manor)
+"wHQ" = (
+/obj/structure/table/wood{
+	dir = 1;
+	icon_state = "largetable"
+	},
+/obj/structure/fermenting_barrel/random/beer,
+/turf/open/floor/rogue/ruinedwood/herringbone,
+/area/rogue/indoors/town/tavern)
 "wIf" = (
 /obj/machinery/light/rogue/wallfire/candle/r,
 /turf/open/floor/rogue/hexstone,
@@ -16024,7 +16057,7 @@
 	},
 /obj/machinery/light/rogue/torchholder/l,
 /turf/open/floor/rogue/grass,
-/area/rogue/outdoors/town)
+/area/rogue/outdoors/town/dwarf)
 "xcZ" = (
 /obj/machinery/light/rogue/torchholder/r,
 /turf/open/floor/rogue/cobble,
@@ -32613,7 +32646,7 @@ hCP
 vwF
 eTN
 iQY
-kMN
+wHQ
 uYu
 uBR
 uBR
@@ -32770,7 +32803,7 @@ hCP
 vwF
 eTN
 iQY
-kMN
+ntE
 uYu
 uBR
 uBR
@@ -32927,7 +32960,7 @@ ruh
 rBZ
 bdZ
 bbR
-kMN
+tee
 uYu
 uBR
 uBR
@@ -56611,16 +56644,16 @@ oQK
 oQK
 vIV
 vgZ
-inW
-inW
-ppp
-spI
-spI
-ppp
+lBQ
+lBQ
+tox
+vyM
+vyM
+tox
 xcU
-inW
-inW
-aaM
+lBQ
+lBQ
+gKU
 aaM
 aaM
 aaM
@@ -57091,7 +57124,7 @@ tGU
 tGU
 tGU
 jTM
-pPV
+gKU
 ppp
 ppp
 ppp
@@ -57234,12 +57267,12 @@ jQO
 gYH
 uWl
 jgS
-pPV
-pPV
-pPV
+gKU
+gKU
+gKU
 hYj
-pPV
-pPV
+gKU
+gKU
 tox
 mUn
 sBL
@@ -57248,7 +57281,7 @@ kAM
 iLl
 kbo
 aPH
-pPV
+gKU
 mdn
 ppp
 nlm
@@ -57405,7 +57438,7 @@ pPV
 pPV
 pPV
 eEG
-pPV
+gKU
 ppp
 ppp
 ccX
@@ -57562,7 +57595,7 @@ pPV
 pPV
 ngV
 duc
-pPV
+gKU
 ppp
 ppp
 bDF
@@ -57719,7 +57752,7 @@ pPV
 jKx
 tgh
 tgh
-pPV
+gKU
 ppp
 ppp
 ccX
@@ -57876,7 +57909,7 @@ pPV
 vmb
 tgh
 sWY
-pPV
+gKU
 oyc
 ppp
 dzo
@@ -58032,7 +58065,7 @@ xCx
 pPV
 pPV
 rtS
-pPV
+gKU
 fcf
 ppp
 ppp
