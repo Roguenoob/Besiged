@@ -13,8 +13,10 @@
 	if(!Adjacent(usr) || !over.Adjacent(usr))
 		return // should stop you from dragging through windows
 	var/list/L = params2list(params)
-	if (L["middle"])
-		over.MiddleMouseDrop_T(src,usr)
+	if (L["right"])
+		over.RightMouseDrop_T(src, usr)
+	else if (L["middle"])
+		over.MiddleMouseDrop_T(src, usr)
 	else
 		if(over == src)
 			return usr.client.Click(src, src_location, src_control, params)
@@ -28,19 +30,20 @@
 			var/list/click_params = params2list(params)
 			if(!click_params || !click_params["icon-x"] || !click_params["icon-y"])
 				return
-			I.pixel_x = round(CLAMP(text2num(click_params["icon-x"]) - 16, -(world.icon_size/2), world.icon_size/2)/modifier, 1)
-			I.pixel_y = round(CLAMP(text2num(click_params["icon-y"]) - 16, -(world.icon_size/2), world.icon_size/2)/modifier, 1)
+			I.pixel_x = round(CLAMP(pixel_x + text2num(click_params["icon-x"]) - 16, pixel_x + -(world.icon_size/2), pixel_x + world.icon_size/2)/modifier, 1)
+			I.pixel_y = round(CLAMP(pixel_y + text2num(click_params["icon-y"]) - 16, pixel_y + -(world.icon_size/2), pixel_y + world.icon_size/2)/modifier, 1)
 			return
 	return
 
 // receive a mousedrop
 /atom/proc/MouseDrop_T(atom/dropping, mob/user)
-	SEND_SIGNAL(src, COMSIG_MOUSEDROPPED_ONTO, dropping, user)
-	return
+	SEND_SIGNAL(src, COMSIG_MOUSEDROPPED_ONTO, dropping, user, "left")
+
+/atom/proc/RightMouseDrop_T(atom/dropping, mob/user)
+	SEND_SIGNAL(src, COMSIG_MOUSEDROPPED_ONTO, dropping, user, "right")
 
 /atom/proc/MiddleMouseDrop_T(atom/dropping, mob/user)
-	SEND_SIGNAL(src, COMSIG_MOUSEDROPPED_ONTO, dropping, user)
-	return
+	SEND_SIGNAL(src, COMSIG_MOUSEDROPPED_ONTO, dropping, user, "middle")
 
 /client
 	var/list/atom/selected_target[2]
@@ -60,6 +63,8 @@
 	var/goal
 	var/progress
 	var/doneset
+	var/aghost_toggle
+	var/show_lobby_ooc = TRUE // Admin preference: see lobby OOC even when not in lobby
 
 /atom
 	var/blockscharging = FALSE
@@ -94,9 +99,9 @@
 	chargedprog = 0
 
 	if(!mob.fixedeye) //If fixedeye isn't already enabled, we need to set this var
-		mob.tempfixeye = TRUE //Change icon to 'target' red eye
 		mob.nodirchange = TRUE
-
+	mob.tempfixeye = TRUE //Change icon to 'target' red eye
+	
 	for(var/atom/movable/screen/eye_intent/eyet in mob.hud_used.static_inventory)
 		eyet.update_icon(mob) //Update eye icon
 
@@ -115,7 +120,10 @@
 
 	var/list/L = params2list(params)
 	if (L["right"])
-		mob.face_atom(object, location, control, params)
+		if(mob.buckled)
+			mob.buckled.face_atom(object, location, control, params)
+		else
+			mob.face_atom(object, location, control, params)
 		if(L["left"])
 			return
 		mob.atkswinging = "right"
@@ -127,7 +135,7 @@
 				if(mob.next_rmove > world.time)
 					return
 			mob.used_intent = mob.o_intent
-			if(mob.used_intent.get_chargetime() && !AD.blockscharging && !mob.in_throw_mode)
+			if(mob.used_intent.get_chargetime() && mob.mmb_intent.can_charge() && !AD.blockscharging && !mob.in_throw_mode)
 				updateprogbar()
 			else
 				mouse_pointer_icon = 'icons/effects/mousemice/human_attack.dmi'
@@ -148,7 +156,11 @@
 		if(!mob.mmb_intent)
 			mouse_pointer_icon = 'icons/effects/mousemice/human_looking.dmi'
 		else
-			if(mob.mmb_intent.get_chargetime() && !AD.blockscharging)
+			if(mob.mmb_intent.get_chargetime() && mob.mmb_intent.can_charge() && !AD.blockscharging)
+				if(mob.buckled)
+					mob.buckled.face_atom(object, location, control, params)
+				else
+					mob.face_atom(object, location, control, params)
 				updateprogbar()
 			else
 				mouse_pointer_icon = mob.mmb_intent.pointer
@@ -175,6 +187,9 @@
 /mob
 	var/datum/intent/curplaying
 
+/atom/proc/should_click_on_mouse_up(var/atom/original_object)
+	return TRUE
+
 /client/MouseUp(object, location, control, params)
 	charging = 0
 //	mob.update_warning()
@@ -185,8 +200,8 @@
 		mob.curplaying.on_mouse_up()
 
 	if(!mob.fixedeye)
-		mob.tempfixeye = FALSE
 		mob.nodirchange = FALSE
+	mob.tempfixeye = FALSE
 
 	if(mob.hud_used)
 		for(var/atom/movable/screen/eye_intent/eyet in mob.hud_used.static_inventory)
@@ -220,10 +235,9 @@
 //	var/list/L = params2list(params)
 
 	if(tcompare)
-		if(object)
-			if(isatom(object) && object != tcompare && mob.atkswinging && tcompare != mob)
-				var/atom/N = object
-				N.Click(location, control, params)
+		var/atom/target_atom = object
+		if(istype(target_atom) && target_atom.should_click_on_mouse_up(tcompare) && tcompare != mob && (mob.atkswinging == "middle" || (mob.atkswinging && object != tcompare)))
+			target_atom.Click(location, control, params)
 		tcompare = null
 
 //	mouse_pointer_icon = 'icons/effects/mousemice/human.dmi'
@@ -244,18 +258,20 @@
 	if(!L.used_intent.can_charge())
 		return
 	L.used_intent.prewarning()
-	if(!charging)
+
+	if(!charging) //This is for spell charging
 		charging = 1
 		L.used_intent.on_charge_start()
 		L.update_charging_movespeed(L.used_intent)
 //		L.update_warning(L.used_intent)
 		progress = 0
+
 //		if(L.used_intent.charge_invocation)
 //			sections = 100/L.used_intent.charge_invocation.len
 //		else
 //			sections = null
-		sections = null //commented
-		goal = L.used_intent.get_chargetime()
+		sections = null //commented //From what I can tell, this used to be for the mouse icon changing per % of the cast.
+		goal = L.used_intent.get_chargetime() //How much charge to get in order to cast
 		part = 1
 		lastplayed = 0
 		doneset = 0
@@ -267,40 +283,32 @@
 	STOP_PROCESSING(SSmousecharge, src)
 	return ..()
 
-/client/process()
+/client/process(seconds_per_tick)
 	if(!isliving(mob))
 		return PROCESS_KILL
 	var/mob/living/L = mob
-	if(!L?.client || !update_to_mob(L))
+	if(!L?.client || !update_to_mob(L, seconds_per_tick))
 		if(L.curplaying)
 			L.curplaying.on_mouse_up()
 		L.update_charging_movespeed()
 		return PROCESS_KILL
 
-/client/proc/update_to_mob(mob/living/L)
+/client/proc/update_to_mob(mob/living/L, seconds_per_tick)
 	if(charging)
 		if(progress < goal)
-			progress++
-			chargedprog = text2num("[((progress / goal) * 100)]")
-	//		mouseprog = round(text2num("[((progress / goal) * 20)]"), 1)
-	//		mouse_pointer_icon = GLOB.mouseicons_human[mouseprog]
-	//		testing("mouse[mouseprog]")
-//			if(sections && chargedprog > lastplayed)
-//				L.say(L.used_intent.charge_invocation[part])
-//				part++
-//				lastplayed = sections * part
-		else
+			progress += 1 * seconds_per_tick // Tickspeed independent. Should always be 1, isn't always 1 when under strain.
+			chargedprog = ((progress / goal) * 100)
+			mouse_pointer_icon = 'icons/effects/mousemice/swang/acharging.dmi'
+		else //Fully charged spell
 			if(!doneset)
 				doneset = 1
-//				if(sections)
-//					L.say(L.used_intent.charge_invocation[L.used_intent.charge_invocation.len])
 				if(L.curplaying && !L.used_intent.keep_looping)
 					playsound(L, 'sound/magic/charged.ogg', 100, TRUE)
 					L.curplaying.on_mouse_up()
 				chargedprog = 100
 				mouse_pointer_icon = 'icons/effects/mousemice/swang/acharged.dmi'
 			else
-				if(!L.rogfat_add(L.used_intent.chargedrain))
+				if(!L.stamina_add(L.used_intent.chargedrain))
 					L.stop_attack()
 		return TRUE
 	else
@@ -359,6 +367,9 @@
 		else
 			middragtime = 0
 			middragatom = null
+
+	if(mob.buckled)
+		mob.buckled.face_atom(over_object, over_location, over_control, params)
 	else
 		mob.face_atom(over_object, over_location, over_control, params)
 

@@ -3,8 +3,8 @@
 	if (!screen || screen.type != type)
 		// needs to be recreated
 		clear_fullscreen(category, FALSE)
-		screens[category] = screen = new type()
-		screen.category = category
+		screen = new type()
+		LAZYSET(screens, category, screen)
 	else if ((!severity || severity == screen.severity) && (!client || screen.screen_loc != "CENTER-7,CENTER-7" || screen.view == client.view))
 		// doesn't need to be updated
 		return screen
@@ -19,17 +19,19 @@
 
 
 /mob/proc/flash_fullscreen(state)
+	///Caustic edit, screen epilepsy thing
 	var/atom/movable/screen/fullscreen/flashholder/screen = screens["flashholder"]
+	if(!check_epilepsy()) //This is the only new line added, the rest of the changes are simply indenting the rest of this thing by one 
 
-	if(!screen)
-		screen = new /atom/movable/screen/fullscreen/flashholder()
-		screens["flashholder"] = screen
+		if(!screen)
+			screen = new /atom/movable/screen/fullscreen/flashholder()
+			screens["flashholder"] = screen
 
-	if(client && screen.should_show_to(src))
-		screen.update_for_view(client.view)
-		client.screen += screen
+		if(client && screen.should_show_to(src))
+			screen.update_for_view(client.view)
+			client.screen += screen
 
-	flick(state,screen)
+		flick(state,screen)
 	return screen
 
 
@@ -144,15 +146,14 @@
 	nomouseover = FALSE
 
 /atom/movable/screen/fullscreen/crit/zeth/Click()
-	if(isliving(usr))
-		var/mob/living/L = usr
-		if(L.stat != DEAD)
-			if(alert("Are you done living?", "", "Yes", "No") == "Yes")
-				if(!L.succumb_timer || (world.time < L.succumb_timer + 111 SECONDS) )
-					var/ttime =  round(((L.succumb_timer + 111 SECONDS) - world.time) / 10)
-					to_chat(L, span_redtext("I'm not dead enough yet. [ttime]"))
-				else
-					L.succumb(reaper = TRUE)
+	if(!isliving(usr))
+		return
+	var/mob/living/L = usr
+	if(L.stat == DEAD)
+		return
+	if(alert("Are you done living?", "", "Yes", "No") == "No")
+		return
+	L.succumb(reaper = TRUE)
 
 /atom/movable/screen/fullscreen/crit/death
 	icon_state = "DD"
@@ -168,6 +169,10 @@
 	icon_state = "oxydamageoverlay"
 	layer = BLIND_LAYER
 
+/atom/movable/screen/fullscreen/inqvision
+	icon_state = "inqvision"
+	layer = BLIND_LAYER
+
 /atom/movable/screen/fullscreen/blackimageoverlay
 	icon_state = "blackimageoverlay"
 	layer = BLIND_LAYER
@@ -176,6 +181,16 @@
 /atom/movable/screen/fullscreen/blind
 	icon_state = "blind"
 	layer = BLIND_LAYER
+	plane = FULLSCREEN_PLANE
+
+/atom/movable/screen/fullscreen/zezuspsyst
+	icon_state = "hey"
+	layer = CRIT_LAYER
+	plane = FULLSCREEN_PLANE
+
+/atom/movable/screen/fullscreen/zezuspsyst_subtle
+	icon_state = "hey_but_way_more_subtle"
+	layer = CRIT_LAYER
 	plane = FULLSCREEN_PLANE
 
 /atom/movable/screen/fullscreen/curse
@@ -206,12 +221,6 @@
 	screen_loc = "WEST,SOUTH to EAST,NORTH"
 	icon_state = "druggy"
 	alpha = 80
-
-/atom/movable/screen/fullscreen/purest
-	icon = 'icons/mob/screen_gen.dmi'
-	screen_loc = "WEST,SOUTH to EAST,NORTH"
-	icon_state = "purest"
-	alpha = 100
 
 /atom/movable/screen/fullscreen/fade
 	icon = 'icons/mob/roguehudback2.dmi'
@@ -262,26 +271,6 @@
 	layer = LIGHTING_LAYER
 	blend_mode = BLEND_ADD
 	show_when_dead = TRUE
-
-/atom/movable/screen/fullscreen/maniac 
-	icon = 'icons/roguetown/maniac/fullscreen.dmi'
-	icon_state = "hall0"
-	alpha = 0
-	/// Amount of hallucination icon states we have
-	var/hall_amount = 13
-
-/atom/movable/screen/fullscreen/maniac/proc/jumpscare(mob/living/scared, silent = FALSE, fade_in = 0.2 SECONDS, duration = 0.5 SECONDS, fade_out = 1 SECONDS)
-	if(!silent)
-		var/static/list/spookies = list(
-			'sound/villain/hall_appear1.ogg',
-			'sound/villain/hall_appear2.ogg',
-			'sound/villain/hall_appear3.ogg',
-		)
-		scared.playsound_local(scared, pick(spookies), vol = 100, vary = FALSE)
-	icon_state = "hall[rand(1, hall_amount)]"
-	animate(src, alpha = 255, time = fade_in, easing = BOUNCE_EASING | EASE_IN | EASE_OUT)
-	animate(time = duration, easing = BOUNCE_EASING | EASE_IN | EASE_OUT)
-	animate(alpha = 0, time = fade_out, easing = LINEAR_EASING)
 
 /atom/movable/screen/fullscreen/dreaming
 	icon = 'icons/roguetown/maniac/fullscreen_wakeup.dmi'

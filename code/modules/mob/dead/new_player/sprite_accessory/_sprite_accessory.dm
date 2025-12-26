@@ -30,6 +30,8 @@
 	var/gendered_variants = FALSE
 	/// List of generated icons based on the [type x icon_state x colors] combination.
 	var/static/list/accessory_icon_cache = list()
+	/// Whether this specific accessory doesn't allow for coloring
+	var/color_disabled = FALSE
 
 /datum/sprite_accessory/New()
 	if(color_keys > 1)
@@ -177,14 +179,14 @@
 			return "ADJ"
 		if(BODY_FRONT_LAYER)
 			return "FRONT"
-		if(BODY_FRONT_SECOND_LAYER)
+		//Caustic Edit
+		if(BODY_FRONTER_LAYER)
 			return "FRONT"
-		if(BODY_FRONT_THIRD_LAYER)
+		if(BODY_FRONTEST_LAYER)
 			return "FRONT"
-		if(BODY_FRONT_FOURTH_LAYER)
-			return "FRONT"
-		if(BODY_FRONT_FIFTH_LAYER)
-			return "FRONT"
+		//Caustic End
+		if(BODY_FRONT_FRONT_LAYER)
+			return "FFRONT"
 		if(BODY_UNDER_LAYER)
 			return "UNDER"
 		else
@@ -237,11 +239,8 @@
 	sources[KEY_FACE_HAIR_COLOR] = prefs.get_facial_hair_color()
 	sources[KEY_CHEST_COLOR] = sources[KEY_SKIN_COLOR]
 	var/chest_color = prefs.get_chest_color()
-	var/belly_color = prefs.get_belly_color()
 	if(chest_color)
 		sources[KEY_CHEST_COLOR] = chest_color
-	if(belly_color)
-		sources[KEY_CHEST_COLOR] = belly_color
 	return sources
 
 /proc/color_key_source_list_from_carbon(mob/living/carbon/carbon)
@@ -264,11 +263,8 @@
 		sources[KEY_FACE_HAIR_COLOR] = human.get_facial_hair_color()
 		sources[KEY_CHEST_COLOR] = sources[KEY_SKIN_COLOR]
 		var/chest_color = human.get_chest_color()
-		var/belly_color = human.get_chest_color()
 		if(chest_color)
 			sources[KEY_CHEST_COLOR] = chest_color
-		if(belly_color)
-			sources[KEY_CHEST_COLOR] = belly_color
 	else
 		sources[KEY_SKIN_COLOR] = "FFFFFF"
 		sources[KEY_CHEST_COLOR] = sources[KEY_SKIN_COLOR]

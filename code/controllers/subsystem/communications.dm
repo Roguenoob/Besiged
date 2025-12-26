@@ -20,32 +20,20 @@ SUBSYSTEM_DEF(communications)
 	if(is_silicon)
 		if(user.job)
 			var/used_title = user.get_role_title()
-			priority_announce(html_decode(user.treat_message(input)), "The [used_title] Decrees", pick('sound/misc/royal_decree.ogg', 'sound/misc/royal_decree2.ogg'), "Captain")
+			if(SSticker.regentmob == user)
+				used_title = "[used_title]" + " Regent"
+			priority_announce(html_decode(user.treat_message(input)), "The [used_title] Decrees", pick('sound/misc/royal_decree.ogg', 'sound/misc/royal_decree2.ogg'), sender = user)
 			silicon_message_cooldown = world.time + 5 SECONDS
 	else
 		if(user.job)
 			var/used_title = user.get_role_title()
-			priority_announce(html_decode(user.treat_message(input)), "The [used_title] Speaks", 'sound/misc/bell.ogg', "Captain")
+			if(SSticker.regentmob == user)
+				used_title = "[used_title]" + " Regent"
+			priority_announce(html_decode(user.treat_message(input)), "The [used_title] Speaks", 'sound/misc/bell.ogg', sender = user)
 			nonsilicon_message_cooldown = world.time + 5 SECONDS
 		else
-			priority_announce(html_decode(user.treat_message(input)), "Someone Speaks", 'sound/misc/bell.ogg', "Captain")
+			priority_announce(html_decode(user.treat_message(input)), "Someone Speaks", 'sound/misc/bell.ogg', sender = user)
 			nonsilicon_message_cooldown = world.time + 5 SECONDS
-	user.log_talk(input, LOG_SAY, tag="priority announcement")
-	message_admins("[ADMIN_LOOKUPFLW(user)] has made a priority announcement.")
-
-/datum/controller/subsystem/communications/proc/send_message(datum/comm_message/sending,print = TRUE,unique = FALSE)
-	for(var/obj/machinery/computer/communications/C in GLOB.machines)
-		if(!(C.stat & (BROKEN|NOPOWER)) && is_station_level(C.z))
-			if(unique)
-				C.add_message(sending)
-			else //We copy the message for each console, answers and deletions won't be shared
-				var/datum/comm_message/M = new(sending.title,sending.content,sending.possible_answers.Copy())
-				C.add_message(M)
-			if(print)
-				var/obj/item/paper/P = new /obj/item/paper(C.loc)
-				P.name = "paper - '[sending.title]'"
-				P.info = sending.content
-				P.update_icon()
 
 #undef COMMUNICATION_COOLDOWN
 #undef COMMUNICATION_COOLDOWN_AI

@@ -4,11 +4,14 @@
 	name = "statue"
 	icon_state = ""
 	w_class = WEIGHT_CLASS_NORMAL
+	experimental_inhand = FALSE
 	smeltresult = null
+	grid_width = 32
+	grid_height = 64
 
 /obj/item/roguestatue/gold
 	name = "gold statue"
-	desc = "Made of heavy, gleaming gold!"
+	desc = "A statue made of heavy, gleaming gold!"
 	icon_state = "gstatue1"
 	smeltresult = /obj/item/ingot/gold
 	sellprice = 120
@@ -19,7 +22,7 @@
 
 /obj/item/roguestatue/gold/loot
 	name = "gold statuette"
-	desc = "Made of heavy, gleaming gold!"
+	desc = "A statue made of heavy, gleaming gold!"
 	icon_state = "lstatue1"
 	sellprice = 45
 
@@ -30,7 +33,7 @@
 
 /obj/item/roguestatue/silver
 	name = "silver statue"
-	desc = "Made of pure, shimmering silver!"
+	desc = "A statue made of pure, shimmering silver!"
 	icon_state = "sstatue1"
 	smeltresult = /obj/item/ingot/silver
 	sellprice = 90
@@ -44,27 +47,49 @@
 	desc = "An unyielding statue of resilient steel."
 	icon_state = "ststatue1"
 	smeltresult = /obj/item/ingot/steel
-	sellprice = 60
+	sellprice = 40
 
 /obj/item/roguestatue/steel/Initialize()
 	. = ..()
 	icon_state = "ststatue[pick(1,2)]"
+
+/obj/item/roguestatue/aalloy
+	name = "decrepit statue"
+	desc = "A statue of wrought bronze, forged to venerate an ancient champion."
+	icon_state = "astatue1"
+	smeltresult = /obj/item/ingot/aalloy
+	sellprice = 77
+	color = "#bb9696"
+
+/obj/item/roguestatue/aalloy/Initialize()
+	. = ..()
+	icon_state = "astatue[pick(1,2)]"
 
 /obj/item/roguestatue/iron
 	name = "iron statue"
 	desc = "A forged statue of cast iron!"
 	icon_state = "istatue1"
 	smeltresult = /obj/item/ingot/iron
-	sellprice = 40
+	sellprice = 20
 
 /obj/item/roguestatue/iron/Initialize()
 	. = ..()
 	icon_state = "istatue[pick(1,2)]"
 
+/obj/item/roguestatue/blacksteel
+	name = "blacksteel statue"
+	desc = "A dark statue of glimmering, resilient blacksteel."
+	icon_state = "bsstatue1"
+	smeltresult = /obj/item/ingot/blacksteel
+	sellprice = 160
 
+/obj/item/roguestatue/blacksteel/Initialize()
+	. = ..()
+	icon_state = "bsstatue[pick(1,2)]"
 //000000000000000000000000000--
 
 /obj/item/var/polished = FALSE
+/obj/item/var/polish_bonus = 0
 
 /obj/item/examine(mob/user)
 	. = ..()
@@ -84,6 +109,8 @@
 	w_class = WEIGHT_CLASS_SMALL
 	dropshrink = 0.8
 	var/uses = 12
+	grid_width = 32
+	grid_height = 32
 
 /obj/item/polishing_cream/examine(mob/user)
 	. = ..()
@@ -95,7 +122,7 @@
 	var/obj/item/thing = O
 	if(!thing.anvilrepair)
 		return ..()
-	if((HAS_TRAIT(user, TRAIT_SQUIRE_REPAIR) || user.mind.get_skill_level(thing.anvilrepair)) && thing.polished == 0 && obj_integrity <= max_integrity)
+	if((HAS_TRAIT(user, TRAIT_SQUIRE_REPAIR) || user.get_skill_level(thing.anvilrepair)) && thing.polished == 0 && obj_integrity <= max_integrity)
 		to_chat(user, span_info("I start applying some compound to \the [thing]..."))
 		if(do_after(user, 50 - user.STASPD*2, target = O))
 			thing.polished = 1
@@ -117,7 +144,18 @@
 	w_class = WEIGHT_CLASS_SMALL
 	smeltresult = null
 	dropshrink = 0.8
+	grid_width = 32
+	grid_height = 64
 	var/roughness = 0 // 0  for a fine brush, 1 for a coarse brush
+
+/obj/item/armor_brush/examine()
+	. = ..()
+	. += span_info("To polish a weapon or a piece of armor, you must have the knowledge of a squire or how to repair the item. Follow the following steps:")
+	. += span_info("I. Apply polishing cream to the item.")
+	. += span_info("II. Use the coarse side (use the item to flip it) to scrub the item roughly.")
+	. += span_info("III. Use the fine side to gently polish the item.")
+	. += span_info("IV. Wash the item in a wooden bin with water to polish it.")
+	. += span_info("A fully polished item will be slightly stronger and or more durable.")
 
 /obj/item/armor_brush/attack_self(mob/user)
 	roughness = 1 - roughness
@@ -134,7 +172,7 @@
 		return ..()
 	var/obj/item/thing = O
 	if(thing.polished == 1 && roughness)
-		if((HAS_TRAIT(user, TRAIT_SQUIRE_REPAIR) || user.mind.get_skill_level(thing.anvilrepair)))
+		if((HAS_TRAIT(user, TRAIT_SQUIRE_REPAIR) || user.get_skill_level(thing.anvilrepair)))
 			to_chat(user, span_info("I start roughly scrubbing the compound on \the [thing]..."))
 			playsound(loc,"sound/foley/scrubbing[pick(1,2)].ogg", 100, TRUE)
 			if(do_after(user, 50 - user.STASTR*1.5, target = O))
@@ -143,7 +181,7 @@
 				thing.add_atom_colour("#9e9e9e", FIXED_COLOUR_PRIORITY)
 
 	else if(thing.polished == 2 && !roughness)
-		if((HAS_TRAIT(user, TRAIT_SQUIRE_REPAIR) || user.mind.get_skill_level(thing.anvilrepair)))
+		if((HAS_TRAIT(user, TRAIT_SQUIRE_REPAIR) || user.get_skill_level(thing.anvilrepair)))
 			to_chat(user, span_info("I start gently scrubbing the edges of \the [thing]..."))
 			playsound(loc,"sound/foley/scrubbing[pick(1,2)].ogg", 100, TRUE)
 			if(do_after(user, 50 - user.STASTR*1.5, target = O))
@@ -153,14 +191,17 @@
 
 /obj/item/take_damage(damage_amount, damage_type, damage_flag, sound_effect, attack_dir, armor_penetration)
 	. = ..()
-	if(src)
+	if(obj_integrity <= max_integrity * 0.25)
 		if(polished == 4)
 			polished = 0
 			force -= 2
 			force_wielded -= 3
+			max_integrity -= polish_bonus
+			polish_bonus = 0
+			obj_integrity = min(obj_integrity, max_integrity)
 			var/datum/component/glint = GetComponent(/datum/component/metal_glint)
 			qdel(glint)
-		else if(polished >= 1 && polished <= 4)
+		else if(polished >= 1 && polished <= 3)
 			remove_atom_colour(FIXED_COLOUR_PRIORITY)
 			UnregisterSignal(src, COMSIG_COMPONENT_CLEAN_ACT)
 
@@ -169,7 +210,9 @@
 		polished = 4
 		remove_atom_colour(FIXED_COLOUR_PRIORITY)
 		add_atom_colour("#ffffff", FIXED_COLOUR_PRIORITY)
-		obj_integrity += 50
+		polish_bonus = ceil(max_integrity * 0.10)
+		max_integrity += polish_bonus
+		obj_integrity += polish_bonus
 		force += 2
 		force_wielded += 3
 		AddComponent(/datum/component/metal_glint)
@@ -177,6 +220,7 @@
 
 	else if(polished < 4)
 		polished = 0
+		polish_bonus = 0
 		remove_atom_colour(FIXED_COLOUR_PRIORITY)
 		UnregisterSignal(src, COMSIG_COMPONENT_CLEAN_ACT)
 
@@ -202,13 +246,22 @@
 
 /datum/component/metal_glint/process()
 	var/atom/current_parent = parent
-	if(istype(current_parent.loc,/turf) || istype(current_parent.loc, /mob/living))
+	if(istype(current_parent.loc, /turf))
 		if(prob(25))
 			new /obj/effect/temp_visual/armor_glint(current_parent.loc)
 		if(prob(15))
 			new /obj/effect/temp_visual/armor_glint(current_parent.loc, 2)
 		if(prob(5))
 			new /obj/effect/temp_visual/armor_glint(current_parent.loc, 3)
+	else if(istype(current_parent.loc, /mob/living) && istype(current_parent, /obj/item/clothing/suit/roguetown/armor))
+		var/mob/M = current_parent.loc
+		var/turf/T = get_turf(M)
+		if(prob(8))
+			new /obj/effect/temp_visual/armor_glint(T)
+		if(prob(4))
+			new /obj/effect/temp_visual/armor_glint(T, 2)
+		if(prob(2))
+			new /obj/effect/temp_visual/armor_glint(T, 3)
 
 /datum/component/metal_glint/proc/stop_process()
 	STOP_PROCESSING(SSobj, src)

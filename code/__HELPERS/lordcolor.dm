@@ -20,28 +20,15 @@ GLOBAL_VAR(lordsecondary)
 	if(!client)
 		addtimer(CALLBACK(src, PROC_REF(lord_color_choice)), 50)
 		return
-	var/list/lordcolors = list(
-"PURPLE"="#865c9c", //RED AND BLACK
-"RED"="#933030", 	//	 I DRESS
-"BLACK"="#2f352f", 	//	  EAGLE
-"BROWN"="#685542", 	// ON MY CHEST
-"GREEN"="#79763f", 	//IT'S GOOD TO BE
-"BLUE"="#395480", 	// AN ALBANIAN
-"YELLOW"="#b5b004", // KEEP MY HEAD
-"TEAL"="#249589", 	//	 UP HIGH
-"AZURE"="#007fff", 	// FOR THE FLAG
-"WHITE"="#ffffff",	//	  I DIE
-"ORANGE"="#b86f0c",	//I'M PROUD TO BE
-"MAJENTA"="#962e5c")// AN ALBANIAN
 	var/prim
 	var/sec
-	var/choice = input(src, "Choose a Primary Color", "ROGUETOWN") as anything in lordcolors
+	var/choice = input(src, "Choose a Primary Color", "ROGUETOWN") as anything in colorlist
 	if(choice)
-		prim = lordcolors[choice]
-		lordcolors -= choice
-	choice = input(src, "Choose a Secondary Color", "ROGUETOWN") as anything in lordcolors
+		prim = colorlist[choice]
+		colorlist -= choice
+	choice = input(src, "Choose a Secondary Color", "ROGUETOWN") as anything in colorlist
 	if(choice)
-		sec = lordcolors[choice]
+		sec = colorlist[choice]
 	if(!prim || !sec)
 		GLOB.lordcolor = list()
 		return

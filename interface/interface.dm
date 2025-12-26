@@ -59,9 +59,9 @@
 /client/verb/mentorhelp()
 	set name = "Mentorhelp"
 	set desc = ""
-	set category = "Admin"
+	set category = "-Admin-"
 	if(mob)
-		var/msg = input("Say your meditation:", "Voices in your head") as text|null
+		var/msg = input("Submit your question to the Voices:", "Mentorhelp Input") as text|null
 		if(msg)
 			mob.schizohelp(msg)
 	else
@@ -93,21 +93,11 @@
 	set name = "Changelog"
 	set category = "OOC"
 	set hidden = 1
-//	var/datum/asset/changelog = get_asset_datum(/datum/asset/simple/changelog)
-//	changelog.send(src)
 	src << browse('html/changelog.html', "window=changes;size=675x650")
 	if(prefs.lastchangelog != GLOB.changelog_hash)
 		prefs.lastchangelog = GLOB.changelog_hash
 		prefs.save_preferences()
 		winset(src, "infowindow.changelog", "font-style=;")
-
-/client/verb/recent_changelog()
-	set name = "Recent Changes"
-	set category = "OOC"
-	if(GLOB.changelog.len)
-		to_chat(src, "Recent Changes:")
-		for(var/change in GLOB.changelog)
-			to_chat(src, span_info("- [change]"))
 
 /client/verb/hotkeys_help()
 	set name = "_Help-Controls"
@@ -148,7 +138,7 @@ Hotkey-Mode: (hotkey-mode must be on)
 \tMMB (no intent) = Special Interaction
 \tSHIFT + LMB = Examine something
 \tSHIFT + RMB = Focus
-\tCTRL + LMB = TileAtomList
+\tALT + RMB = TileAtomList
 \tCTRL + RMB = Point at something
 </font>"}
 
@@ -200,6 +190,24 @@ Hotkey-Mode: (hotkey-mode must be on)
 		for(var/atom/movable/screen/scannies/S in screen)
 			S.alpha = 70
 
+/client/verb/grainfilter()
+	set category = "Options"
+	set name = "ToggleGrain"
+	if(!prefs)
+		return
+	if(prefs.grain == TRUE)
+		prefs.grain = FALSE
+		prefs.save_preferences()
+		to_chat(src, "Grain is <font color='gray'>OFF.</font>")
+		for(var/atom/movable/screen/grain/S in screen)
+			S.alpha = 0
+	else
+		prefs.grain = TRUE
+		prefs.save_preferences()
+		to_chat(src, "Grain is <font color='#007fff'>ON.</font>")
+		for(var/atom/movable/screen/grain/S in screen)
+			S.alpha = 55
+
 /client/verb/triggercommend()
 	set category = "OOC"
 	set name = "Commend Someone"
@@ -244,6 +252,18 @@ Hotkey-Mode: (hotkey-mode must be on)
 		prefs.clientfps = clamp(newfps, 1, 1000)
 		fps = prefs.clientfps
 		prefs.save_preferences()
+
+/client/verb/set_picinchat()
+	set name = "Headshot in Chat"
+	set category = "Options"
+
+	if(prefs)
+		prefs.chatheadshot = !prefs.chatheadshot
+		prefs.save_preferences()
+		if(prefs.chatheadshot)
+			to_chat(src, "Headshot in chat Enabled")
+		else
+			to_chat(src, "Headshot in chat Disabled")
 
 /*
 /client/verb/set_blur()

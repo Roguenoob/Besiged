@@ -16,8 +16,6 @@
 	set name = "Vore Panel"
 	set category = "Vore"
 
-	init_vore()
-
 	var/datum/vore_look/picker_holder = new()
 	picker_holder.loop = picker_holder
 	picker_holder.selected = vore_selected
@@ -126,6 +124,10 @@
 				spanstyle = "color:purple;"
 			if(DM_DRAGON)
 				spanstyle = "color:blue;"
+			if(DM_MANABURN)
+				spanstyle = "color:red;"
+			if(DM_STRONGDIGEST)
+				spanstyle =  "color:red;"
 
 		dat += "<span style='[spanstyle]'> ([B.contents.len])</span></a></li>"
 

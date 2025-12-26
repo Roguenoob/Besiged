@@ -3,14 +3,16 @@
 	GLOB.farm_animals++
 	if(tame)
 		tamed()
+	AddElement(/datum/element/ai_retaliate)
+	ai_controller.set_blackboard_key(BB_BASIC_FOODS, food_type)
 
 /mob/living/simple_animal/hostile/retaliate/rogue/goat/Destroy()
-	..()
 	GLOB.farm_animals = max(GLOB.farm_animals - 1, 0)
+	return ..()
 
 /mob/living/simple_animal/hostile/retaliate/rogue/goat/find_food()
 	..()
-	var/obj/structure/spacevine/SV = locate(/obj/structure/spacevine) in loc
+	var/obj/structure/vine/SV = locate(/obj/structure/vine) in loc
 	if(SV)
 		SV.eat(src)
 		food = max(food + 30, 100)
@@ -19,9 +21,9 @@
 	..()
 	deaggroprob = 50
 	if(can_buckle)
-		var/datum/component/riding/D = LoadComponent(/datum/component/riding)
+		var/datum/component/riding/D = LoadComponent(/datum/component/riding/no_ocean)
 		D.set_riding_offsets(RIDING_OFFSET_ALL, list(TEXT_NORTH = list(0, 6), TEXT_SOUTH = list(0, 6), TEXT_EAST = list(-2, 6), TEXT_WEST = list(2, 6)))
-		D.set_vehicle_dir_layer(SOUTH, OBJ_LAYER)
+		D.set_vehicle_dir_layer(SOUTH, MOB_LAYER+0.1)
 		D.set_vehicle_dir_layer(NORTH, OBJ_LAYER)
 		D.set_vehicle_dir_layer(EAST, OBJ_LAYER)
 		D.set_vehicle_dir_layer(WEST, OBJ_LAYER)
@@ -49,7 +51,7 @@
 			for(var/direction in shuffle(list(1,2,4,8,5,6,9,10)))
 				var/step = get_step(src, direction)
 				if(step)
-					if(locate(/obj/structure/spacevine) in step || locate(/obj/structure/glowshroom) in step)
+					if(locate(/obj/structure/vine) in step || locate(/obj/structure/glowshroom) in step)
 						Move(step, get_dir(src, step))
 
 /mob/living/simple_animal/hostile/retaliate/rogue/goat
@@ -68,11 +70,20 @@
 	see_in_dark = 6
 	move_to_delay = 8
 	animal_species = /mob/living/simple_animal/hostile/retaliate/rogue/goatmale
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 4,
+	botched_butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 2,
+									/obj/item/reagent_containers/food/snacks/fat = 1,
+									/obj/item/alch/viscera = 1,
+									/obj/item/alch/sinew = 2)
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 3,
+						/obj/item/reagent_containers/food/snacks/fat = 2,
+						/obj/item/natural/hide = 1,
+						/obj/item/natural/fur/goat = 1,
+						/obj/item/natural/bundle/bone/full = 1, /obj/item/alch/sinew = 4, /obj/item/alch/bone = 1, /obj/item/alch/viscera = 2)
+	perfect_butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 4,
 						/obj/item/reagent_containers/food/snacks/fat = 2,
 						/obj/item/natural/hide = 2,
-						/obj/item/natural/fur = 1,
-						/obj/item/natural/bundle/bone/full = 1)
+						/obj/item/natural/fur/goat = 1,
+						/obj/item/natural/bundle/bone/full = 1, /obj/item/alch/sinew = 4, /obj/item/alch/bone = 1, /obj/item/alch/viscera = 2, /obj/item/natural/head/goat = 1)
 	base_intents = list(/datum/intent/simple/headbutt)
 	health = 80
 	maxHealth = 80
@@ -92,14 +103,19 @@
 	attack_verb_simple = "headbutt"
 	melee_damage_lower = 10
 	melee_damage_upper = 25
-	STASPD = 2
+	STASPD = 10
 	STACON = 8
 	STASTR = 12
 	childtype = list(/mob/living/simple_animal/hostile/retaliate/rogue/goat/goatlet = 90, /mob/living/simple_animal/hostile/retaliate/rogue/goat/goatletboy = 10)
 	can_buckle = TRUE
 	buckle_lying = 0
-	can_saddle = FALSE
+	can_saddle = TRUE
 	remains_type = /obj/effect/decal/remains/cow
+
+	//new ai, old ai off
+	AIStatus = AI_OFF
+	can_have_ai = FALSE
+	ai_controller = /datum/ai_controller/generic/goat //slightly more agressive retaliation
 
 /mob/living/simple_animal/hostile/retaliate/rogue/goat/get_sound(input)
 	switch(input)
@@ -122,7 +138,6 @@
 	icon_dead = "goatlet_dead"
 	icon_gib = "goatlet_gib"
 	animal_species = null
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 1, /obj/item/natural/bone = 3)
 	base_intents = list(/datum/intent/simple/headbutt)
 	health = 20
 	pass_flags = PASSTABLE | PASSMOB
@@ -196,11 +211,20 @@
 	see_in_dark = 6
 	move_to_delay = 8
 	base_intents = list(/datum/intent/simple/headbutt)
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 4,
-						/obj/item/reagent_containers/food/snacks/fat = 1,
+	botched_butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 2,
+									/obj/item/reagent_containers/food/snacks/fat = 1,
+									/obj/item/alch/viscera = 1,
+									/obj/item/alch/sinew = 2)
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 3,
+						/obj/item/reagent_containers/food/snacks/fat = 2,
+						/obj/item/natural/hide = 1,
+						/obj/item/natural/fur/goat = 1,
+						/obj/item/natural/bundle/bone/full = 1, /obj/item/alch/sinew = 4, /obj/item/alch/bone = 1, /obj/item/alch/viscera = 2)
+	perfect_butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 4,
+						/obj/item/reagent_containers/food/snacks/fat = 2,
 						/obj/item/natural/hide = 2,
-						/obj/item/natural/fur = 1,
-						/obj/item/natural/bundle/bone/full = 1)
+						/obj/item/natural/fur/goat = 1,
+						/obj/item/natural/bundle/bone/full = 1, /obj/item/alch/sinew = 4, /obj/item/alch/bone = 1, /obj/item/alch/viscera = 2, /obj/item/natural/head/goat = 1)
 	faction = list("goats")
 	mob_biotypes = MOB_ORGANIC|MOB_BEAST
 	attack_verb_continuous = "headbutts"
@@ -223,13 +247,21 @@
 	pooptype = /obj/item/natural/poo/horse
 	STACON = 7
 	STASTR = 12
-	STASPD = 2
+	STASPD = 14
 	can_buckle = TRUE
 	buckle_lying = 0
-	can_saddle = FALSE
+	can_saddle = TRUE
 	tame_chance = 25
 	bonus_tame_chance = 15
 	remains_type = /obj/effect/decal/remains/cow
+
+	//new ai, old ai off
+	AIStatus = AI_OFF
+	can_have_ai = FALSE
+	ai_controller = /datum/ai_controller/generic
+
+/mob/living/simple_animal/hostile/retaliate/rogue/goatmale/tame
+	tame = TRUE
 
 /mob/living/simple_animal/hostile/retaliate/rogue/goatmale/update_icon()
 	cut_overlays()
@@ -248,9 +280,9 @@
 	..()
 	deaggroprob = 20
 	if(can_buckle)
-		var/datum/component/riding/D = LoadComponent(/datum/component/riding)
+		var/datum/component/riding/D = LoadComponent(/datum/component/riding/no_ocean)
 		D.set_riding_offsets(RIDING_OFFSET_ALL, list(TEXT_NORTH = list(0, 6), TEXT_SOUTH = list(0, 6), TEXT_EAST = list(-2, 6), TEXT_WEST = list(2, 6)))
-		D.set_vehicle_dir_layer(SOUTH, OBJ_LAYER)
+		D.set_vehicle_dir_layer(SOUTH, MOB_LAYER+0.1)
 		D.set_vehicle_dir_layer(NORTH, OBJ_LAYER)
 		D.set_vehicle_dir_layer(EAST, OBJ_LAYER)
 		D.set_vehicle_dir_layer(WEST, OBJ_LAYER)
@@ -260,6 +292,8 @@
 	GLOB.farm_animals++
 	if(tame)
 		tamed()
+	AddElement(/datum/element/ai_retaliate)
+	ai_controller.set_blackboard_key(BB_BASIC_FOODS, food_type)
 
 /mob/living/simple_animal/hostile/retaliate/rogue/goatmale/Destroy()
 	..()
@@ -284,7 +318,7 @@
 
 /mob/living/simple_animal/hostile/retaliate/rogue/goatmale/eat_plants()
 	..()
-	var/obj/structure/spacevine/SV = locate(/obj/structure/spacevine) in loc
+	var/obj/structure/vine/SV = locate(/obj/structure/vine) in loc
 	if(SV)
 		SV.eat(src)
 		food = max(food + 30, 100)
@@ -296,7 +330,7 @@
 			for(var/direction in shuffle(list(1,2,4,8,5,6,9,10)))
 				var/step = get_step(src, direction)
 				if(step)
-					if(locate(/obj/structure/spacevine) in step || locate(/obj/structure/glowshroom) in step)
+					if(locate(/obj/structure/vine) in step || locate(/obj/structure/glowshroom) in step)
 						Move(step, get_dir(src, step))
 
 /mob/living/simple_animal/hostile/retaliate/rogue/goatmale/simple_limb_hit(zone)
@@ -350,7 +384,6 @@
 	icon_dead = "goatletboy_dead"
 	icon_gib = "goatletboyt_gib"
 	animal_species = null
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 1, /obj/item/natural/bone = 3)
 	base_intents = list(/datum/intent/simple/headbutt)
 	health = 20
 	maxHealth = 20

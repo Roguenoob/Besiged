@@ -1,6 +1,8 @@
 #define CTYPE_GOLD "g"
 #define CTYPE_SILV "s"
 #define CTYPE_COPP "c"
+#define CTYPE_ICOIN "i"
+#define CTYPE_ANCIENT "a"
 #define MAX_COIN_STACK_SIZE 20
 
 /obj/item/roguecoin
@@ -23,6 +25,7 @@
 	var/base_type //used for compares
 	var/quantity = 1
 	var/plural_name
+	var/rigged_outcome = 0 //1 for heads, 2 for tails
 	resistance_flags = FIRE_PROOF
 
 /obj/item/roguecoin/Initialize(mapload, coin_amount)
@@ -38,21 +41,13 @@
 
 /obj/item/roguecoin/throw_impact(atom/hit_atom, datum/thrownthing/throwingdatum)
 	playsound(loc, 'sound/foley/coins1.ogg', 100, TRUE, -2)
-	scatter(get_turf(src))
-	..()
+	..() 
 
-/obj/item/roguecoin/proc/scatter(turf/T)
-	pixel_x = rand(-8, 8)
-	pixel_y = rand(-5, 5)
-	if(isturf(T) && quantity > 1)
-		var/obj/structure/table/TA = locate() in T
-		if(!TA) //no table
-			for(var/i in 2 to quantity)
-				var/obj/item/roguecoin/new_coin = new type(T)
-				new_coin.set_quantity(1) // prevent exploits with coin piles
-				new_coin.pixel_x = rand(-8, 8)
-				new_coin.pixel_y = rand(-5, 5)
-				set_quantity(quantity - 1)
+/obj/item/roguecoin/Crossed(atom/movable/AM)
+	. = ..()
+	if(istype(AM, /obj/item/roguecoin) && isturf(loc)) // Only on floor
+		merge(AM, null)
+		return
 
 /obj/item/roguecoin/get_real_price()
 	return sellprice * quantity
@@ -80,11 +75,34 @@
 	last_merged_heads_tails = G.heads_tails
 
 	G.set_quantity(G.quantity - amt_to_merge)
-	if(G.quantity == 0)
+	rigged_outcome = 0
+	G.rigged_outcome = 0
+	if(user && G.quantity <= 0)
 		user.doUnEquip(G)
+		user.update_inv_hands()
+	if(G.quantity <= 0)
 		qdel(G)
-	user.update_inv_hands()
 	playsound(loc, 'sound/foley/coins1.ogg', 100, TRUE, -2)
+
+/obj/item/roguecoin/attack_right(mob/user)
+	if(user.get_active_held_item())
+		return ..()
+	if(quantity == 1)
+		if(HAS_TRAIT(user, TRAIT_BLACKLEG))
+			switch(alert(user, "What will you rig the next coin flip to?","XYLIX","Heads","Tails","Play fair"))
+				if("Heads")
+					rigged_outcome = 1
+				if("Tails")
+					rigged_outcome = 2
+				if("Play fair")
+					rigged_outcome = 0
+		return
+	var/obj/item/roguecoin/new_coin = new type()
+	new_coin.set_quantity(1)
+	set_quantity(quantity - 1)
+	new_coin.heads_tails = last_merged_heads_tails
+	user.put_in_hands(new_coin)
+	playsound(loc, 'sound/foley/coinphy (2).ogg', 100, TRUE, -2)
 
 /obj/item/roguecoin/attack_hand(mob/user)
 	if(user.get_inactive_held_item() == src && quantity > 1)
@@ -121,6 +139,22 @@
 		heads_tails = TRUE
 	else
 		user.visible_message(span_info("[user] flips the coin. Tails!"))
+		heads_tails = FALSE
+	update_icon()
+
+
+/obj/item/roguecoin/inqcoin/attack_self(mob/living/user)
+	if(quantity > 1 || !base_type)
+		return
+	if(world.time < flip_cd + 30)
+		return
+	flip_cd = world.time
+	playsound(user, 'sound/foley/coinphy (1).ogg', 100, FALSE)	
+	if(prob(50))
+		user.visible_message(span_info("[user] flips the coin. ENDVRE!"))
+		heads_tails = TRUE
+	else
+		user.visible_message(span_info("[user] flips the coin. LYVE!"))
 		heads_tails = FALSE
 	update_icon()
 
@@ -164,9 +198,21 @@
 /obj/item/roguecoin/attackby(obj/item/I, mob/user)
 	if(istype(I, /obj/item/roguecoin))
 		var/obj/item/roguecoin/G = I
-		merge(G, user)
+		if(item_flags & IN_STORAGE)
+			merge(G, user)
+		else
+			G.merge(src, user)
 		return
 	return ..()
+
+//OTAVAN MARQUE - WORTHLESS TO ANYONE BUT INQ.
+/obj/item/roguecoin/inqcoin
+	name = "otavan marque"
+	desc = "A blessed silver coin finished with a unique wash of black dye, bearing the post-kingdom Psycross. Kingsfield has denied the existence of such a coin when queried, as such coinage is rumoured to be used internally by the Otavan Inquisition."
+	icon_state = "i1"
+	sellprice = 0
+	base_type = CTYPE_ICOIN
+	plural_name = "otavan marques"	
 
 //GOLD
 /obj/item/roguecoin/gold
@@ -196,19 +242,46 @@
 	base_type = CTYPE_COPP
 	plural_name = "zennies"
 
+// ANCIENT
+/obj/item/roguecoin/aalloy
+	name = "psilen"
+	desc = "A coin of polished gilbranze, beheld to a fallen kingdom that hadn't endured the passage of tyme."
+	icon_state = "a1"
+	sellprice = 3 //Dungeon-specific coinage - valued by historians, collectors, and smelters. 
+	base_type = CTYPE_ANCIENT
+	plural_name = "psila"
+
+/obj/item/roguecoin/inqcoin/pile/Initialize()
+	. = ..()
+	set_quantity(rand(4,19))
+
+/obj/item/roguecoin/aalloy/pile/Initialize()
+	. = ..()
+	set_quantity(rand(4,19))
+
 /obj/item/roguecoin/copper/pile/Initialize()
 	. = ..()
 	set_quantity(rand(4,19))
 
 /obj/item/roguecoin/silver/pile/Initialize()
 	. = ..()
-	set_quantity(rand(4,19))
+	set_quantity(rand(4,19))	
+
+/obj/item/roguecoin/silver/pile/readyuppile/Initialize()
+	. = ..()
+	set_quantity(4) // 20 mammons combine with starting pouch to buy something
 
 /obj/item/roguecoin/gold/pile/Initialize()
 	. = ..()
 	set_quantity(rand(4,19))
 
+/obj/item/roguecoin/gold/virtuepile/Initialize()
+	. = ..()
+	set_quantity(rand(8,12))
+
 #undef CTYPE_GOLD
 #undef CTYPE_SILV
 #undef CTYPE_COPP
+#undef CTYPE_ANCIENT
+#undef CTYPE_ICOIN
 #undef MAX_COIN_STACK_SIZE

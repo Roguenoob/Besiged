@@ -38,7 +38,7 @@
 	if (i == 1)
 		return"WEST-3:-16,SOUTH+7"
 	else
-		testing("Index of failed hand is [i]")
+
 		return
 /proc/ui_equip_position(mob/M)
 	var/y_off = round((M.held_items.len-1) / 2) //values based on old equip ui position (CENTER: +/-16,SOUTH+1:5)
@@ -68,10 +68,6 @@
 #define ui_monkey_mask "CENTER-4:14,SOUTH:5"	//monkey
 #define ui_monkey_neck "CENTER-3:15,SOUTH:5"	//monkey
 #define ui_monkey_back "CENTER-2:16,SOUTH:5"	//monkey
-
-//#define ui_alien_storage_l "CENTER-2:14,SOUTH:5"//alien
-#define ui_alien_storage_r "CENTER+1:18,SOUTH:5"//alien
-#define ui_alien_language_menu "EAST-3:26,SOUTH:5" //alien
 
 #define ui_drone_drop "CENTER+1:18,SOUTH:5"     //maintenance drones
 #define ui_drone_pull "CENTER+2:2,SOUTH:5"      //maintenance drones
@@ -188,6 +184,7 @@
 #define rogueui_fat "WEST-1,CENTER+2"
 #define rogueui_stam "WEST-1:0,CENTER+4"
 #define rogueui_blood "WEST-1:6,CENTER+4:17"
+#define rogueui_vitae "WEST-5,CENTER+2"
 
 #define rogueui_cmode "WEST-1:-16,CENTER+1"
 #define rogueui_def "WEST-2,NORTH-5"
@@ -196,11 +193,6 @@
 
 //borgs
 #define ui_borg_health "EAST-1:28,CENTER-1:15"		//borgs have the health display where humans have the pressure damage indicator.
-
-//aliens
-#define ui_alien_health "EAST,CENTER-1:15"	//aliens have the health display where humans have the pressure damage indicator.
-#define ui_alienplasmadisplay "EAST,CENTER-2:15"
-#define ui_alien_queen_finder "EAST,CENTER-3:15"
 
 //constructs
 #define ui_construct_pull "EAST,CENTER-2:15"

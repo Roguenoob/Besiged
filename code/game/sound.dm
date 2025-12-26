@@ -2,21 +2,33 @@
 	var/list/played_loops = list() //uses dlink to link to the sound
 
 
-/proc/playsound(atom/source, soundin, vol as num, vary, extrarange as num, falloff, frequency = null, channel, pressure_affected = FALSE, ignore_walls = TRUE, soundping = FALSE, repeat = FALSE)
+/proc/playsound(atom/source, soundin, vol as num, vary, extrarange as num, falloff, frequency = null, channel, pressure_affected = FALSE, ignore_walls = TRUE, soundping = FALSE, repeat, animal_pref = FALSE, preference )
 	if(isarea(source))
 		CRASH("playsound(): source is an area")
+
+	var/soundfile = soundin
+	if(istype(soundin, /sound))
+		var/sound/sound = soundin
+		soundfile = sound.file
+	// Voice over sound, which implies it should come from the head.
+	if(isdullahan(source) && findtext("[soundfile]", @"sound/vo"))
+		var/mob/living/carbon/human/human = source
+		var/datum/species/dullahan/dullahan = human.dna.species
+		if(dullahan.headless)
+			var/obj/item/bodypart/head/dullahan/head = dullahan.my_head
+			source = head
 
 	var/turf/turf_source = get_turf(source)
 	if(isturf(source))
 		turf_source = source
 
-	if (!turf_source)
+	if(!turf_source)
 		return
 
 	//allocate a channel if necessary now so its the same for everyone
-	channel = channel || open_sound_channel()
+	channel = channel || SSsounds.random_available_channel()
 
- 	// Looping through the player list has the added bonus of working for mobs inside containers
+	// Looping through the player list has the added bonus of working for mobs inside containers
 	var/sound/S = soundin
 	if(!istype(S))
 		S = sound(get_sfx(soundin))
@@ -26,54 +38,53 @@
 	var/source_z = turf_source.z
 	var/list/listeners = SSmobs.clients_by_zlevel[source_z].Copy()
 
-	var/turf/above_turf = turf_source.above()
-	var/turf/below_turf = turf_source.below()
-
-	if(above_turf)
-		if(!is_in_zweb(turf_source, above_turf))
-			above_turf=null
-	if(below_turf)
-		if(!is_in_zweb(turf_source, below_turf))
-			below_turf=null
+	var/turf/above_turf = GET_TURF_ABOVE(turf_source)
+	var/turf/below_turf = GET_TURF_BELOW(turf_source)
 
 	if(soundping)
 		ping_sound(source)
 
-	if(!ignore_walls) //these sounds don't carry through walls
-		listeners = listeners & hearers(maxdistance,turf_source)
-
-		if(above_turf && istransparentturf(above_turf))
-			listeners += hearers(maxdistance,above_turf)
-
-		if(below_turf && istransparentturf(turf_source))
-			listeners += hearers(maxdistance,below_turf)
-
+	//var/list/muffled_listeners = list() //this is very rudimentary list of muffled listeners above and below to mimic sound muffling (this is done through modifying the playsounds for them) <-- no it ain't you forgot to use this var
+	if(!ignore_walls) //these sounds don't carry through walls or vertically
+		listeners = listeners & get_hearers_in_view(maxdistance,turf_source)
 	else
 		if(above_turf)
 			listeners += SSmobs.clients_by_zlevel[above_turf.z]
+			listeners += SSmobs.dead_players_by_zlevel[above_turf.z]
 
 		if(below_turf)
 			listeners += SSmobs.clients_by_zlevel[below_turf.z]
+			listeners += SSmobs.dead_players_by_zlevel[below_turf.z]
 
+	listeners += SSmobs.dead_players_by_zlevel[source_z]
 	. = list()
 
-	for(var/P in listeners)
-		var/mob/M = P
-		if(get_dist(M, turf_source) <= maxdistance)
-			if(M.playsound_local(turf_source, soundin, vol, vary, frequency, falloff, channel, pressure_affected, S, repeat))
+	for(var/mob/M as anything in listeners)
+		var/turf/turf_check = get_turf(M)
+		// Check relay instead.
+		if(isdullahan(M))
+			var/mob/living/carbon/human = M
+			var/datum/species/dullahan/dullahan = human.dna.species
+			if(dullahan.headless)
+				turf_check = get_turf(dullahan.my_head)
+
+		if(get_dist(turf_check, turf_source) <= maxdistance)
+			if(animal_pref)
+				if(M.client?.prefs?.mute_animal_emotes)
+					continue
+			if(M.playsound_local(turf_source, soundin, vol, vary, frequency, falloff, channel, pressure_affected, S, repeat, preference))
 				. += M
-	for(var/P in SSmobs.dead_players_by_zlevel[source_z])
-		var/mob/M = P
+	//This never runs because muffled listeners will always be empty and instead muffling runs on playsound_local
+	/*for(var/mob/M as anything in muffled_listeners)
 		if(get_dist(M, turf_source) <= maxdistance)
-			if(M.playsound_local(turf_source, soundin, vol, vary, frequency, falloff, channel, pressure_affected, S, repeat))
-				. += M
+			if(animal_pref)
+				if(M.client?.prefs?.mute_animal_emotes)
+					continue
+			if(M.playsound_local(turf_source, soundin, vol, vary, frequency, falloff, channel, pressure_affected, S, repeat, muffled = TRUE))
+				. += M*/ 
 
 
 /proc/ping_sound(atom/A)
-	if(ishuman(A))
-		var/mob/living/carbon/human/sneaker = A
-		if(HAS_TRAIT(sneaker,TRAIT_LIGHT_STEP))
-			return FALSE //Should stop people with Light Step from appearing on FOV cones. Won't stop their actions (stepping on branches) from alerting people. test with caution.
 	var/image/I = image(icon = 'icons/effects/effects.dmi', loc = A, icon_state = "emote", layer = ABOVE_MOB_LAYER)
 	if(!I)
 		return
@@ -99,7 +110,7 @@
 	. = ..()
 	animate(src, alpha = 0, time = duration, easing = EASE_IN)
 */
-/mob/proc/playsound_local(turf/turf_source, soundin, vol as num, vary, frequency, falloff, channel, pressure_affected = TRUE, sound/S, repeat)
+/mob/proc/playsound_local(atom/turf_source, soundin, vol as num, vary, frequency, falloff, channel, pressure_affected = TRUE, sound/S, repeat, muffled, preference)
 	if(!client || !can_hear())
 		return FALSE
 
@@ -107,16 +118,42 @@
 		S = sound(get_sfx(soundin))
 
 	S.wait = 0 //No queue
-	S.channel = channel || open_sound_channel()
+	S.channel = channel
+	if(!S.channel)
+		S.channel = SSsounds.random_available_channel()
+
+	var/obj/item/bodypart/head/dullahan/user_head
+	if(isdullahan(src))
+		var/mob/living/carbon/human = src
+		var/datum/species/dullahan/dullahan = human.dna.species
+		if(dullahan.headless)
+			user_head = dullahan.my_head
+			muffled = istype(user_head.loc, /obj/structure/closet) || istype(user_head.loc, /obj/item/storage/)
+
+	if(muffled)
+		S.environment = 11
+		if(falloff)
+			falloff *= 1.5
+		else
+			falloff = FALLOFF_SOUNDS * 1.5
+		vol *= 0.75
 
 	var/vol2use = vol
 	if(client.prefs)
 		vol2use = vol * (client.prefs.mastervol * 0.01)
+		if(preference)
+			switch(preference)
+				if("digestion_noises")
+					if(!client.prefs.digestion_noises)
+						return
+				if("eating_noises")
+					if(!client.prefs.eating_noises)
+						return
 	vol2use = min(vol2use, 100)
 
 	S.volume = vol2use
 
-	var/area/A = get_area(src)
+	var/area/A = get_area(get_turf(src))
 	if(A)
 		if(A.soundenv != -1)
 			S.environment = A.soundenv
@@ -127,11 +164,13 @@
 		S.frequency = frequency
 
 	if(isturf(turf_source))
-		var/turf/T = get_turf(src)
+		// Check distance to relay instead.
+		var/atom/movable/tocheck = user_head ? user_head : src
+
+		var/turf/T = get_turf(tocheck)
 
 		//sound volume falloff with distance
 		var/distance = get_dist(T, turf_source)
-
 		S.volume -= (distance * (0.10 * S.volume)) //10% each step
 /*
 		if(pressure_affected)
@@ -156,48 +195,46 @@
 
 		if(S.volume <= 0)
 			return FALSE //No sound
-
-		var/dx = turf_source.x - T.x // Hearing from the right/left
-		if(dx <= 1 && dx >= -1) //if we're  close enough we're heard in both ears
+		var/atom/our_turf = get_turf(src)
+		var/dx = turf_source.x - our_turf.x
+		if(dx <= 1 && dx >= -1)
 			S.x = 0
 		else
 			S.x = dx
-		var/dz = turf_source.y - T.y // Hearing from infront/behind
-		if(dz <= 1 && dz >= -1) //if we're  close enough we're heard in both ears
+		var/dz = turf_source.y - our_turf.y
+		if(dz <= 1 && dz >= -1)
 			S.z = 0
 		else
 			S.z = dz
-		var/dy = (turf_source.z - T.z) * 2 // Hearing from  above / below, multiplied by 5 because we assume height is further along coords.
+
+		var/dy = turf_source.z - our_turf.z
 		S.y = dy
 
 		S.falloff = (falloff ? falloff : FALLOFF_SOUNDS)
 
-	if(repeat)
-		if(istype(repeat, /datum/looping_sound))
-			var/datum/looping_sound/D = repeat
-			if(src in D.thingshearing) //we are already hearing this loop
-				if(client.played_loops[D])
-					var/sound/DS = client.played_loops[D]["SOUND"]
-					if(DS)
-						var/volly = client.played_loops[D]["VOL"]
-						if(volly != S.volume)
-							DS.x = S.x
-							DS.y = S.y
-							DS.z = S.z
-							DS.falloff = S.falloff
-							client.played_loops[D]["VOL"] = S.volume
-							update_sound_volume(DS, S.volume)
-							if(client.played_loops[D]["MUTESTATUS"]) //we have sound so turn this off
-								client.played_loops[D]["MUTESTATUS"] = null
-						return TRUE
-			else
-				D.thingshearing += src
+	if(repeat && istype(repeat, /datum/looping_sound))
+		var/datum/looping_sound/D = repeat
+		var/datum/weakref/our_ref = WEAKREF(src)
+		if(our_ref in D.thingshearing) //we are already hearing this loop
+			if(client.played_loops[D])
+				var/sound/DS = client.played_loops[D]["SOUND"]
+				if(DS)
+					var/volly = client.played_loops[D]["VOL"]
+					if(volly != S.volume)
+						DS.x = S.x
+						DS.y = S.y
+						DS.z = S.z
+						DS.falloff = S.falloff
+						client.played_loops[D]["VOL"] = S.volume
+						update_sound_volume(DS, S.volume)
+						if(client.played_loops[D]["MUTESTATUS"]) //we have sound so turn this off
+							client.played_loops[D]["MUTESTATUS"] = null
+		else
+			D.thingshearing += our_ref
 			client.played_loops[D] = list()
 			client.played_loops[D]["SOUND"] = S
 			client.played_loops[D]["VOL"] = S.volume
 			client.played_loops[D]["MUTESTATUS"] = null
-//			if(D.persistent_loop) //shut up music because we're hearing ingame music
-//				play_ambience(get_area(src))
 			S.repeat = 1
 
 	SEND_SOUND(src, S)
@@ -212,14 +249,13 @@
 			var/mob/M = m
 			M.playsound_local(M, null, volume, vary, frequency, falloff, channel, pressure_affected, S)
 
-/proc/open_sound_channel()
-	var/static/next_channel = 1	//loop through the available 1024 - (the ones we reserve) channels and pray that its not still being used
-	. = ++next_channel
-	if(next_channel > CHANNEL_HIGHEST_AVAILABLE)
-		next_channel = 1
-
 /mob/proc/stop_sound_channel(chan)
 	SEND_SOUND(src, sound(null, repeat = 0, wait = 0, channel = chan))
+
+/mob/proc/set_sound_channel_volume(channel, volume)
+	var/sound/S = sound(null, FALSE, FALSE, channel, volume)
+	S.status = SOUND_UPDATE
+	SEND_SOUND(src, S)
 
 /mob/proc/mute_sound_channel(chan)
 	for(var/sound/S in client.SoundQuery())
@@ -318,10 +354,22 @@
 				soundin = pick('sound/foley/cloth_wipe (1).ogg','sound/foley/cloth_wipe (2).ogg','sound/foley/cloth_wipe (3).ogg')
 			if ("glassbreak")
 				soundin = pick('sound/combat/hits/onglass/glassbreak (1).ogg','sound/combat/hits/onglass/glassbreak (2).ogg','sound/combat/hits/onglass/glassbreak (3).ogg')
+			if ("parrywood")
+				soundin = pick('sound/combat/parry/wood/parrywood (1).ogg', 'sound/combat/parry/wood/parrywood (2).ogg', 'sound/combat/parry/wood/parrywood (3).ogg')
 			if ("unarmparry")
 				soundin = pick('sound/combat/parry/pugilism/unarmparry (1).ogg','sound/combat/parry/pugilism/unarmparry (2).ogg','sound/combat/parry/pugilism/unarmparry (3).ogg')
-			if ("bladedmedium")
+			if ("dagger")
+				soundin = pick('sound/combat/parry/bladed/bladedsmall (1).ogg', 'sound/combat/parry/bladed/bladedsmall (2).ogg', 'sound/combat/parry/bladed/bladedsmall (3).ogg')
+			if ("rapier")
+				soundin = pick('sound/combat/parry/bladed/bladedthin (1).ogg', 'sound/combat/parry/bladed/bladedthin (2).ogg', 'sound/combat/parry/bladed/bladedthin (3).ogg')
+			if ("sword")
 				soundin = pick('sound/combat/parry/bladed/bladedmedium (1).ogg', 'sound/combat/parry/bladed/bladedmedium (2).ogg', 'sound/combat/parry/bladed/bladedmedium (3).ogg')
+			if ("largeblade")
+				soundin = pick('sound/combat/parry/bladed/bladedlarge (1).ogg', 'sound/combat/parry/bladed/bladedlarge (2).ogg', 'sound/combat/parry/bladed/bladedlarge (3).ogg')
+			if ("unsheathe_sword")
+				soundin = pick('sound/foley/equip/swordsmall1.ogg', 'sound/foley/equip/swordsmall2.ogg')
+			if ("brandish_blade")
+				soundin = pick('sound/foley/equip/swordlarge1.ogg', 'sound/foley/equip/swordlarge2.ogg')
 			if ("burn")
 				soundin = pick('sound/combat/hits/burn (1).ogg','sound/combat/hits/burn (2).ogg')
 			if ("nodmg")
@@ -369,7 +417,82 @@
 				soundin = pick('sound/combat/wooshes/blunt/wooshlarge (1).ogg','sound/combat/wooshes/blunt/wooshlarge (2).ogg','sound/combat/wooshes/blunt/wooshlarge (3).ogg')
 			if("punchwoosh")
 				soundin = pick('sound/combat/wooshes/punch/punchwoosh (1).ogg','sound/combat/wooshes/punch/punchwoosh (2).ogg','sound/combat/wooshes/punch/punchwoosh (3).ogg')
-			//START OF CIT CHANGES - adds random vore sounds
+			if(SFX_CHAIN_STEP)
+				soundin = pick(
+							'sound/foley/footsteps/armor/chain (1).ogg',
+							'sound/foley/footsteps/armor/chain (2).ogg',
+							'sound/foley/footsteps/armor/chain (3).ogg',
+							)
+			if(SFX_PLATE_STEP)
+				soundin = pick(
+							'sound/foley/footsteps/armor/plate (1).ogg',
+							'sound/foley/footsteps/armor/plate (2).ogg',
+							'sound/foley/footsteps/armor/plate (3).ogg',
+							)
+			if(SFX_PLATE_COAT_STEP)
+				soundin = pick(
+							'sound/foley/footsteps/armor/coatplates (1).ogg',
+							'sound/foley/footsteps/armor/coatplates (2).ogg',
+							'sound/foley/footsteps/armor/coatplates (3).ogg',
+							)
+			if(SFX_JINGLE_BELLS)
+				soundin = pick(
+							'sound/items/jinglebell1.ogg',
+							'sound/items/jinglebell2.ogg',
+							'sound/items/jinglebell3.ogg',
+							'sound/items/jinglebell4.ogg',
+							)
+			if(SFX_WOOD_ARMOR)
+				soundin = pick(
+							'sound/foley/footsteps/armor/woodarmor (1).ogg',
+							'sound/foley/footsteps/armor/woodarmor (2).ogg',
+							'sound/foley/footsteps/armor/woodarmor (3).ogg',
+							)
+	//START OF CIT CHANGES - adds random vore sounds
+			if ("hunger_sounds") soundin = pick('modular_causticcove/sound/cvore/vore/growl1.ogg','modular_causticcove/sound/cvore/vore/growl2.ogg','modular_causticcove/sound/cvore/vore/growl3.ogg','modular_causticcove/sound/cvore/vore/growl4.ogg','modular_causticcove/sound/cvore/vore/growl5.ogg')
+
+			if("classic_digestion_sounds") soundin = pick(
+					'modular_causticcove/sound/cvore/vore/digest1.ogg','modular_causticcove/sound/cvore/vore/digest2.ogg','modular_causticcove/sound/cvore/vore/digest3.ogg','modular_causticcove/sound/cvore/vore/digest4.ogg',
+					'modular_causticcove/sound/cvore/vore/digest5.ogg','modular_causticcove/sound/cvore/vore/digest6.ogg','modular_causticcove/sound/cvore/vore/digest7.ogg','modular_causticcove/sound/cvore/vore/digest8.ogg',
+					'modular_causticcove/sound/cvore/vore/digest9.ogg','modular_causticcove/sound/cvore/vore/digest10.ogg','modular_causticcove/sound/cvore/vore/digest11.ogg','modular_causticcove/sound/cvore/vore/digest12.ogg')
+			if("classic_death_sounds") soundin = pick(
+					'modular_causticcove/sound/cvore/vore/death1.ogg','modular_causticcove/sound/cvore/vore/death2.ogg','modular_causticcove/sound/cvore/vore/death3.ogg','modular_causticcove/sound/cvore/vore/death4.ogg','modular_causticcove/sound/cvore/vore/death5.ogg',
+					'modular_causticcove/sound/cvore/vore/death6.ogg','modular_causticcove/sound/cvore/vore/death7.ogg','modular_causticcove/sound/cvore/vore/death8.ogg','modular_causticcove/sound/cvore/vore/death9.ogg','modular_causticcove/sound/cvore/vore/death10.ogg')
+			if("classic_struggle_sounds") soundin = pick('modular_causticcove/sound/cvore/vore/squish1.ogg','modular_causticcove/sound/cvore/vore/squish2.ogg','modular_causticcove/sound/cvore/vore/squish3.ogg','modular_causticcove/sound/cvore/vore/squish4.ogg')
+
+			if("fancy_prey_struggle") soundin = pick(
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/struggle_01.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/struggle_02.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/struggle_03.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/struggle_04.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/struggle_05.ogg')
+			if("fancy_digest_pred") soundin = pick(
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/digest_01.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_02.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_03.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/digest_04.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_05.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_06.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/digest_07.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_08.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_09.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/digest_10.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_11.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_12.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/digest_13.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_14.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_15.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/digest_16.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_17.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/digest_18.ogg')
+			if("fancy_death_pred") soundin = pick(
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/death_01.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/death_02.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/death_03.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/death_04.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/death_05.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/death_06.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/death_07.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/death_08.ogg','modular_causticcove/sound/cvore/vore/sunesound/pred/death_09.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/pred/death_10.ogg')
+			if("fancy_digest_prey") soundin = pick(
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/digest_01.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_02.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_03.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/digest_04.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_05.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_06.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/digest_07.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_08.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_09.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/digest_10.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_11.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_12.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/digest_13.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_14.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_15.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/digest_16.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_17.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/digest_18.ogg')
+			if("fancy_death_prey") soundin = pick(
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/death_01.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/death_02.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/death_03.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/death_04.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/death_05.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/death_06.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/death_07.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/death_08.ogg','modular_causticcove/sound/cvore/vore/sunesound/prey/death_09.ogg',
+					'modular_causticcove/sound/cvore/vore/sunesound/prey/death_10.ogg')
+			if ("belches") soundin = pick(
+					'modular_causticcove/sound/cvore/vore/belches/belch1.ogg','modular_causticcove/sound/cvore/vore/belches/belch2.ogg','modular_causticcove/sound/cvore/vore/belches/belch3.ogg','modular_causticcove/sound/cvore/vore/belches/belch4.ogg',
+					'modular_causticcove/sound/cvore/vore/belches/belch5.ogg','modular_causticcove/sound/cvore/vore/belches/belch6.ogg','modular_causticcove/sound/cvore/vore/belches/belch7.ogg','modular_causticcove/sound/cvore/vore/belches/belch8.ogg',
+					'modular_causticcove/sound/cvore/vore/belches/belch9.ogg','modular_causticcove/sound/cvore/vore/belches/belch10.ogg','modular_causticcove/sound/cvore/vore/belches/belch11.ogg','modular_causticcove/sound/cvore/vore/belches/belch12.ogg',
+					'modular_causticcove/sound/cvore/vore/belches/belch13.ogg','modular_causticcove/sound/cvore/vore/belches/belch14.ogg','modular_causticcove/sound/cvore/vore/belches/belch15.ogg')
+			/* <-- Classic vore sounds, should be outdated by the new ones
 			if ("struggle_sound")
 				soundin = pick( 'modular_causticcove/sound/vore/pred/struggle_01.ogg','modular_causticcove/sound/vore/pred/struggle_02.ogg','modular_causticcove/sound/vore/pred/struggle_03.ogg',
 								'modular_causticcove/sound/vore/pred/struggle_04.ogg','modular_causticcove/sound/vore/pred/struggle_05.ogg')
@@ -403,5 +526,6 @@
 			if("hunger_sounds")
 				soundin = pick(	'modular_causticcove/sound/vore/growl1.ogg','modular_causticcove/sound/vore/growl2.ogg','modular_causticcove/sound/vore/growl3.ogg','modular_causticcove/sound/vore/growl4.ogg',
 								'modular_causticcove/sound/vore/growl5.ogg')
+			*/
 			//END OF CIT CHANGES
 	return soundin

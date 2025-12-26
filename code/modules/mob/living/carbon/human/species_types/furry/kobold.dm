@@ -5,12 +5,23 @@
 	name = "Kobold"
 	id = "kobold"
 	desc = "<b>Kobold</b><br>\
-	Short in stature and typically scrawny, this little lizards make up for it in their natural agility. People typically stereotype them as thieves, though..."
+	Short in stature and typically scrawny, these little lizards make up for it in their natural agility. People typically stereotype them as thieves, though...<br>\
+	(+1 Fortune)"
 	species_traits = list(EYECOLOR,LIPS,STUBBLE,MUTCOLORS)
+	///Caustic edit
+	allowed_taur_types = list(
+		/obj/item/bodypart/taur/lamia,
+		/obj/item/bodypart/taur/lizard,
+		/obj/item/bodypart/taur/drake,
+		/obj/item/bodypart/taur/altnaga,
+		/obj/item/bodypart/taur/altnagatailmaw,
+		/obj/item/bodypart/taur/fatnaga,
+	)
+	///Caustic edit end
 	possible_ages = ALL_AGES_LIST
-	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | ERT_SPAWN | RACE_SWAP | SLIME_EXTRACT
-	limbs_icon_m = 'icons/mob/species/anthro_small_male.dmi'
-	limbs_icon_f = 'icons/mob/species/anthro_small_female.dmi'
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | RACE_SWAP | SLIME_EXTRACT
+	limbs_icon_m = 'icons/mob/species/anthro_small_malea.dmi'
+	limbs_icon_f = 'icons/mob/species/anthro_small_femalea.dmi'
 	dam_icon = 'icons/roguetown/mob/bodies/dam/dam_male.dmi'
 	dam_icon_f = 'icons/roguetown/mob/bodies/dam/dam_female.dmi'
 	soundpack_m = /datum/voicepack/male/elf
@@ -19,18 +30,21 @@
 	custom_clothes = TRUE
 	clothes_id = "dwarf"
 	offset_features = list(
-		OFFSET_ID = list(0,-4), OFFSET_GLOVES = list(0,-3), OFFSET_WRISTS = list(0,-3),\
+		//Caustic Edit
+		OFFSET_ID = list(0,-5), OFFSET_GLOVES = list(0,-3), OFFSET_WRISTS = list(0,-3),\
 		OFFSET_CLOAK = list(0,0), OFFSET_FACEMASK = list(0,-4), OFFSET_HEAD = list(0,-4), \
 		OFFSET_FACE = list(0,-4), OFFSET_BELT = list(0,-4), OFFSET_BACK = list(0,-3), \
 		OFFSET_NECK = list(0,-4), OFFSET_MOUTH = list(0,-4), OFFSET_PANTS = list(0,0), \
 		OFFSET_SHIRT = list(0,0), OFFSET_ARMOR = list(0,0), OFFSET_HANDS = list(0,-3), \
 		OFFSET_ID_F = list(0,-5), OFFSET_GLOVES_F = list(0,-4), OFFSET_WRISTS_F = list(0,-4), OFFSET_HANDS_F = list(0,-4), \
 		OFFSET_CLOAK_F = list(0,0), OFFSET_FACEMASK_F = list(0,-5), OFFSET_HEAD_F = list(0,-5), \
-		OFFSET_FACE_F = list(0,-5), OFFSET_BELT_F = list(0,-4), OFFSET_BUTT = list(0,-4), OFFSET_BACK_F = list(0,-4), \
+		OFFSET_FACE_F = list(0,-5), OFFSET_BELT_F = list(0,-4), OFFSET_BACK_F = list(0,-4), OFFSET_BUTT = list(0,-4), \
 		OFFSET_NECK_F = list(0,-5), OFFSET_MOUTH_F = list(0,-5), OFFSET_PANTS_F = list(0,0), \
 		OFFSET_SHIRT_F = list(0,0), OFFSET_ARMOR_F = list(0,0), OFFSET_UNDIES = list(0,-4), OFFSET_UNDIES_F = list(0,-4), \
+		OFFSET_TAUR = list(-16,0), OFFSET_TAUR_F = list(-16,0), \
+		//Caustic End
 		)
-	race_bonus = list(STAT_SPEED = 1, STAT_CONSTITUTION = -1)
+	race_bonus = list(STAT_FORTUNE = 1)
 	enflamed_icon = "widefire"
 	attack_verb = "slash"
 	attack_sound = 'sound/blank.ogg'
@@ -45,7 +59,7 @@
 		ORGAN_SLOT_LIVER = /obj/item/organ/liver,
 		ORGAN_SLOT_STOMACH = /obj/item/organ/stomach,
 		ORGAN_SLOT_APPENDIX = /obj/item/organ/appendix,
-		ORGAN_SLOT_TAIL = /obj/item/organ/tail/kobold,
+		//ORGAN_SLOT_TAIL = /obj/item/organ/tail/kobold, //caustic remove the customizer already gives the organ
 		ORGAN_SLOT_SNOUT = /obj/item/organ/snout/lizard,
 		ORGAN_SLOT_FRILLS = /obj/item/organ/frills/lizard,
 		ORGAN_SLOT_HORNS = /obj/item/organ/horns,
@@ -61,21 +75,41 @@
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
 		/datum/customizer/bodypart_feature/underwear,
+		/datum/customizer/bodypart_feature/legwear,
 		/datum/customizer/organ/snout/lizard,
 		/datum/customizer/organ/frills/lizard,
 		/datum/customizer/organ/horns/humanoid,
 		/datum/customizer/organ/testicles/anthro,
 		/datum/customizer/organ/penis/anthro,
 		/datum/customizer/organ/breasts/animal,
-		/datum/customizer/organ/belly/animal,
 		/datum/customizer/organ/vagina/animal,
+		//Caustic edit
+		/datum/customizer/organ/tail/anthro,
+		/datum/customizer/organ/tail_feature/anthro,
+		/datum/customizer/organ/belly/animal,
 		/datum/customizer/organ/butt/animal,
+		//Caustic edit end
 		)
 	body_marking_sets = list(
 		/datum/body_marking_set/none,
 		/datum/body_marking_set/kobold_scale,
 	)
 	body_markings = list(
+		/datum/body_marking/small/plain,
+		/datum/body_marking/small/sock,
+		/datum/body_marking/small/socklonger,
+		/datum/body_marking/small/tips,
+		/datum/body_marking/small/belly,
+		/datum/body_marking/small/bellyslim,
+		/datum/body_marking/small/butt,
+		/datum/body_marking/small/tie,
+		/datum/body_marking/small/tiesmall,
+		/datum/body_marking/small/backspots,
+		/datum/body_marking/small/front,
+		/datum/body_marking/small/spotted,
+		/datum/body_marking/small/nose,
+		/datum/body_marking/small/bangs,
+		/datum/body_marking/small/bun,
 	)
 	languages = list(
 		/datum/language/common,
@@ -84,9 +118,10 @@
 	stress_examine = TRUE
 	stress_desc = span_red("Thieving little kobold...")
 	descriptor_choices = list(
+		/datum/descriptor_choice/trait,
+		/datum/descriptor_choice/stature,
 		/datum/descriptor_choice/height,
 		/datum/descriptor_choice/body,
-		/datum/descriptor_choice/stature,
 		/datum/descriptor_choice/face,
 		/datum/descriptor_choice/face_exp,
 		/datum/descriptor_choice/scales,

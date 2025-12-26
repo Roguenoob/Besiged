@@ -29,16 +29,10 @@
 	var/icon_state = "popcorn"
 
 /datum/language/proc/display_icon(atom/movable/hearer)
-	var/understands = hearer.has_language(src.type)
-	if(flags & LANGUAGE_HIDE_ICON_IF_UNDERSTOOD && understands)
-		return FALSE
-	if(flags & LANGUAGE_HIDE_ICON_IF_NOT_UNDERSTOOD && !understands)
-		return FALSE
 	return TRUE
 
 /datum/language/proc/get_icon()
-	var/datum/asset/spritesheet/sheet = get_asset_datum(/datum/asset/spritesheet/goonchat)
-	return sheet.icon_tag("language-[icon_state]")
+	return "[icon2html(icon, world, icon_state)]"
 
 /datum/language/proc/get_random_name(gender, name_count=2, syllable_count=4, syllable_divisor=2)
 	if(!syllables || !syllables.len)
@@ -75,7 +69,10 @@
 /datum/language/proc/scramble(input)
 
 	if(!syllables || !syllables.len)
-		return stars(input)
+		if(!signlang_verb || !signlang_verb.len)
+			return stars(input)
+		else
+			return "*[pick(signlang_verb)]"
 
 	// If the input is cached already, move it to the end of the cache and return it
 	var/lookup = check_cache(input)

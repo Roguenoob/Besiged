@@ -5,7 +5,7 @@
 	relevant_layers = list(BODY_ADJ_LAYER)
 
 /datum/sprite_accessory/snout/is_visible(obj/item/organ/organ, obj/item/bodypart/bodypart, mob/living/carbon/owner)
-	return is_human_part_visible(owner, HIDEFACE)
+	return is_human_part_visible(owner, HIDESNOUT)
 
 /datum/sprite_accessory/snout/adjust_appearance_list(list/appearance_list, obj/item/organ/organ, obj/item/bodypart/bodypart, mob/living/carbon/owner)
 	generic_gender_feature_adjust(appearance_list, organ, bodypart, owner, OFFSET_FACE, OFFSET_FACE_F)
@@ -18,17 +18,41 @@
 	name = "Sharp"
 	icon_state = "sharp"
 
+/datum/sprite_accessory/snout/sharpdualcolor
+	name = "Sharp - Dual Color"
+	icon_state = "m_snout_sharp"
+	color_keys = 2
+	color_key_names = list("Snout", "Jaw")
+
 /datum/sprite_accessory/snout/round
 	name = "Round"
 	icon_state = "round"
+
+/datum/sprite_accessory/snout/rounddualcolor
+	name = "Round - Dual Color"
+	icon_state = "m_snout_round"
+	color_keys = 2
+	color_key_names = list("Snout", "Jaw")
 
 /datum/sprite_accessory/snout/sharplight
 	name = "Sharp + Light"
 	icon_state = "sharplight"
 
+/datum/sprite_accessory/snout/sharplightdualcolor
+	name = "Sharp + Light - Dual Color"
+	icon_state = "m_snout_sharplight"
+	color_keys = 2
+	color_key_names = list("Snout", "Jaw")
+
 /datum/sprite_accessory/snout/roundlight
 	name = "Round + Light"
 	icon_state = "roundlight"
+
+/datum/sprite_accessory/snout/roundlightdualcolor
+	name = "Round + Light - Dual Color"
+	icon_state = "m_snout_roundlight"
+	color_keys = 2
+	color_key_names = list("Snout", "Jaw")
 
 /datum/sprite_accessory/snout/vulp
 	name = "Vulp Two-shade"
@@ -455,10 +479,14 @@
 	color_keys = 2
 	color_key_names = list("Snout", "Nose")
 
-/datum/sprite_accessory/snout/cownose
-	name = "Cow Nose"
-	icon_state = "cownose"
+/datum/sprite_accessory/snout/stubby
+	name = "Stubby"
+	icon_state = "stubby"
+	color_keys = 2
+	color_key_names = list("Mask", "Snout")
 
-/datum/sprite_accessory/snout/front/cownose
-	name = "Cow Nose(Top)"
-	icon_state = "cownose"
+/datum/sprite_accessory/snout/stubbyalt
+	name = "Stubby ALT"
+	icon_state = "stubbyalt"
+	color_keys = 2
+	color_key_names = list("Snout", "Nose")

@@ -2,11 +2,38 @@
 	name = "Hedge Knight"
 	tutorial = "A noble fallen from grace, your tarnished armor sits upon your shoulders as a heavy reminder of the life you've lost. Take back what is rightfully yours."
 	allowed_sexes = list(MALE, FEMALE)
-	allowed_races = RACES_ALL_KINDS
+	allowed_races = RACES_ALL_KINDS //Caustic edit from RACES_NO_CONSTRUCT
 	outfit = /datum/outfit/job/roguetown/bandit/hedgeknight
 	category_tags = list(CTAG_BANDIT)
-	maximum_possible_slots = 2 //Too many plate armoured fellas is scawy ...
-	cmode_music = 'sound/music/combat_bandit.ogg'
+	//Caustic edit
+	maximum_possible_slots = 1 //The right hand man of the Iconoclast
+	//Caustic edit end
+	cmode_music = 'sound/music/cmode/antag/combat_thewall.ogg' // big chungus gets the wall too
+	traits_applied = list(TRAIT_MEDIUMARMOR, TRAIT_HEAVYARMOR, TRAIT_NOBLE)
+	subclass_stats = list(
+		//Caustic edit
+		STATKEY_CON = 3, //dark souls 3 dual greatshield moment
+		STATKEY_STR = 2,
+		STATKEY_WIL = 2,
+		STATKEY_LCK = 1,
+		STATKEY_SPD = -1
+		//Caustic edit end
+	)
+	subclass_skills = list(
+		/datum/skill/combat/polearms = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/combat/swords = SKILL_LEVEL_MASTER,
+		/datum/skill/combat/shields = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/combat/maces = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/combat/wrestling = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/combat/unarmed = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/misc/athletics = SKILL_LEVEL_EXPERT,
+		/datum/skill/misc/swimming = SKILL_LEVEL_APPRENTICE,
+		/datum/skill/misc/climbing = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/misc/reading = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/misc/riding = SKILL_LEVEL_EXPERT,
+		/datum/skill/craft/cooking = SKILL_LEVEL_NOVICE,
+		/datum/skill/labor/butchering = SKILL_LEVEL_NOVICE,
+	)
 
 /datum/outfit/job/roguetown/bandit/hedgeknight/pre_equip(mob/living/carbon/human/H)
 	..()
@@ -21,29 +48,18 @@
 	shoes = /obj/item/clothing/shoes/roguetown/boots/armor/blkknight
 	belt = /obj/item/storage/belt/rogue/leather
 	beltr = /obj/item/rogueweapon/sword/long/death // ow the edge. it's just spraypainted. no weapon choice you MUST use a sword
+	beltl = /obj/item/rogueweapon/scabbard/sword
 	backr = /obj/item/storage/backpack/rogue/satchel/black
 	backl = /obj/item/rogueweapon/shield/tower/metal
 	id = /obj/item/mattcoin
-	backpack_contents = list(/obj/item/rogueweapon/huntingknife/idagger = 1)
-	H.mind.adjust_skillrank(/datum/skill/combat/polearms, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/combat/swords, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/combat/shields, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/combat/maces, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/combat/wrestling, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/combat/unarmed, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/athletics, 4, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/swimming, 1, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/climbing, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/reading, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/riding, 4, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/craft/cooking, 1, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/labor/butchering, 1, TRUE)
-	H.change_stat("strength", 2)
-	H.change_stat("endurance", 2)
-	H.change_stat("constitution", 3) //dark souls 3 dual greatshield moment
-	H.change_stat("intelligence", 1)
-	H.change_stat("speed", 1)
-	H.change_stat("fortune", 2)
-	ADD_TRAIT(H, TRAIT_MEDIUMARMOR, TRAIT_GENERIC)
-	ADD_TRAIT(H, TRAIT_HEAVYARMOR, TRAIT_GENERIC)
-	ADD_TRAIT(H, TRAIT_NOBLE, TRAIT_GENERIC) //hey buddy you hear about roleplaying
+	backpack_contents = list(
+					/obj/item/rogueweapon/huntingknife/idagger = 1,
+					/obj/item/flashlight/flare/torch = 1,
+					/obj/item/rogueweapon/scabbard/sheath = 1
+					)
+
+	if(!istype(H.patron, /datum/patron/inhumen/matthios))
+		var/inputty = input(H, "Would you like to change your patron to Matthios?", "The Transactor calls", "No") as anything in list("Yes", "No")
+		if(inputty == "Yes")
+			to_chat(H, span_warning("My former deity has abandoned me.. Matthios is my new master."))
+			H.set_patron(/datum/patron/inhumen/matthios)

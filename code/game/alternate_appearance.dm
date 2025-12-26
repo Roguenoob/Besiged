@@ -106,19 +106,6 @@ GLOBAL_LIST_EMPTY(active_alternate_appearances)
 /datum/atom_hud/alternate_appearance/basic/everyone/mobShouldSee(mob/M)
 	return !isobserver(M)
 
-/datum/atom_hud/alternate_appearance/basic/silicons
-
-/datum/atom_hud/alternate_appearance/basic/silicons/New()
-	..()
-	for(var/mob in GLOB.silicon_mobs)
-		if(mobShouldSee(mob))
-			add_hud_to(mob)
-
-/datum/atom_hud/alternate_appearance/basic/silicons/mobShouldSee(mob/M)
-	if(issilicon(M))
-		return TRUE
-	return FALSE
-
 /datum/atom_hud/alternate_appearance/basic/observers
 	add_ghost_version = FALSE //just in case, to prevent infinite loops
 
@@ -131,32 +118,6 @@ GLOBAL_LIST_EMPTY(active_alternate_appearances)
 /datum/atom_hud/alternate_appearance/basic/observers/mobShouldSee(mob/M)
 	return isobserver(M)
 
-/datum/atom_hud/alternate_appearance/basic/noncult
-
-/datum/atom_hud/alternate_appearance/basic/noncult/New()
-	..()
-	for(var/mob in GLOB.player_list)
-		if(mobShouldSee(mob))
-			add_hud_to(mob)
-
-/datum/atom_hud/alternate_appearance/basic/noncult/mobShouldSee(mob/M)
-	if(!iscultist(M))
-		return TRUE
-	return FALSE
-
-/datum/atom_hud/alternate_appearance/basic/cult
-
-/datum/atom_hud/alternate_appearance/basic/cult/New()
-	..()
-	for(var/mob in GLOB.player_list)
-		if(mobShouldSee(mob))
-			add_hud_to(mob)
-
-/datum/atom_hud/alternate_appearance/basic/cult/mobShouldSee(mob/M)
-	if(iscultist(M))
-		return TRUE
-	return FALSE
-
 /datum/atom_hud/alternate_appearance/basic/blessedAware
 
 /datum/atom_hud/alternate_appearance/basic/blessedAware/New()
@@ -167,10 +128,6 @@ GLOBAL_LIST_EMPTY(active_alternate_appearances)
 
 /datum/atom_hud/alternate_appearance/basic/blessedAware/mobShouldSee(mob/M)
 	if(M.mind && (M.mind.assigned_role == "Chaplain"))
-		return TRUE
-	if (istype(M, /mob/living/simple_animal/hostile/construct/wraith))
-		return TRUE
-	if(isrevenant(M) || iswizard(M))
 		return TRUE
 	return FALSE
 
@@ -186,3 +143,25 @@ GLOBAL_LIST_EMPTY(active_alternate_appearances)
 	..(key, I, FALSE)
 	seer = M
 	add_hud_to(seer)
+
+
+/datum/atom_hud/alternate_appearance/basic/People
+	var/mob/seers // Can be a list or an atom
+
+/datum/atom_hud/alternate_appearance/basic/People/mobShouldSee(mob/M)
+	if(islist(seers))
+		if(M in seers)
+			return TRUE
+	else
+		if(M == seers)
+			return TRUE
+	return FALSE
+
+/datum/atom_hud/alternate_appearance/basic/People/New(key, image/I, mob/seers_to_add)
+	..(key, I, FALSE)
+	seers = seers_to_add
+	if(islist(seers))
+		for(var/mob/seer in seers)
+			add_hud_to(seer)
+	else if(isatom(seers))
+		add_hud_to(seers)

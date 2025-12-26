@@ -14,6 +14,7 @@
 	implements = list(
 		TOOL_SUTURE = 80,
 		TOOL_HEMOSTAT = 60,
+		TOOL_IMPROVISED_HEMOSTAT = 50,
 		TOOL_SCREWDRIVER = 50,
 	)
 	target_mobtypes = list(/mob/living/carbon/human, /mob/living/carbon/monkey)
@@ -21,7 +22,8 @@
 	requires_tech = TRUE
 	replaced_by = /datum/surgery_step
 	repeating = TRUE
-	surgery_flags = SURGERY_BLOODY | SURGERY_INCISED | SURGERY_CLAMPED
+	repeatingonfail = TRUE
+	surgery_flags = SURGERY_BLOODY | SURGERY_CLAMPED
 	skill_min = SKILL_LEVEL_APPRENTICE
 	skill_median = SKILL_LEVEL_APPRENTICE
 	success_sound = 'sound/surgery/retractor2.ogg'
@@ -65,7 +67,7 @@
 	var/umsg = "You succeed in fixing some of [target]'s wounds" //no period, add initial space to "addons"
 	var/tmsg = "[user] fixes some of [target]'s wounds" //see above
 	var/healing_multiplier = 1
-	switch(user.mind.get_skill_level(skill_used))
+	switch(user.get_skill_level(skill_used))
 		if(SKILL_LEVEL_JOURNEYMAN)
 			healing_multiplier = 1.2
 		if(SKILL_LEVEL_EXPERT)
@@ -89,6 +91,7 @@
 	display_results(user, target, span_notice("[umsg]."),
 		"[tmsg].",
 		"[tmsg].")
+	target.update_damage_hud()
 	return TRUE
 
 /datum/surgery_step/heal/failure(mob/user, mob/living/target, target_zone, obj/item/tool, datum/intent/intent, success_prob)
@@ -102,27 +105,28 @@
 		urdamageamt_burn += round((target.getFireLoss()/(missinghpbonus*2)),0.1)
 
 	target.take_bodypart_damage(urdamageamt_brute, urdamageamt_burn)
+	target.update_damage_hud()
 	return TRUE
 
 /********************BRUTE STEPS********************/
 /datum/surgery_step/heal/brute/basic
 	name = "Tend bruises"
 	brutehealing = 10
-	missinghpbonus = 7.5
+	missinghpbonus = 6
 	requires_tech = FALSE
 	replaced_by = /datum/surgery_step/heal/brute/upgraded
 
 /datum/surgery_step/heal/brute/upgraded
 	name = "Tend bruises (Adv.)"
-	brutehealing = 10
-	missinghpbonus = 5
+	brutehealing = 20
+	missinghpbonus = 4
 	requires_tech = TRUE
 	replaced_by = /datum/surgery_step/heal/brute/upgraded/femto
 
 /datum/surgery_step/heal/brute/upgraded/femto
 	name = "Tend bruises (Exp.)"
-	brutehealing = 10
-	missinghpbonus = 2.5
+	brutehealing = 30
+	missinghpbonus = 2
 	requires_tech = TRUE
 	replaced_by = null
 

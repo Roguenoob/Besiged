@@ -51,7 +51,6 @@
 	var/static_light = 0
 	var/static_environ
 
-	var/has_gravity = 0
 	///Are you forbidden from teleporting to the area? (centcom, mobs, wizard, hand teleporter)
 	var/noteleport = FALSE
 	///Hides area from player Teleport function.
@@ -68,11 +67,6 @@
 	var/list/ambientsounds = GENERIC
 	var/list/ambientrain = null
 	var/list/ambientnight = null
-	var/list/ambientdrone = list('sound/blank.ogg') //Just in case we really don't have something.
-	var/list/ambientdroneday = null
-	var/list/ambientdronenight = null
-	var/list/ambientdronedusk = null
-	var/list/ambientdronedawn = null
 
 	var/min_ambience_cooldown = 70 SECONDS
 	var/max_ambience_cooldown = 120 SECONDS
@@ -81,7 +75,6 @@
 	var/we_looping_here = TRUE
 
 	var/droning_sound_current = null
-	var/ambient_droning_sound_current = null
 	var/droning_sound_dawn = null
 	var/droning_sound = null
 	var/droning_sound_dusk = null
@@ -91,7 +84,6 @@
 	var/droning_wait = 0
 	var/droning_volume = 100
 	var/droning_channel = CHANNEL_BUZZ
-	var/ambient_channel = CHANNEL_DRONING_AMBIENCE
 	var/droning_frequency = 0
 
 	var/list/spookysounds = null
@@ -100,7 +92,10 @@
 	flags_1 = CAN_BE_DIRTY_1 | CULT_PERMITTED_1
 	var/soundenv = 0
 
+	/// The text displayed on top of the screen the first time a player enter an area in a round
 	var/first_time_text = null
+	/// Detail text. When a player enter an area, a small message appears in chat with a href. see area_detail_txt.dm for style guidee
+	var/detail_text = null
 
 	var/list/firedoors
 	var/list/cameras
@@ -111,11 +106,16 @@
 	/// typecache to limit the areas that atoms in this area can smooth with, used for shuttles IIRC
 	var/list/canSmoothWithAreas
 
-	var/list/ambush_types
 	var/list/ambush_mobs
 	var/list/ambush_times
 
 	var/converted_type
+
+	var/threat_region = "" // Key used to look up threat region this area belongs to
+	/// Message used for deathsight. Try to be deliberately obtuse but not too obtuse.
+	var/deathsight_message = "a locale wreathed in enigmatic fog"
+
+	var/coven_protected = FALSE
 
 
 /**
@@ -138,7 +138,7 @@ GLOBAL_LIST_EMPTY(teleportlocs)
 /proc/process_teleport_locs()
 	for(var/V in GLOB.sortedAreas)
 		var/area/AR = V
-		if(istype(AR, /area/shuttle) || AR.noteleport)
+		if(AR.noteleport)
 			continue
 		if(GLOB.teleportlocs[AR.name])
 			continue
@@ -160,6 +160,7 @@ GLOBAL_LIST_EMPTY(teleportlocs)
 	// rather than waiting for atoms to initialize.
 	if (unique)
 		GLOB.areas_by_type[type] = src
+	GLOB.areas += src
 	return ..()
 
 /area/proc/can_craft_here()
@@ -213,7 +214,6 @@ GLOBAL_LIST_EMPTY(teleportlocs)
   * Sets machine power levels in the area
   */
 /area/LateInitialize()
-	power_change()		// all machines set to current power level, also updates icon
 	update_beauty()
 
 /**
@@ -254,238 +254,9 @@ GLOBAL_LIST_EMPTY(teleportlocs)
 /area/Destroy()
 	if(GLOB.areas_by_type[type] == src)
 		GLOB.areas_by_type[type] = null
+	GLOB.areas -= src
 	STOP_PROCESSING(SSobj, src)
 	return ..()
-
-/**
-  * Generate a power alert for this area
-  *
-  * Sends to all ai players, alert consoles, drones and alarm monitor programs in the world
-  */
-/area/proc/poweralert(state, obj/source)
-	if (state != poweralm)
-		poweralm = state
-		if(istype(source))	//Only report power alarms on the z-level where the source is located.
-			for (var/item in GLOB.silicon_mobs)
-				var/mob/living/silicon/aiPlayer = item
-				if (state == 1)
-					aiPlayer.cancelAlarm("Power", src, source)
-				else
-					aiPlayer.triggerAlarm("Power", src, cameras, source)
-
-			for (var/item in GLOB.alert_consoles)
-				var/obj/machinery/computer/station_alert/a = item
-				if(state == 1)
-					a.cancelAlarm("Power", src, source)
-				else
-					a.triggerAlarm("Power", src, cameras, source)
-
-			for (var/item in GLOB.drones_list)
-				var/mob/living/simple_animal/drone/D = item
-				if(state == 1)
-					D.cancelAlarm("Power", src, source)
-				else
-					D.triggerAlarm("Power", src, cameras, source)
-			for(var/item in GLOB.alarmdisplay)
-				var/datum/computer_file/program/alarm_monitor/p = item
-				if(state == 1)
-					p.cancelAlarm("Power", src, source)
-				else
-					p.triggerAlarm("Power", src, cameras, source)
-
-/**
-  * Generate an atmospheric alert for this area
-  *
-  * Sends to all ai players, alert consoles, drones and alarm monitor programs in the world
-  */
-/area/proc/atmosalert(danger_level, obj/source)
-	if(danger_level != atmosalm)
-		if (danger_level==2)
-
-			for (var/item in GLOB.silicon_mobs)
-				var/mob/living/silicon/aiPlayer = item
-				aiPlayer.triggerAlarm("Atmosphere", src, cameras, source)
-			for (var/item in GLOB.alert_consoles)
-				var/obj/machinery/computer/station_alert/a = item
-				a.triggerAlarm("Atmosphere", src, cameras, source)
-			for (var/item in GLOB.drones_list)
-				var/mob/living/simple_animal/drone/D = item
-				D.triggerAlarm("Atmosphere", src, cameras, source)
-			for(var/item in GLOB.alarmdisplay)
-				var/datum/computer_file/program/alarm_monitor/p = item
-				p.triggerAlarm("Atmosphere", src, cameras, source)
-
-		else if (src.atmosalm == 2)
-			for (var/item in GLOB.silicon_mobs)
-				var/mob/living/silicon/aiPlayer = item
-				aiPlayer.cancelAlarm("Atmosphere", src, source)
-			for (var/item in GLOB.alert_consoles)
-				var/obj/machinery/computer/station_alert/a = item
-				a.cancelAlarm("Atmosphere", src, source)
-			for (var/item in GLOB.drones_list)
-				var/mob/living/simple_animal/drone/D = item
-				D.cancelAlarm("Atmosphere", src, source)
-			for(var/item in GLOB.alarmdisplay)
-				var/datum/computer_file/program/alarm_monitor/p = item
-				p.cancelAlarm("Atmosphere", src, source)
-
-		src.atmosalm = danger_level
-		return 1
-	return 0
-
-/**
-  * Try to close all the firedoors in the area
-  */
-/area/proc/ModifyFiredoors(opening)
-	if(firedoors)
-		firedoors_last_closed_on = world.time
-		for(var/FD in firedoors)
-			var/obj/machinery/door/firedoor/D = FD
-			var/cont = !D.welded
-			if(cont && opening)	//don't open if adjacent area is on fire
-				for(var/I in D.affecting_areas)
-					var/area/A = I
-					if(A.fire)
-						cont = FALSE
-						break
-			if(cont && D.is_operational())
-				if(D.operating)
-					D.nextstate = opening ? FIREDOOR_OPEN : FIREDOOR_CLOSED
-				else if(!(D.density ^ opening))
-					INVOKE_ASYNC(D, (opening ? TYPE_PROC_REF(/obj/machinery/door/firedoor, open) : TYPE_PROC_REF(/obj/machinery/door/firedoor, close)))
-
-/**
-  * Generate an firealarm alert for this area
-  *
-  * Sends to all ai players, alert consoles, drones and alarm monitor programs in the world
-  *
-  * Also starts the area processing on SSobj
-  */
-/area/proc/firealert(obj/source)
-	if(always_unpowered == 1) //no fire alarms in space/asteroid
-		return
-
-	if (!fire)
-		set_fire_alarm_effect()
-		ModifyFiredoors(FALSE)
-		for(var/item in firealarms)
-			var/obj/machinery/firealarm/F = item
-			F.update_icon()
-
-	for (var/item in GLOB.alert_consoles)
-		var/obj/machinery/computer/station_alert/a = item
-		a.triggerAlarm("Fire", src, cameras, source)
-	for (var/item in GLOB.silicon_mobs)
-		var/mob/living/silicon/aiPlayer = item
-		aiPlayer.triggerAlarm("Fire", src, cameras, source)
-	for (var/item in GLOB.drones_list)
-		var/mob/living/simple_animal/drone/D = item
-		D.triggerAlarm("Fire", src, cameras, source)
-	for(var/item in GLOB.alarmdisplay)
-		var/datum/computer_file/program/alarm_monitor/p = item
-		p.triggerAlarm("Fire", src, cameras, source)
-
-	START_PROCESSING(SSobj, src)
-
-/**
-  * Reset the firealarm alert for this area
-  *
-  * resets the alert sent to all ai players, alert consoles, drones and alarm monitor programs
-  * in the world
-  *
-  * Also cycles the icons of all firealarms and deregisters the area from processing on SSOBJ
-  */
-/area/proc/firereset(obj/source)
-	if (fire)
-		unset_fire_alarm_effects()
-		ModifyFiredoors(TRUE)
-		for(var/item in firealarms)
-			var/obj/machinery/firealarm/F = item
-			F.update_icon()
-
-	for (var/item in GLOB.silicon_mobs)
-		var/mob/living/silicon/aiPlayer = item
-		aiPlayer.cancelAlarm("Fire", src, source)
-	for (var/item in GLOB.alert_consoles)
-		var/obj/machinery/computer/station_alert/a = item
-		a.cancelAlarm("Fire", src, source)
-	for (var/item in GLOB.drones_list)
-		var/mob/living/simple_animal/drone/D = item
-		D.cancelAlarm("Fire", src, source)
-	for(var/item in GLOB.alarmdisplay)
-		var/datum/computer_file/program/alarm_monitor/p = item
-		p.cancelAlarm("Fire", src, source)
-
-	STOP_PROCESSING(SSobj, src)
-
-/**
-  * If 100 ticks has elapsed, toggle all the firedoors closed again
-  */
-/area/process()
-	if(firedoors_last_closed_on + 100 < world.time)	//every 10 seconds
-		ModifyFiredoors(FALSE)
-
-/**
-  * Close and lock a door passed into this proc
-  *
-  * Does this need to exist on area? probably not
-  */
-/area/proc/close_and_lock_door(obj/machinery/door/DOOR)
-	set waitfor = FALSE
-	DOOR.close()
-	if(DOOR.density)
-		DOOR.lock()
-
-/**
-  * Raise a burglar alert for this area
-  *
-  * Close and locks all doors in the area and alerts silicon mobs of a break in
-  *
-  * Alarm auto resets after 600 ticks
-  */
-/area/proc/burglaralert(obj/trigger)
-	if(always_unpowered) //no burglar alarms in space/asteroid
-		return
-
-	//Trigger alarm effect
-	set_fire_alarm_effect()
-	//Lockdown airlocks
-	for(var/obj/machinery/door/DOOR in src)
-		close_and_lock_door(DOOR)
-
-	for (var/i in GLOB.silicon_mobs)
-		var/mob/living/silicon/SILICON = i
-		if(SILICON.triggerAlarm("Burglar", src, cameras, trigger))
-			//Cancel silicon alert after 1 minute
-			addtimer(CALLBACK(SILICON, TYPE_PROC_REF(/mob/living/silicon, cancelAlarm),"Burglar",src,trigger), 600)
-
-/**
-  * Trigger the fire alarm visual affects in an area
-  *
-  * Updates the fire light on fire alarms in the area and sets all lights to emergency mode
-  */
-/area/proc/set_fire_alarm_effect()
-	fire = TRUE
-	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	for(var/alarm in firealarms)
-		var/obj/machinery/firealarm/F = alarm
-		F.update_fire_light(fire)
-	for(var/obj/machinery/light/L in src)
-		L.update()
-
-/**
-  * unset the fire alarm visual affects in an area
-  *
-  * Updates the fire light on fire alarms in the area and sets all lights to emergency mode
-  */
-/area/proc/unset_fire_alarm_effects()
-	fire = FALSE
-	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	for(var/alarm in firealarms)
-		var/obj/machinery/firealarm/F = alarm
-		F.update_fire_light(fire)
-	for(var/obj/machinery/light/L in src)
-		L.update()
 
 /**
   * Update the icon state of the area
@@ -538,16 +309,6 @@ GLOBAL_LIST_EMPTY(teleportlocs)
   */
 /area/space/powered(chan) //Nope.avi
 	return 0
-
-/**
-  * Called when the area power status changes
-  *
-  * Updates the area icon and calls power change on all machinees in the area
-  */
-/area/proc/power_change()
-	for(var/obj/machinery/M in src)	// for each machine in the area
-		M.power_change()				// reverify power status (to update icons etc.)
-	update_icon()
 
 /**
   * Return the usage of power per channel
@@ -643,7 +404,6 @@ GLOBAL_LIST_EMPTY(teleportlocs)
 		//Ambience if combat mode is off
 		SSdroning.area_entered(src, living_arrived.client)
 		SSdroning.play_loop(src, living_arrived.client)
-		SSdroning.play_ambient_loop(src, living_arrived.client)
 		var/found = FALSE
 		for(var/datum/weather/rain/R in SSweather.curweathers)
 			found = TRUE
@@ -658,9 +418,13 @@ GLOBAL_LIST_EMPTY(teleportlocs)
 /mob/living/proc/intro_area(area/A)
 	if(!mind)
 		return
-	if(A.first_time_text in mind.areas_entered)
-		return
 	if(!client)
+		return
+	if(A.first_time_text && A.detail_text)
+		to_chat(client, span_info("You enter <a href='?src=[REF(A)];getdescription=1'>[A.name]</a>."))
+	else if (A.first_time_text) // Avoid trivial introduction
+		to_chat(client, span_info("You enter [A.name]."))
+	if(A.first_time_text in mind.areas_entered)
 		return
 	mind.areas_entered += A.first_time_text
 	var/atom/movable/screen/area_text/T = new()
@@ -780,7 +544,6 @@ GLOBAL_LIST_EMPTY(teleportlocs)
 		SSdroning.area_entered(src, boarder.client)
 		boarder.client.update_ambience_pref()
 		SSdroning.play_loop(src, boarder.client)
-		SSdroning.play_ambient_loop(src, boarder.client)
 		var/found = FALSE
 		for(var/datum/weather/rain/R in SSweather.curweathers)
 			found = TRUE
@@ -792,9 +555,14 @@ GLOBAL_LIST_EMPTY(teleportlocs)
 	if(istype(boarder) && boarder.client)
 		SSdroning.area_entered(src, boarder.client)
 		SSdroning.play_loop(src, boarder.client)
-		SSdroning.play_ambient_loop(src, boarder.client)
 		var/found = FALSE
 		for(var/datum/weather/rain/R in SSweather.curweathers)
 			found = TRUE
 		if(found)
 			SSdroning.play_rain(get_area(boarder.client), boarder.client)
+
+/area/Topic(href, href_list)
+	..()
+	if(href_list["getdescription"])
+		if(detail_text)
+			to_chat(usr, span_info("[detail_text]"))

@@ -78,9 +78,8 @@
 		if(ishuman(B.owner))
 			var/mob/living/carbon/human/H = B.owner
 			reagents.trans_to(H, (reagents.total_volume * 0.3), 1, 0)
-		else if(iscyborg(B.owner))
-			var/mob/living/silicon/robot/R = B.owner
-			R.cell.charge += 150
+		else
+			return
 
 	. = ..()
 

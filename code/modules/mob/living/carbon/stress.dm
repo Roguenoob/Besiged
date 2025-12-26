@@ -1,3 +1,6 @@
+//Cove edit
+//GLOBAL_LIST_INIT(stress_messages, world.file2list("strings/rt/stress_messages.txt"))
+
 /mob/proc/add_stress(event_type)
 	return
 
@@ -60,14 +63,25 @@
 		remove_stress(event_type)
 
 /mob/living/carbon/update_stress()
-	// Handle expiration
+	// Handle expiration and accumulate our new stress status in the same operation
+	if (!client) // no reason to fire stress at all on npcs
+		return
+	if (stat != CONSCIOUS) // oblivion preserves our stress, for better or worse. (read: life optimizations weewoo)
+		return
+	var/new_stress = 0
 	for(var/stressor_type in stressors)
 		var/datum/stressevent/event = stressors[stressor_type]
+		var/stress_amt = event.get_stress(src)
 		if(event.time_added + event.timer > world.time)
+			new_stress += stress_amt
 			continue
 		remove_stress(stressor_type)
-	// Update stress status and prompts
-	var/new_stress = get_stress_amount()
+
+	// move bleeding stress handling here
+	if (bleed_rate)
+		add_stress(/datum/stressevent/bleeding)
+	else
+		remove_stress(/datum/stressevent/bleeding)
 
 	var/ascending = (new_stress > oldstress)
 
@@ -76,8 +90,14 @@
 		if(diff_abs > 1)
 			if(ascending)
 				to_chat(src, span_smallred("I gain stress."))
+				if(diff_abs > 2)
+					if(!rogue_sneaking || alpha >= 100)
+						play_stress_indicator()
 			else
 				to_chat(src, span_smallgreen("I gain peace."))
+				if(diff_abs > 2)
+					if(!rogue_sneaking || alpha >= 100)
+						play_relief_indicator()
 
 	var/old_threshold = get_stress_threshold(oldstress)
 	var/new_threshold = get_stress_threshold(new_stress)
@@ -89,33 +109,45 @@
 				apply_status_effect(/datum/status_effect/mood/vgood)
 			if(STRESS_THRESHOLD_GOOD)
 				if(ascending)
-					to_chat(src, span_info("I no longer feel as good"))
+					to_chat(src, span_info("I no longer feel as good."))
 				else
-					to_chat(src, span_green("I feel good"))
+					to_chat(src, span_green("I feel good."))
 				apply_status_effect(/datum/status_effect/mood/good)
 			if(STRESS_THRESHOLD_NEUTRAL)
 				if(ascending)
-					to_chat(src, span_info("I no longer feel good"))
+					to_chat(src, span_info("I no longer feel good."))
 				else
-					to_chat(src, span_info("I no longer feel stressed"))
+					to_chat(src, span_info("I no longer feel stressed."))
 			if(STRESS_THRESHOLD_STRESSED)
 				if(ascending)
 					to_chat(src, span_red("I'm getting stressed..."))
 				else
-					to_chat(src, span_red("I'm stressed a little less, now"))
+					to_chat(src, span_red("I'm stressed a little less, now."))
 				apply_status_effect(/datum/status_effect/mood/bad)
 			if(STRESS_THRESHOLD_STRESSED_BAD)
-				if(ascending)
-					to_chat(src, span_boldred("I'm getting at my limit.."))
-				else
-					to_chat(src, span_boldred("I'm not freaking out that badly anymore..."))
-				apply_status_effect(/datum/status_effect/mood/vbad)
+				if(!HAS_TRAIT(src, TRAIT_EORAN_CALM) && !HAS_TRAIT(src, TRAIT_EORAN_SERENE))
+					if(ascending)
+						to_chat(src, span_boldred("I'm getting at my limit..."))
+					else
+						to_chat(src, span_boldred("I'm not freaking out that badly anymore."))
+					apply_status_effect(/datum/status_effect/mood/vbad)
 			if(STRESS_THRESHOLD_FREAKING_OUT)
 				to_chat(src, span_boldred("I'M FREAKING OUT!!!"))
+				play_mental_break_indicator()
 				apply_status_effect(/datum/status_effect/mood/vbad)
+	//Caustic edit
+	/*
+	if(new_stress >=13)
+
+		if(!HAS_TRAIT(src, TRAIT_EORAN_CALM) && !HAS_TRAIT(src, TRAIT_EORAN_SERENE))
+			random_stress_message()
 
 	if(new_stress >= 20)
-		roll_streak_freakout()
+		if(!HAS_TRAIT(src, TRAIT_EORAN_CALM) && !HAS_TRAIT(src, TRAIT_EORAN_SERENE))
+			roll_streak_freakout()
+	*/
+	//Caustic edit end
+
 
 	oldstress = new_stress
 	update_stress_visual(new_stress)
@@ -124,8 +156,8 @@
 	if(!client)
 		return
 	/// Update grain alpha
-	var/atom/movable/screen/grain_obj = hud_used.grain
-	grain_obj.alpha = 55 + (new_stress * 1.5)
+	//var/atom/movable/screen/grain_obj = hud_used.grain
+	//grain_obj.alpha = 55 + (new_stress * 1.5)
 
 	var/fade_progress = 0
 	if(new_stress < 5)
@@ -161,7 +193,8 @@
 
 	update_client_colour()
 
-/mob/living/carbon/proc/roll_streak_freakout()
+//Cove edit
+/*/mob/living/carbon/proc/roll_streak_freakout()
 	if(stat != CONSCIOUS)
 		return
 	if(mob_timers["next_stress_freakout"])
@@ -171,7 +204,7 @@
 		return
 	// Randomized cooldown
 	mob_timers["next_stress_freakout"] = world.time + rand(60 SECONDS, 120 SECONDS)
-	stress_freakout()
+	stress_freakout()*/
 
 /mob/living/carbon/proc/stress_freakout()
 	to_chat(src, span_boldred("I PANIC!!!"))
@@ -200,7 +233,19 @@
 		animate(whole_screen, transform = newmatrix, time = 1, easing = QUAD_EASING)
 		animate(transform = -newmatrix, time = 30, easing = QUAD_EASING)
 
+//Cove edit
+/*/mob/living/carbon/proc/random_stress_message()
+	if(mob_timers["next_stress_message"])
+		if(world.time < mob_timers["next_stress_message"])
+			return
+	mob_timers["next_stress_message"] = world.time + rand(80 SECONDS, 160 SECONDS) //not as important as freakout
+	var/stress_message_picked = pick(GLOB.stress_messages)
+	to_chat(client, span_danger("<b>[stress_message_picked]</b>"))*/
+
+
 /mob/living/carbon/get_stress_amount()
+	var/willpowerresistance = CLAMP((STAWIL - 10), 0, 10)
+	var/wpmodifier = willpowerresistance / 3
 	if(HAS_TRAIT(src, TRAIT_NOMOOD))
 		return 0
 	var/total_stress = 0
@@ -209,6 +254,10 @@
 		var/stress_amt = event.get_stress(src)
 		if(stress_amt > 0 && HAS_TRAIT(src, TRAIT_BAD_MOOD))
 			stress_amt *= 2
+		if(stress_amt > 0 && HAS_TRAIT(src, TRAIT_EORAN_SERENE))
+			stress_amt = (stress_amt * -1)	//We make the bad things feel good.
+		if((stress_amt >= 0) && (wpmodifier > 0))
+			stress_amt = CLAMP((stress_amt -= wpmodifier), 0, INFINITY)
 		total_stress += stress_amt
 	return total_stress
 
@@ -249,3 +298,10 @@
 		if(19 to INFINITY)
 			return STRESS_THRESHOLD_FREAKING_OUT
 
+/mob/living/carbon/add_stress_list(list/event_list)
+	for(var/event_type in event_list)
+		add_stress(event_type)
+
+/mob/living/carbon/remove_stress_list(list/event_list)
+	for(var/event_type in event_list)
+		remove_stress(event_type)

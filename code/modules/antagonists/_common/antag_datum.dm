@@ -2,7 +2,7 @@ GLOBAL_LIST_EMPTY(antagonists)
 
 /datum/antagonist
 	var/name = "Antagonist"
-	var/roundend_category = "other antagonists"				//Section of roundend report, datums with same category will be displayed together, also default header for the section
+	var/roundend_category = "other villains"				//Section of roundend report, datums with same category will be displayed together, also default header for the section
 	var/show_in_roundend = TRUE								//Set to false to hide the antagonists from roundend report
 	var/prevent_roundtype_conversion = TRUE		//If false, the roundtype will still convert with this antag active
 	var/datum/mind/owner						//Mind that owns this datum
@@ -13,7 +13,6 @@ GLOBAL_LIST_EMPTY(antagonists)
 	var/replace_banned = TRUE //Should replace jobbanned player with ghosts if granted.
 	var/list/objectives = list()
 	var/antag_memory = ""//These will be removed with antag datum
-	var/antag_moodlet //typepath of moodlet that the mob will gain with their status
 	var/can_hijack = HIJACK_NEUTRAL //If these antags are alone on shuttle hijack happens.
 	var/antag_hud_type
 	var/antag_hud_name
@@ -25,6 +24,9 @@ GLOBAL_LIST_EMPTY(antagonists)
 	var/show_name_in_check_antagonists = FALSE //Will append antagonist name in admin listings - use for categories that share more than one antag type
 	var/increase_votepwr = TRUE
 	var/rogue_enabled = FALSE
+
+	///flags used by storytellers
+	var/antag_flags = NONE
 
 /datum/antagonist/New()
 	GLOB.antagonists += src
@@ -53,6 +55,10 @@ GLOBAL_LIST_EMPTY(antagonists)
 		var/datum/antagonist/A = i
 		if(is_type_in_typecache(src, A.typecache_datum_blacklist))
 			return FALSE
+
+/// Proc to return the weight of this antagonist for purpose of antag cap calculations. Meant to be overriddeable  
+/datum/antagonist/proc/get_antag_cap_weight()
+	return 1
 
 //This will be called in add_antag_datum before owner assignment.
 //Should return antag datum without owner.
@@ -84,17 +90,6 @@ GLOBAL_LIST_EMPTY(antagonists)
 	hud.leave_hud(mob_override)
 	set_antag_hud(mob_override, null)
 
-// Handles adding and removing the clumsy mutation from clown antags. Gets called in apply/remove_innate_effects
-/datum/antagonist/proc/handle_clown_mutation(mob/living/mob_override, message, removing = TRUE)
-	var/mob/living/carbon/human/H = mob_override
-	if(H && istype(H) && H.mind.assigned_role == "Clown")
-		if(removing) // They're a clown becoming an antag, remove clumsy
-			H.dna.remove_mutation(CLOWNMUT)
-			if(!silent && message)
-				to_chat(H, span_boldnotice("[message]"))
-		else
-			H.dna.add_mutation(CLOWNMUT) // We're removing their antag status, add back clumsy
-
 //Assign default team and creates one for one of a kind team antagonists
 /datum/antagonist/proc/create_team(datum/team/team)
 	return
@@ -105,7 +100,6 @@ GLOBAL_LIST_EMPTY(antagonists)
 //		if(!silent)
 //			greet()
 		apply_innate_effects()
-		give_antag_moodies()
 		if(is_banned(owner.current) && replace_banned)
 			replace_banned_player()
 		else if(owner.current.client?.holder && (CONFIG_GET(flag/auto_deadmin_antagonists) || owner.current.client.prefs?.toggles & DEADMIN_ANTAGONIST))
@@ -132,7 +126,6 @@ GLOBAL_LIST_EMPTY(antagonists)
 
 /datum/antagonist/proc/on_removal()
 	remove_innate_effects()
-	clear_antag_moodies()
 	if(owner)
 		LAZYREMOVE(owner.antag_datums, src)
 		if(!silent && owner.current)
@@ -148,23 +141,13 @@ GLOBAL_LIST_EMPTY(antagonists)
 /datum/antagonist/proc/farewell()
 	return
 
-/datum/antagonist/proc/give_antag_moodies()
-	if(!antag_moodlet)
-		return
-	SEND_SIGNAL(owner.current, COMSIG_ADD_MOOD_EVENT, "antag_moodlet", antag_moodlet)
-
-/datum/antagonist/proc/clear_antag_moodies()
-	if(!antag_moodlet)
-		return
-	SEND_SIGNAL(owner.current, COMSIG_CLEAR_MOOD_EVENT, "antag_moodlet")
-
 //Returns the team antagonist belongs to if any.
 /datum/antagonist/proc/get_team()
 	return
 
 //Individual roundend report
 /datum/antagonist/proc/roundend_report()
-	testing("doreport")
+
 	var/list/report = list()
 
 	if(!owner)
@@ -183,8 +166,9 @@ GLOBAL_LIST_EMPTY(antagonists)
 	if(objectives.len == 0 || objectives_complete)
 		report += span_greentextbig("The [name] was successful!")
 	else
-		testing("redtext")
+
 		report += span_redtextbig("The [name] has failed!")
+	report += "<br>"
 
 	return report.Join("<br>")
 
@@ -203,7 +187,7 @@ GLOBAL_LIST_EMPTY(antagonists)
 /datum/antagonist/proc/admin_add(datum/mind/new_owner,mob/admin)
 	message_admins("[key_name_admin(admin)] made [key_name_admin(new_owner)] into [name].")
 	log_admin("[key_name(admin)] made [key_name(new_owner)] into [name].")
-	new_owner.add_antag_datum(src)
+	new_owner.add_antag_datum(datum_type_or_instance = src, team = null, admin_panel = TRUE)
 
 //Called when removing antagonist using admin tools
 /datum/antagonist/proc/admin_remove(mob/user)

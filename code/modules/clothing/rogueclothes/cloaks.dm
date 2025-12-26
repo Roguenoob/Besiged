@@ -8,6 +8,11 @@
 	equip_delay_self = 10
 	bloody_icon_state = "bodyblood"
 	sewrepair = TRUE //Vrell - AFAIK, all cloaks are cloth ATM. Technically semi-less future-proof, but it removes a line of code from every subtype, which is worth it IMO.
+	experimental_inhand = FALSE
+	sellprice = 5 //Identity Protection!
+
+	grid_width = 64
+	grid_height = 64
 
 
 //////////////////////////
@@ -27,6 +32,134 @@
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
 	flags_inv = HIDECROTCH|HIDEBOOB
 	var/picked
+	var/overarmor = TRUE
+	sellprice = 3
+
+/obj/item/clothing/cloak/tabard/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/tabard/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
+
+/obj/item/clothing/cloak/abyssortabard
+	name = "abyssorite tabard"
+	desc = "A tabard worn by Abyssorite devouts."
+	color = null
+	icon_state = "abyssortabard"
+	item_state = "abyssortabard"
+	mob_overlay_icon = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	alternate_worn_layer = TABARD_LAYER
+	body_parts_covered = CHEST|GROIN
+	boobed = TRUE
+	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
+	flags_inv = HIDECROTCH|HIDEBOOB
+	var/overarmor = TRUE
+	sellprice = 10 //Religious...
+
+/obj/item/clothing/cloak/abyssortabard/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/abyssortabard/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
+
+/obj/item/clothing/cloak/abyssortabard/MiddleClick(mob/user)
+	overarmor = !overarmor
+	to_chat(user, span_info("I [overarmor ? "wear the tabard over my armor" : "wear the tabard under my armor"]."))
+	if(overarmor)
+		alternate_worn_layer = TABARD_LAYER
+	else
+		alternate_worn_layer = UNDER_ARMOR_LAYER
+	user.update_inv_cloak()
+	user.update_inv_armor()
+
+/obj/item/clothing/cloak/psydontabard
+	name = "psydonian tabard"
+	desc = "A tabard worn by Psydon's disciples. Delicate stitchwork professes the psycross with pride."
+	color = null
+	icon_state = "psydontabard"
+	item_state = "psydontabard"
+	mob_overlay_icon = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	alternate_worn_layer = TABARD_LAYER
+	body_parts_covered = CHEST|GROIN
+	boobed = TRUE
+	slot_flags = ITEM_SLOT_SHIRT|ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
+	flags_inv = HIDECROTCH|HIDEBOOB
+	var/open_wear = FALSE
+	var/overarmor = TRUE
+	sellprice = 10
+
+/obj/item/clothing/cloak/psydontabard/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/psydontabard/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
+
+
+/obj/item/clothing/cloak/psydontabard/alt
+	name = "opened psydonian tabard"
+	desc = "A tabard worn by Psydon's disciples, peeled back to reveal its enduring innards."
+	body_parts_covered = GROIN
+	icon_state = "psydontabardalt"
+	item_state = "psydontabardalt"
+	flags_inv = HIDECROTCH
+	open_wear = TRUE
+
+
+/obj/item/clothing/cloak/psydontabard/MiddleClick(mob/user)
+	overarmor = !overarmor
+	to_chat(user, span_info("I [overarmor ? "wear the tabard over my armor" : "wear the tabard under my armor"]."))
+	if(overarmor)
+		alternate_worn_layer = TABARD_LAYER
+	else
+		alternate_worn_layer = UNDER_ARMOR_LAYER
+	user.update_inv_cloak()
+	user.update_inv_armor()
+	user.update_inv_shirt()
+
+/obj/item/clothing/cloak/psydontabard/attack_right(mob/user)
+	switch(open_wear)
+		if(FALSE)
+			name = "opened psydonian tabard"
+			desc = "A tabard worn by Psydon's disciples, peeled back to reveal its enduring innards."
+			body_parts_covered = GROIN
+			icon_state = "psydontabardalt"
+			item_state = "psydontabardalt"
+			open_wear = TRUE
+			flags_inv = HIDECROTCH // BARE YOUR CHEST, NOT YOUR WEEN!
+			to_chat(usr, span_warning("ENDURING, like the MARTYRS who'll guide the faithful-and-pious to PARADISE."))
+		if(TRUE)
+			name = "psydonian tabard"
+			desc = "A tabard worn by Psydon's disciples. Delicate stitchwork professes the psycross with pride."
+			body_parts_covered = CHEST|GROIN
+			icon_state = "psydontabard"
+			item_state = "psydontabard"
+			flags_inv = HIDECROTCH|HIDEBOOB
+			open_wear = FALSE
+			to_chat(usr, span_warning("VEILED, like the CORPSES who've been shepherded by your steel to the AFTERLYFE."))
+	update_icon()
+	if(user)
+		if(ishuman(user))
+			var/mob/living/carbon/H = user
+			H.update_inv_cloak()
+			H.update_inv_armor()
 
 /obj/item/clothing/cloak/tabard/update_icon()
 	cut_overlays()
@@ -36,6 +169,18 @@
 		if(get_detail_color())
 			pic.color = get_detail_color()
 		add_overlay(pic)
+
+/obj/item/clothing/cloak/tabard/MiddleClick(mob/user)
+	overarmor = !overarmor
+	to_chat(user, span_info("I [overarmor ? "wear the tabard over my armor" : "wear the tabard under my armor"]."))
+	if(overarmor)
+		alternate_worn_layer = TABARD_LAYER
+	else
+		alternate_worn_layer = UNDER_ARMOR_LAYER
+	user.update_inv_cloak()
+	user.update_inv_armor()
+
+
 
 /obj/item/clothing/cloak/tabard/attack_right(mob/user)
 	if(picked)
@@ -115,6 +260,7 @@
 	detail_tag = "_psy"
 	detail_color = CLOTHING_RED
 	boobed_detail = FALSE
+	sellprice = 10 //Religious ties.
 
 /obj/item/clothing/cloak/tabard/crusader/Initialize()
 	. = ..()
@@ -169,6 +315,10 @@
 /obj/item/clothing/cloak/tabard/crusader/malum
 	color = CLOTHING_RED
 	detail_color = CLOTHING_YELLOW
+
+/obj/item/clothing/cloak/tabard/crusader/abyssor
+	color = "#373f69"
+	detail_color = "#974305"
 
 /obj/item/clothing/cloak/tabard/crusader/dendor
 	color = "#4B5637"
@@ -226,13 +376,14 @@
 		return
 	picked = TRUE
 
-/obj/item/clothing/cloak/tabard/knight/guard
+/obj/item/clothing/cloak/tabard/retinue
 	desc = "A tabard with the lord's heraldic colors."
 	color = CLOTHING_AZURE
-	detail_tag = "_spl"
+	detail_tag = "_quad"
 	detail_color = CLOTHING_WHITE
+	sellprice = 15 //Pretty expensive!
 
-/obj/item/clothing/cloak/tabard/knight/guard/attack_right(mob/user)
+/obj/item/clothing/cloak/tabard/retinue/attack_right(mob/user)
 	if(picked)
 		return
 	var/the_time = world.time
@@ -263,13 +414,25 @@
 		return
 	picked = TRUE
 
-/obj/item/clothing/cloak/tabard/knight/guard/Initialize()
+/obj/item/clothing/cloak/tabard/retinue/Initialize()
 	. = ..()
 	if(GLOB.lordprimary)
 		lordcolor(GLOB.lordprimary,GLOB.lordsecondary)
 	GLOB.lordcolor += src
 
-/obj/item/clothing/cloak/tabard/knight/guard/update_icon()
+/obj/item/clothing/cloak/tabard/retinue/lordcolor(primary,secondary)
+	color = primary
+	detail_color = secondary
+	update_icon()
+	if(ismob(loc))
+		var/mob/L = loc
+		L.update_inv_cloak()
+
+/obj/item/clothing/cloak/tabard/retinue/Destroy()
+	GLOB.lordcolor -= src
+	return ..()
+
+/obj/item/clothing/cloak/tabard/retinue/update_icon()
 	cut_overlays()
 	if(get_detail_tag())
 		var/mutable_appearance/pic = mutable_appearance(icon(icon, "[icon_state][detail_tag]"))
@@ -278,22 +441,8 @@
 			pic.color = get_detail_color()
 		add_overlay(pic)
 
-/obj/item/clothing/cloak/tabard/knight/guard/lordcolor(primary,secondary)
-	color = primary
-	detail_color = secondary
-	update_icon()
-	if(ismob(loc))
-		var/mob/L = loc
-		L.update_inv_cloak()
-
-/obj/item/clothing/cloak/tabard/knight/guard/Destroy()
-	GLOB.lordcolor -= src
-	return ..()
-
-/obj/item/clothing/cloak/tabard/musketeer
-	detail_tag = "_psy"
-	color = CLOTHING_BLUE
-	detail_color = CLOTHING_WHITE
+/obj/item/clothing/cloak/tabard/retinue/captain //Because of his other snowflake cloak we can't actually use the naming normally.
+	name = "captain's tabard"
 
 //////////////////////////
 /// SOLDIER TABARD
@@ -311,8 +460,32 @@
 	sleevetype = "shirt"
 	nodismemsleeves = TRUE
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
-	flags_inv = HIDECROTCH|HIDEBOOB|HIDEBUTT
+	flags_inv = HIDECROTCH|HIDEBOOB
 	var/picked
+	var/overarmor = TRUE
+	sellprice = 7 //Soldier cloaks...
+
+/obj/item/clothing/cloak/stabard/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/stabard/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
+
+/obj/item/clothing/cloak/stabard/MiddleClick(mob/user)
+	overarmor = !overarmor
+	to_chat(user, span_info("I [overarmor ? "wear the tabard over my armor" : "wear the tabard under my armor"]."))
+	if(overarmor)
+		alternate_worn_layer = TABARD_LAYER
+	else
+		alternate_worn_layer = UNDER_ARMOR_LAYER
+	user.update_inv_cloak()
+	user.update_inv_armor()
 
 /obj/item/clothing/cloak/stabard/attack_right(mob/user)
 	if(picked)
@@ -470,6 +643,11 @@
 /obj/item/clothing/cloak/stabard/surcoat/councillor
 	color = "#2d2d2d"
 
+/obj/item/clothing/cloak/stabard/surcoat/short
+	name = "short jupon"
+	icon_state = "surcoat_short"
+	body_parts_covered = CHEST
+
 /obj/item/clothing/cloak/stabard/surcoat/attack_right(mob/user)
 	if(picked)
 		return
@@ -578,6 +756,9 @@
 	GLOB.lordcolor -= src
 	return ..()
 
+/obj/item/clothing/cloak/stabard/black
+	color = CLOTHING_BLACK
+
 /obj/item/clothing/cloak/lordcloak
 	name = "lordly cloak"
 	desc = "Ermine trimmed, handed down."
@@ -595,7 +776,6 @@
 	allowed_race = NON_DWARVEN_RACE_TYPES
 	detail_tag = "_det"
 	detail_color = CLOTHING_AZURE
-	flags_inv = HIDEBOOB
 
 /obj/item/clothing/cloak/lordcloak/update_icon()
 	cut_overlays()
@@ -626,12 +806,7 @@
 
 /obj/item/clothing/cloak/lordcloak/ComponentInitialize()
 	. = ..()
-	AddComponent(/datum/component/storage/concrete)
-	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
-	if(STR)
-		STR.max_combined_w_class = 3
-		STR.max_w_class = WEIGHT_CLASS_BULKY
-		STR.max_items = 1
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak/lord)
 
 /obj/item/clothing/cloak/lordcloak/dropped(mob/living/carbon/human/user)
 	..()
@@ -655,15 +830,12 @@
 	nodismemsleeves = TRUE
 	inhand_mod = TRUE
 	allowed_race = NON_DWARVEN_RACE_TYPES
+	salvage_result = /obj/item/natural/fur
+	sellprice = 9 //Furry...
 
 /obj/item/clothing/cloak/darkcloak/ComponentInitialize()
 	. = ..()
-	AddComponent(/datum/component/storage/concrete)
-	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
-	if(STR)
-		STR.max_combined_w_class = 3
-		STR.max_w_class = WEIGHT_CLASS_BULKY
-		STR.max_items = 1
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
 
 /obj/item/clothing/cloak/darkcloak/dropped(mob/living/carbon/human/user)
 	..()
@@ -678,10 +850,19 @@
 	desc = "Made from the finest, warmest bear pelt. It might be worth more than your life."
 	icon_state = "bear_cloak"
 	item_state = "bear_cloak"
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	salvage_result = /obj/item/natural/hide/cured
+	salvage_amount = 3
+	sellprice = 12
 
 /obj/item/clothing/cloak/darkcloak/bear/light
+	name = "light direbear cloak"
 	icon_state = "bbear_cloak"
 	item_state = "bbear_cloak"
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	salvage_result = /obj/item/natural/hide/cured
+	salvage_amount = 3
+	sellprice = 10
 
 /obj/item/clothing/cloak/apron
 	name = "apron"
@@ -694,15 +875,11 @@
 	boobed = TRUE
 	allowed_race = CLOTHED_RACES_TYPES
 	flags_inv = HIDECROTCH|HIDEBOOB
+	sellprice = 8
 
 /obj/item/clothing/cloak/apron/ComponentInitialize()
 	. = ..()
-	AddComponent(/datum/component/storage/concrete)
-	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
-	if(STR)
-		STR.max_combined_w_class = 3
-		STR.max_w_class = WEIGHT_CLASS_NORMAL
-		STR.max_items = 1
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
 
 /obj/item/clothing/cloak/apron/blacksmith
 	name = "leather apron"
@@ -711,8 +888,9 @@
 	icon_state = "leather_apron"
 	item_state = "leather_apron"
 	body_parts_covered = CHEST|GROIN
-	armor = list("blunt" = 25, "slash" = 5, "stab" = 15, "bullet" = 0, "laser" = 0,"energy" = 0, "bomb" = 0, "bio" = 0, "rad" = 0, "fire" = 24, "acid" = 0)
+	armor = ARMOR_CLOTHING
 	boobed = TRUE
+	salvage_result = /obj/item/natural/hide/cured
 
 /obj/item/clothing/cloak/apron/brown
 	color = CLOTHING_BROWN
@@ -758,7 +936,7 @@
 	return TRUE*/
 
 /obj/item/clothing/cloak/raincloak
-	name = "cloak"
+	name = "rain cloak"
 	desc = "This one will help against the rainy weather."
 	color = null
 	icon_state = "rain_cloak"
@@ -773,21 +951,12 @@
 	inhand_mod = TRUE
 	hoodtype = /obj/item/clothing/head/hooded/rainhood
 	toggle_icon_state = FALSE
-	flags_inv = HIDEBOOB
-
-/obj/item/clothing/wash_act(clean)
-	. = ..()
-	if(hood)
-		wash_atom(hood,clean)
+	salvage_result = /obj/item/natural/hide/cured
+	sellprice = 6 //Rain protector...
 
 /obj/item/clothing/cloak/raincloak/ComponentInitialize()
 	. = ..()
-	AddComponent(/datum/component/storage/concrete)
-	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
-	if(STR)
-		STR.max_combined_w_class = 3
-		STR.max_w_class = WEIGHT_CLASS_NORMAL
-		STR.max_items = 1
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
 
 /obj/item/clothing/cloak/raincloak/dropped(mob/living/carbon/human/user)
 	..()
@@ -819,9 +988,6 @@
 /obj/item/clothing/cloak/raincloak/purple
 	color = CLOTHING_PURPLE
 
-/obj/item/clothing/cloak/raincloak/yellow
-	color = CLOTHING_YELLOW
-
 /obj/item/clothing/head/hooded/rainhood
 	name = "hood"
 	desc = "This one will shelter me from the weather and my identity too."
@@ -831,16 +997,9 @@
 	dynamic_hair_suffix = ""
 	edelay_type = 1
 	body_parts_covered = HEAD
-	flags_inv = HIDEEARS|HIDEFACE|HIDEHAIR|HIDEFACIALHAIR|HIDETAIL|HIDEBUTT
+	flags_inv = HIDEEARS|HIDEFACE|HIDEHAIR|HIDEFACIALHAIR|HIDETAIL
 	block2add = FOV_BEHIND
-
-/obj/item/clothing/head/hooded/equipped(mob/user, slot)
-	. = ..()
-	user.update_fov_angles()
-
-/obj/item/clothing/head/hooded/dropped(mob/user)
-	. = ..()
-	user.update_fov_angles()
+	sellprice = 4
 
 /obj/item/clothing/cloak/raincloak/furcloak
 	name = "fur cloak"
@@ -848,6 +1007,7 @@
 	icon_state = "furgrey"
 	inhand_mod = FALSE
 	hoodtype = /obj/item/clothing/head/hooded/rainhood/furhood
+	salvage_result = /obj/item/natural/fur
 
 /obj/item/clothing/cloak/raincloak/furcloak/crafted/Initialize()
 	. = ..()
@@ -858,7 +1018,10 @@
 	color = "#685542"
 
 /obj/item/clothing/cloak/raincloak/furcloak/black
-	color = "#66564d"
+	color = "#2b292e"
+
+/obj/item/clothing/cloak/raincloak/furcloak/darkgreen
+	color = "#264d26"
 
 /obj/item/clothing/cloak/raincloak/furcloak/woad
 	name = "Warden's fur cloak"
@@ -882,6 +1045,10 @@
 	nodismemsleeves = TRUE
 	inhand_mod = FALSE
 	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	sellprice = 6 //Pretty cape.
+
+/obj/item/clothing/cloak/cape/purple
+	color = CLOTHING_PURPLE
 
 /obj/item/clothing/cloak/cape/knight
 	color = CLOTHING_WHITE
@@ -909,11 +1076,24 @@
 /obj/item/clothing/cloak/cape/puritan
 	icon_state = "puritan_cape"
 	allowed_race = CLOTHED_RACES_TYPES
+	salvage_result = /obj/item/natural/silk
+	salvage_amount = 1
+	sellprice = 8 //Pretty...
 
 /obj/item/clothing/cloak/cape/archivist
 	icon_state = "puritan_cape"
 	color = CLOTHING_BLACK
 	allowed_race = CLOTHED_RACES_TYPES
+	sellprice = 7
+
+/obj/item/clothing/cloak/cape/inquisitor
+	name = "Inquisitors Cloak"
+	desc = "A time honored cloak Valorian design, used by founding clans of the Valorian Lodge"
+	icon_state = "inquisitor_cloak"
+	icon = 'icons/roguetown/clothing/cloaks.dmi'
+	mob_overlay_icon = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sellprice = 25 //Important cloak...
 
 /obj/item/clothing/cloak/cape/rogue
 	name = "cape"
@@ -929,7 +1109,10 @@
 	name = "fur cape"
 	icon_state = "furcape"
 	item_state = "furcape"
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
 	inhand_mod = TRUE
+	salvage_result = /obj/item/natural/fur
+	sellprice = 7 //Fluffy!
 
 /obj/item/clothing/cloak/chasuble
 	name = "chasuble"
@@ -942,27 +1125,30 @@
 	allowed_sex = list(MALE, FEMALE)
 	allowed_race = NON_DWARVEN_RACE_TYPES
 	nodismemsleeves = TRUE
-	flags_inv = HIDECROTCH|HIDEBOOB|HIDEBUTT
+	sellprice = 10 //Stylish.
 
 
 /obj/item/clothing/cloak/stole
 	name = "stole"
 	desc = ""
 	icon_state = "stole_gold"
+	item_state = "stole_gold"
 	sleeved = null
 	sleevetype = null
 	body_parts_covered = null
 	flags_inv = null
+	sellprice = 9 //Kinda stylish
 
 /obj/item/clothing/cloak/stole/red
 	icon_state = "stole_red"
+	item_state = "stole_red"
 
 /obj/item/clothing/cloak/stole/purple
 	icon_state = "stole_purple"
 
 /obj/item/clothing/cloak/black_cloak
-	name = "fur coat"
-	desc = ""
+	name = "fur overcoat"
+	desc = "A very thick, baggy set of robes trimmed with fur, meant to be worn over one's clothing."
 	icon_state = "black_cloak"
 	body_parts_covered = CHEST|GROIN|VITALS|ARMS
 	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
@@ -972,6 +1158,7 @@
 	allowed_race = NON_DWARVEN_RACE_TYPES
 	sellprice = 50
 	nodismemsleeves = TRUE
+	salvage_result = /obj/item/natural/fur
 
 /obj/item/clothing/cloak/heartfelt
 	name = "red cloak"
@@ -985,7 +1172,28 @@
 	allowed_race = NON_DWARVEN_RACE_TYPES
 	sellprice = 50
 	nodismemsleeves = TRUE
-	flags_inv = HIDEBOOB
+
+/obj/item/clothing/cloak/undivided
+	name = "undivided cloak"
+	desc = "The refuge of the TEN upon my back. A Undivided House, standing eternal against the encroaching darkness."
+	icon_state = "seecloak"
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	sellprice = 15 //Religious...
+
+/obj/item/clothing/cloak/undivided/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/undivided/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
+
 
 /obj/item/clothing/cloak/half
 	name = "halfcloak"
@@ -1004,16 +1212,13 @@
 	toggle_icon_state = FALSE
 	color = CLOTHING_BLACK
 	allowed_sex = list(MALE, FEMALE)
-	flags_inv = HIDEBOOB // Put this here, since the covered boob otherwise clips through
+	flags_inv = null
+	var/flipped = FALSE
+	sellprice = 5  //Half!?
 
 /obj/item/clothing/cloak/half/ComponentInitialize()
 	. = ..()
-	AddComponent(/datum/component/storage/concrete)
-	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
-	if(STR)
-		STR.max_combined_w_class = 3
-		STR.max_w_class = WEIGHT_CLASS_NORMAL
-		STR.max_items = 1
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
 
 /obj/item/clothing/cloak/half/dropped(mob/living/carbon/human/user)
 	..()
@@ -1022,6 +1227,15 @@
 		var/list/things = STR.contents()
 		for(var/obj/item/I in things)
 			STR.remove_from_storage(I, get_turf(src))
+
+/obj/item/clothing/cloak/half/attack_right(mob/user)
+	if(!flipped)
+		icon_state += "_rev"
+		flipped = TRUE
+	else
+		icon_state = initial(icon_state)
+		flipped = FALSE
+	user.regenerate_icons()
 
 /obj/item/clothing/cloak/half/brown
 	color = CLOTHING_BROWN
@@ -1050,7 +1264,6 @@
 	allowed_sex = list(MALE, FEMALE)
 	allowed_race = NON_DWARVEN_RACE_TYPES
 	inhand_mod = FALSE
-	flags_inv = null
 
 /obj/item/clothing/cloak/half/vet/Initialize()
 	. = ..()
@@ -1064,10 +1277,48 @@
 
 /obj/item/clothing/cloak/half/shadowcloak
 	name = "stalker cloak"
-	desc = "A heavy leather cloak held together by a gilded pin, depicting the Monarch's house. The sign of a faithful servant."
+	desc = "A heavy leather cloak held together by a gilded pin, depicting the Grand Duke's house. The sign of a faithful servant."
 	icon_state = "shadowcloak"
 	color = null
 	allowed_race = NON_DWARVEN_RACE_TYPES
+
+/obj/item/clothing/cloak/thief_cloak
+	name = "rapscallion's shawl"
+	desc = "A simple shawl clapsed with an ersatz fastener. Practical and functional, though the fabric is rough and wearing bare."
+	icon_state = "thiefcloak"
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	color = CLOTHING_ORANGE
+
+/obj/item/clothing/cloak/thief_cloak/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/thief_cloak/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
+
+/obj/item/clothing/cloak/thief_cloak/yoruku
+	color = CLOTHING_BLACK
+
+/obj/item/clothing/cloak/templar
+	var/overarmor = TRUE
+	sellprice = 15 //Templar!!!
+
+/obj/item/clothing/cloak/templar/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/templar/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
 
 /obj/item/clothing/cloak/templar/psydon
 	name = "psydon tabard"
@@ -1167,6 +1418,104 @@
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
 	flags_inv = HIDECROTCH|HIDEBOOB
 
+/obj/item/clothing/cloak/volfmantle
+	name = "volf mantle"
+	desc = "A warm cloak made using the hide and head of a slain volf. A status symbol if ever there was one."
+	color = null
+	icon_state = "volfpelt"
+	item_state = "volfpelt"
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = FALSE
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	flags_inv = HIDECROTCH|HIDEBOOB
+	salvage_result = /obj/item/natural/hide/cured
+	salvage_amount = 1
+	sellprice = 9 //Scary volf...
+
+/obj/item/clothing/cloak/wickercloak
+	name = "wicker cloak"
+	desc = "A makeshift cloak constructed with mud, sticks and fibers."
+	icon_state = "wicker_cloak"
+	item_state = "wicker_cloak"
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	allowed_sex = list(MALE, FEMALE)
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = TRUE
+	salvage_result = /obj/item/natural/fibers
+	salvage_amount = 2
+	sellprice = 3 //Wtf is this?
+
+/obj/item/clothing/cloak/tribal
+	name = "tribal pelt"
+	desc = "A haphazardly cured pelt of a creecher, thrown on top of one's body or armor, to serve as additional protection against the cold. Itchy."
+	icon_state = "tribal"
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	body_parts_covered = CHEST|GROIN|VITALS
+	allowed_sex = list(MALE, FEMALE)
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	nodismemsleeves = TRUE
+	boobed = FALSE
+	sellprice = 10
+
+/obj/item/clothing/cloak/lordcloak/ladycloak
+	name = "ladylike shortcloak"
+	desc = "Ermine trimmed, handed down."
+	color = null
+	icon_state = "shortcloak"
+	item_state = "shortcloak"
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	boobed = TRUE
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	detail_tag = "_detail"
+	detail_color = CLOTHING_BLACK
+	sellprice = 25 //Expensive clothing..~ How nice~
+
+/obj/item/clothing/cloak/matron
+	name = "matron cloak"
+	desc = "A cloak that only the meanest of old crones bother to wear."
+	icon_state = "matroncloak"
+	icon = 'icons/roguetown/clothing/cloaks.dmi'
+	mob_overlay_icon ='icons/roguetown/clothing/onmob/cloaks.dmi'
+	body_parts_covered = CHEST|GROIN|VITALS|ARMS
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	slot_flags = ITEM_SLOT_CLOAK
+	nodismemsleeves = TRUE
+	sleevetype = "shirt"
+	slot_flags = ITEM_SLOT_CLOAK
+	sellprice = 25 //ooh stylish~
+
+/obj/item/clothing/cloak/battlenun
+	name = "nun vestments"
+	desc = "Chaste, righteous, merciless to the wicked."
+	color = null
+	icon_state = "battlenun"
+	allowed_sex = list(FEMALE)
+	item_state = "battlenun"
+	alternate_worn_layer = TABARD_LAYER
+	body_parts_covered = CHEST|GROIN
+	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
+	sellprice = 12
+
+/obj/item/clothing/cloak/templar/MiddleClick(mob/user)
+	overarmor = !overarmor
+	to_chat(user, span_info("I [overarmor ? "wear the tabard over my armor" : "wear the tabard under my armor"]."))
+	if(overarmor)
+		alternate_worn_layer = TABARD_LAYER
+	else
+		alternate_worn_layer = UNDER_ARMOR_LAYER
+	user.update_inv_cloak()
+	user.update_inv_armor()
+
 /obj/item/clothing/cloak/templar/eora
 	name = "eora tabard"
 	desc = "An outer garment commonly worn by soldiers. This one has the symbol of Eora on it."
@@ -1195,7 +1544,7 @@
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
 	flags_inv = HIDECROTCH|HIDEBOOB
 
-/obj/item/clothing/cloak/templar/ravox
+/obj/item/clothing/cloak/cleric/ravox
 	name = "ravox tabard"
 	desc = "An outer garment commonly worn by soldiers. This one has the symbol of Ravox on it."
 	icon_state = "tabard_ravox"
@@ -1207,6 +1556,20 @@
 	sleevetype = "shirt"
 	nodismemsleeves = TRUE
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
+	flags_inv = HIDECROTCH|HIDEBOOB
+	sellprice = 10
+
+/obj/item/clothing/cloak/templar/ravox
+	name = "justice tabard"
+	desc = "An underarmor vestments with a neck cover, worn by templars of Ravox."
+	icon_state = "justicetabard"
+	body_parts_covered = CHEST|GROIN
+	boobed = TRUE
+	mob_overlay_icon = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleeved = 'icons/roguetown/clothing/onmob/helpers/sleeves_cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK|ITEM_SLOT_MASK
 	flags_inv = HIDECROTCH|HIDEBOOB
 
 /obj/item/clothing/cloak/templar/xylix
@@ -1223,25 +1586,70 @@
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_CLOAK
 	flags_inv = HIDECROTCH|HIDEBOOB
 
-// Dumping old black knight stuff here
 /obj/item/clothing/cloak/cape/blkknight
 	name = "blood cape"
 	icon_state = "bkcape"
 	icon = 'icons/roguetown/clothing/special/blkknight.dmi'
 	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
 	sleeved = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
+	sellprice = 66 //Black Knight...
+
 
 /obj/item/clothing/head/roguetown/helmet/heavy/blkknight
 	name = "blacksteel helmet"
 	icon_state = "bkhelm"
 	icon = 'icons/roguetown/clothing/special/blkknight.dmi'
 	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
+	sellprice = 66
+
+/obj/item/clothing/head/roguetown/helmet/heavy/blkknight/ComponentInitialize()
+	AddComponent(/datum/component/adjustable_clothing, (HEAD|EARS|HAIR), (HIDEEARS|HIDEHAIR), null, 'sound/items/visor.ogg', null, UPD_HEAD)
+
+/obj/item/clothing/head/roguetown/helmet/heavy/blkknight/attackby(obj/item/W, mob/living/user, params)
+	..()
+	if(istype(W, /obj/item/natural/feather) && !detail_tag)
+		var/choice = input(user, "Choose a color.", "Plume") as anything in colorlist
+		user.visible_message(span_warning("[user] adds [W] to [src]."))
+		user.transferItemToLoc(W, src, FALSE, FALSE)
+		detail_color = colorlist[choice]
+		detail_tag = "_detail"
+		update_icon()
+		if(loc == user && ishuman(user))
+			var/mob/living/carbon/H = user
+			H.update_inv_head()
+	if(istype(W, /obj/item/natural/cloth) && !altdetail_tag)
+		var/choicealt = input(user, "Choose a color.", "Orle") as anything in colorlist
+		user.visible_message(span_warning("[user] adds [W] to [src]."))
+		user.transferItemToLoc(W, src, FALSE, FALSE)
+		altdetail_color = colorlist[choicealt]
+		altdetail_tag = "_detailalt"
+		update_icon()
+		if(loc == user && ishuman(user))
+			var/mob/living/carbon/H = user
+			H.update_inv_head()
+
+/obj/item/clothing/head/roguetown/helmet/heavy/blkknight/update_icon()
+	cut_overlays()
+	if(get_detail_tag())
+		var/mutable_appearance/pic = mutable_appearance(icon(icon, "[icon_state][detail_tag]"))
+		pic.appearance_flags = RESET_COLOR
+		if(get_detail_color())
+			pic.color = get_detail_color()
+		add_overlay(pic)
+	if(get_altdetail_tag())
+		var/mutable_appearance/pic2 = mutable_appearance(icon(icon, "[icon_state][altdetail_tag]"))
+		pic2.appearance_flags = RESET_COLOR
+		if(get_altdetail_color())
+			pic2.color = get_altdetail_color()
+		add_overlay(pic2)
+
 
 /obj/item/clothing/cloak/tabard/blkknight
 	name = "blood sash"
 	icon_state = "bksash"
 	icon = 'icons/roguetown/clothing/special/blkknight.dmi'
 	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
+	sellprice = 66
 
 /obj/item/clothing/under/roguetown/platelegs/blk
 	name = "blacksteel legs"
@@ -1249,6 +1657,7 @@
 	icon = 'icons/roguetown/clothing/special/blkknight.dmi'
 	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
 	sleeved = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
+	sellprice = 66
 
 /obj/item/clothing/gloves/roguetown/plate/blk
 	name = "blacksteel gaunties"
@@ -1256,13 +1665,14 @@
 	icon = 'icons/roguetown/clothing/special/blkknight.dmi'
 	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
 	sleeved = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
+	sellprice = 66
 
 /obj/item/clothing/neck/roguetown/blkknight
-	name = "dragonscale necklace"
-	desc = ""
+	name = "dragonscale necklace" //Who the hell put a NECKLACE in the CLOAKS file?
+	desc = "A blacksteel chain, laced through a dozen of the Hoardmaster's golden teeth. Atuned to the beating heart of Psydonia's financial systems, its true strength can only be harnessed by those who covet wealth above all else."
 	icon_state = "bktrinket"
-	max_integrity = 100000
-	armor = list("blunt" = 100, "slash" = 100, "stab" = 100, "bullet" = 100, "laser" = 0,"energy" = 0, "bomb" = 0, "bio" = 0, "rad" = 0, "fire" = 50, "acid" = 0)
+	max_integrity = 400 //Exceptionally strong, can be purchased multiple times, and provides a flat +2 to the entire statblock. If it gets destroyed in a fight, that's fair game. Reduced from the original value of 100,000.
+	armor = ARMOR_DRAGONSCALE
 	prevent_crits = list(BCLASS_CUT,BCLASS_BLUNT)
 	blocksound = PLATEHIT
 	icon = 'icons/roguetown/clothing/special/blkknight.dmi'
@@ -1271,25 +1681,31 @@
 	resistance_flags = FIRE_PROOF
 	sellprice = 666
 	static_price = TRUE
+	smeltresult = /obj/item/riddleofsteel
+	anvilrepair = /datum/skill/craft/armorsmithing
 	var/active_item = FALSE
 
-/obj/item/clothing/neck/roguetown/blkknight/equipped(mob/living/user)
+/obj/item/clothing/neck/roguetown/blkknight/equipped(mob/living/user, slot)
 	. = ..()
 	if(active_item)
 		return
-	active_item = TRUE
-	if(user.mind.special_role == "Bandit")
-		to_chat(user, span_notice("I feel bolstered by Matthios Power!..."))
-		user.change_stat("strength", 2)
-		user.change_stat("perception", 2)
-		user.change_stat("intelligence", 2)
-		user.change_stat("constitution", 2)
-		user.change_stat("endurance", 2)
-		user.change_stat("speed", 2)
-		armor = getArmor("blunt" = 100, "slash" = 100, "stab" = 100, "bullet" = 100, "laser" = 0,"energy" = 0, "bomb" = 0, "bio" = 0, "rad" = 0, "fire" = 50, "acid" = 0)
-	else
-		to_chat(user, span_notice("I feel an evil power about that necklace.."))
-		armor = getArmor("blunt" = 0, "slash" = 0, "stab" = 0, "bullet" = 0, "laser" = 0,"energy" = 0, "bomb" = 0, "bio" = 0, "rad" = 0, "fire" = 0, "acid" = 0)
+	if(slot == SLOT_NECK)
+		active_item = TRUE
+		if(user.mind.special_role == "Bandit")
+			to_chat(user, span_monkeyhive("Matthios empowers me! My body glistens with spiritual wealth!"))
+			//Caustic edit
+			user.change_stat(STATKEY_STR, 1)
+			user.change_stat(STATKEY_PER, 1)
+			user.change_stat(STATKEY_INT, 1)
+			user.change_stat(STATKEY_CON, 1)
+			user.change_stat(STATKEY_WIL, 1)
+			user.change_stat(STATKEY_SPD, 1)
+			user.change_stat(STATKEY_LCK, 1)
+			armor = getArmor("blunt" = 100, "slash" = 100, "stab" = 100, "piercing" = 100, "fire" = 50, "acid" = 0)
+			//Caustic edit end
+		else
+			to_chat(user, span_suicide("As I don the necklace, I feel my very worth draining away.."))
+			armor = getArmor("blunt" = 0, "slash" = 0, "stab" = 0, "piercing" = 0, "fire" = 0, "acid" = 0)
 
 /obj/item/clothing/neck/roguetown/blkknight/dropped(mob/living/user)
 	..()
@@ -1297,16 +1713,17 @@
 		return
 	active_item = FALSE
 	if(user.mind.special_role == "Bandit")
-		to_chat(user, span_notice("I've removed the necklace of Matthios..."))
-		user.change_stat("strength", -2)
-		user.change_stat("perception", -2)
-		user.change_stat("intelligence", -2)
-		user.change_stat("constitution", -2)
-		user.change_stat("endurance", -2)
-		user.change_stat("speed", -2)
+		to_chat(user, span_monkeyhive("Golden sparks flutter from the teeth, before they fade away - and with it, the blessing of Matthios.."))
+		user.change_stat(STATKEY_STR, -2)
+		user.change_stat(STATKEY_PER, -2)
+		user.change_stat(STATKEY_INT, -2)
+		user.change_stat(STATKEY_CON, -2)
+		user.change_stat(STATKEY_WIL, -2)
+		user.change_stat(STATKEY_SPD, -2)
+		user.change_stat(STATKEY_LCK, -2)
 	else
-		to_chat(user, span_notice("Strange, I don't feel that power anymore..."))
-		armor = getArmor("blunt" = 100, "slash" = 100, "stab" = 100, "bullet" = 100, "laser" = 0,"energy" = 0, "bomb" = 0, "bio" = 0, "rad" = 0, "fire" = 50, "acid" = 0)
+		to_chat(user, span_suicide("..dripping down from the heavens, I feel my worth returning once more.."))
+		armor = getArmor("blunt" = 100, "slash" = 100, "stab" = 100, "piercing" = 100, "fire" = 50, "acid" = 0)
 
 /obj/item/clothing/suit/roguetown/armor/plate/blkknight
 	slot_flags = ITEM_SLOT_ARMOR
@@ -1319,6 +1736,7 @@
 	icon = 'icons/roguetown/clothing/special/blkknight.dmi'
 	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
 	sleeved = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
+	sellprice = 66
 
 /obj/item/clothing/shoes/roguetown/boots/armor/blkknight
 	name = "darkened steel boots"
@@ -1326,6 +1744,7 @@
 	icon = 'icons/roguetown/clothing/special/blkknight.dmi'
 	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
 	sleeved = 'icons/roguetown/clothing/special/onmob/blkknight.dmi'
+	sellprice = 66
 
 //Short hoods for guards
 
@@ -1336,8 +1755,8 @@
 	detail_tag = "_spl"
 	detail_color = CLOTHING_WHITE
 	icon_state = "guard_hood"
+	item_state = "guard_hood"
 	body_parts_covered = CHEST
-	flags_inv = HIDEBOOB
 
 /obj/item/clothing/cloak/stabard/guardhood/attack_right(mob/user)
 	if(picked)
@@ -1391,8 +1810,317 @@
 	GLOB.lordcolor -= src
 	return ..()
 
+/obj/item/clothing/cloak/stabard/guardhood/elder
+	name = "elder's hood"
+
 /obj/item/clothing/cloak/hierophant
 	name = "hierophant's sash"
 	icon_state = "naledisash"
 	item_state = "naledisash"
 	desc = "A limp piece of fabric traditionally used to fasten bags that are too baggy, but in modern days has become more of a fashion statement than anything."
+
+/obj/item/clothing/cloak/hierophant/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/hierophant/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
+
+/obj/item/clothing/cloak/stabard/grenzelmage
+	name = "grenzelhoftian magos mantle"
+	desc = "A fashionable Mantle often worn by Celestial Academy Magos."
+	color = CLOTHING_WHITE
+	detail_color = CLOTHING_WHITE
+	detail_tag = "_spl"
+	icon_state = "guard_hood" // The same as the guard hood however to break it from using the lords colors it has been given its own item path
+	item_state = "guard_hood"
+	body_parts_covered = CHEST
+	sellprice = 15 //Fashionable.
+
+/obj/item/clothing/cloak/wardencloak
+	name = "warden cloak"
+	desc = "A cloak worn by the Wardens of Azuria's Forests"
+	icon_state = "wardencloak"
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = TRUE
+	sellprice = 15
+
+/obj/item/clothing/cloak/wardencloak/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/graggar
+	name = "vicious cloak"
+	desc = "The only motive force in this rotten world is violence. Be its wielder, not its victim."
+	icon_state = "graggarcloak"
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = TRUE
+	sellprice = 25  //Heretical...
+
+/obj/item/clothing/cloak/graggar/Initialize()
+	. = ..()
+	AddComponent(/datum/component/cursed_item, TRAIT_HORDE, "CLOAK", "RENDERED ASUNDER")
+
+/obj/item/clothing/cloak/forrestercloak
+	name = "forrester cloak"
+	desc = "A cloak worn by the Black Oaks of Azuria."
+	icon_state = "forestcloak"
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = TRUE
+
+/obj/item/clothing/cloak/forrestercloak/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/forrestercloak/snow
+	name = "snow cloak"
+	desc = "A cloak meant to keep one's body warm in the cold of the mountains as well as the dampness of Azuria."
+	icon_state = "snowcloak"
+
+/obj/item/clothing/cloak/poncho
+	name = "cloth poncho"
+	desc = "A loose garment that is usually draped across ones upper body. No one's quite sure of its cultural origin."
+	icon_state = "poncho"
+	item_state = "poncho"
+	alternate_worn_layer = TABARD_LAYER
+	boobed = FALSE
+	flags_inv = HIDECROTCH|HIDEBOOB
+	slot_flags = ITEM_SLOT_CLOAK|ITEM_SLOT_ARMOR
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	nodismemsleeves = TRUE
+	color = CLOTHING_WHITE
+	detail_tag = "_detail"
+	detail_color = CLOTHING_WHITE
+
+/obj/item/clothing/cloak/poncho/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/poncho/dropped(mob/living/carbon/human/user)
+	..()
+	var/datum/component/storage/STR = GetComponent(/datum/component/storage)
+	if(STR)
+		var/list/things = STR.contents()
+		for(var/obj/item/I in things)
+			STR.remove_from_storage(I, get_turf(src))
+
+/obj/item/clothing/cloak/poncho/fancycoat
+	name = "fancy coat"
+	desc = "A loose garment that is usually draped across ones upper body. No one's quite sure of its cultural origin but it does look fancy."
+	icon_state = "fancycoat"
+	item_state = "fancycoat"
+	alternate_worn_layer = TABARD_LAYER
+	boobed = FALSE
+	flags_inv = HIDECROTCH|HIDEBOOB
+	slot_flags = ITEM_SLOT_CLOAK|ITEM_SLOT_ARMOR
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	nodismemsleeves = TRUE
+	color = CLOTHING_WHITE
+	detail_tag = "_detail"
+	detail_color = CLOTHING_WHITE
+
+//eastern update
+
+/obj/item/clothing/cloak/eastcloak1
+	name = "cloud-cutter's cloak"
+	desc = "A brown cloak with white swirls. Some Kazengites may recognize it as an old militaristic symbol."
+	color = null
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	icon_state = "eastcloak1"
+	item_state = "eastcloak1"
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = FALSE
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	allowed_race = NON_DWARVEN_RACE_TYPES
+
+/obj/item/clothing/cloak/eastcloak2
+	name = "leather cloak"
+	desc = "A brown cloak. There's nothing special on it."
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	color = null
+	icon_state = "eastcloak2"
+	item_state = "eastcloak2"
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = FALSE
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	allowed_race = NON_DWARVEN_RACE_TYPES
+
+/obj/item/clothing/cloak/psyaltrist
+	name = "psyalter's stole"
+	desc = "A silk stole embroidered with silver fillagree and with concealed pockets in its back worn over a hymnal-scroll. It is worn as the traditional garb of a graduate of the choir leaders of the cathedrals of Otava and is a symbol of their station."
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	icon_state = "psaltertabard"
+	item_state = "psaltertabard"
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = TRUE
+
+
+/obj/item/clothing/cloak/psyaltrist/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/ordinatorcape
+	name = "ordinator cape"
+	desc = "A flowing red cape complete with an ornately patterned steel shoulderguard. Made to last. Made to ENDURE. Made to LYVE."
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	icon_state = "ordinatorcape"
+	item_state = "ordinatorcape"
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = TRUE
+
+/obj/item/clothing/cloak/ordinatorcape/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/absolutionistrobe
+	name = "absolver's robe"
+	desc = "Absolve them of their pain. Absolve them of their longing. Lyve, as PSYDON lyves."
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	sleeved = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	icon_state = "absolutionistrobe"
+	item_state = "absolutionistrobe"
+	sleevetype = "shirt"
+	nodismemsleeves = TRUE
+	inhand_mod = TRUE
+
+/obj/item/clothing/cloak/absolutionistrobe/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/cotehardie
+	name = "fitted coat"
+	desc = "Also known as a cotehardie: a long-sleeved tunic worn by peasants and nobles alike. It's used by men and women, in both summer and winter. It won't drop any items inside when unequipped."
+	color = "#586849"
+	icon_state = "cotehardie"
+	item_state = "cotehardie"
+	mob_overlay_icon = 'icons/roguetown/clothing/onmob/cloaks.dmi'
+	alternate_worn_layer = TABARD_LAYER
+	body_parts_covered = CHEST|GROIN|ARMS
+	boobed = TRUE
+	slot_flags = ITEM_SLOT_CLOAK
+	flags_inv = HIDECROTCH|HIDEBOOB
+	detail_tag = "_detail"
+	detail_color = "#36241f"
+	sleeved = 'icons/roguetown/clothing/onmob/helpers/sleeves_cloaks.dmi'
+	sleevetype = "cotehardie"
+	var/overarmor = TRUE
+	sellprice = 10 //Nice...
+
+/obj/item/clothing/cloak/cotehardie/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/cotehardie/update_icon()
+	cut_overlays()
+	if(get_detail_tag())
+		var/mutable_appearance/pic = mutable_appearance(icon(icon, "[icon_state][detail_tag]"))
+		pic.appearance_flags = RESET_COLOR
+		if(get_detail_color())
+			pic.color = get_detail_color()
+		add_overlay(pic)
+
+/obj/item/clothing/cloak/cotehardie/Initialize()
+	..()
+	update_icon()
+
+/obj/item/clothing/cloak/cotehardie/MiddleClick(mob/user)
+	overarmor = !overarmor
+	to_chat(user, span_info("I [overarmor ? "wear the coat over my armor" : "wear the coat under my armor"]."))
+	if(overarmor)
+		alternate_worn_layer = TABARD_LAYER
+	else
+		alternate_worn_layer = UNDER_ARMOR_LAYER
+	user.update_inv_cloak()
+	user.update_inv_armor()
+
+/obj/item/clothing/cloak/captain
+	name = "captain's cape"
+	desc = "A cape with a gold embroided heraldry of Azure."
+	icon = 'icons/roguetown/clothing/special/captain.dmi'
+	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/captain.dmi'
+	sleeved = 'icons/roguetown/clothing/special/onmob/captain.dmi'
+	sleevetype = "shirt"
+	icon_state = "capcloak"
+	detail_tag = "_detail"
+	alternate_worn_layer = CLOAK_BEHIND_LAYER
+	detail_color = "#39404d"
+	sellprice = 45 //Stylish~
+
+/obj/item/clothing/cloak/captain/Initialize()
+	. = ..()
+	if(GLOB.lordprimary)
+		lordcolor(GLOB.lordprimary, GLOB.lordsecondary)
+	GLOB.lordcolor += src
+
+/obj/item/clothing/cloak/tabard/knight/guard/lordcolor(primary,secondary)
+	detail_color = primary
+	update_icon()
+	if(ismob(loc))
+		var/mob/L = loc
+		L.update_inv_cloak()
+
+/obj/item/clothing/cloak/captain/Destroy()
+	GLOB.lordcolor -= src
+	return ..()
+
+/obj/item/clothing/cloak/captain/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+
+/obj/item/clothing/cloak/apron/waist/maid
+	name = "maid apron"
+	desc = "A fancy, somewhat short apron usually worn by servants."
+	body_parts_covered = null
+	icon_state = "maidapron"
+	item_state = "maidapron"
+	slot_flags = ITEM_SLOT_BACK_L|ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK // CC Edit
+	icon = 'icons/roguetown/clothing/special/maids.dmi'
+	mob_overlay_icon = 'icons/roguetown/clothing/special/onmob/maids.dmi'
+	sleeved = 'icons/roguetown/clothing/special/onmob/maids.dmi'
+
+/obj/item/clothing/cloak/kazengun
+	name = "jinbaori"
+	desc = "A simple kind of Kazengunite surcoat, worn here in the distant battlefields of Azuria to differentiate friend from foe."
+	icon_state = "kazenguncoat"
+	item_state = "kazenguncoat"
+	detail_tag = "_detail"
+	slot_flags = ITEM_SLOT_BACK_R|ITEM_SLOT_CLOAK
+	color = "#FFFFFF"
+	detail_color = "#FFFFFF"
+
+/obj/item/clothing/cloak/kazengun/ComponentInitialize()
+	. = ..()
+	AddComponent(/datum/component/storage/concrete/roguetown/cloak)
+	
+/obj/item/clothing/cloak/kazengun/update_icon()
+	cut_overlays()
+	if(get_detail_tag())
+		var/mutable_appearance/pic = mutable_appearance(icon(icon, "[icon_state][detail_tag]"))
+		pic.appearance_flags = RESET_COLOR
+		if(get_detail_color())
+			pic.color = get_detail_color()
+		add_overlay(pic)

@@ -17,9 +17,6 @@
 /obj/effect/dummy/phased_mob/slaughter/bullet_act()
 	return BULLET_ACT_FORCE_PIERCE
 
-/obj/effect/dummy/phased_mob/slaughter/singularity_act()
-	return
-
 /mob/living/proc/phaseout(obj/effect/decal/cleanable/B)
 	if(iscarbon(src))
 		var/mob/living/carbon/C = src
@@ -50,7 +47,7 @@
 	// Extinguish, unbuckle, stop being pulled, set our location into the
 	// dummy object
 	var/obj/effect/dummy/phased_mob/slaughter/holder = new /obj/effect/dummy/phased_mob/slaughter(mobloc)
-	ExtinguishMob()
+	extinguish_mob()
 
 	// Keep a reference to whatever we're pulling, because forceMove()
 	// makes us stop pulling
@@ -74,8 +71,6 @@
 
 	if(victim.stat == CONSCIOUS)
 		visible_message(span_warning("[victim] kicks free of the blood pool just before entering it!"), null, span_notice("I hear splashing and struggling."))
-	else if(victim.reagents && victim.reagents.has_reagent(/datum/reagent/consumable/ethanol/demonsblood, needs_metabolizing = TRUE))
-		visible_message(span_warning("Something prevents [victim] from entering the pool!"), span_warning("A strange force is blocking [victim] from entering!"), span_notice("I hear a splash and a thud."))
 	else
 		victim.forceMove(src)
 		victim.emote("scream")
@@ -93,12 +88,7 @@
 /mob/living/proc/bloodcrawl_consume(mob/living/victim)
 	to_chat(src, span_danger("I begin to feast on [victim]... You can not move while you are doing this."))
 
-	var/sound
-	if(istype(src, /mob/living/simple_animal/slaughter))
-		var/mob/living/simple_animal/slaughter/SD = src
-		sound = SD.feast_sound
-	else
-		sound = 'sound/blank.ogg'
+	var/sound = 'sound/blank.ogg'
 
 	for(var/i in 1 to 3)
 		playsound(get_turf(src),sound, 50, TRUE)
@@ -107,7 +97,7 @@
 	if(!victim)
 		return FALSE
 
-	if(victim.reagents && victim.reagents.has_reagent(/datum/reagent/consumable/ethanol/devilskiss, needs_metabolizing = TRUE))
+	if(victim.reagents)
 		to_chat(src, span_warning("<b>AAH! THEIR FLESH! IT BURNS!</b>"))
 		adjustBruteLoss(25) //I can't use adjustHealth() here because bloodcrawl affects /mob/living and adjustHealth() only affects simple mobs
 		var/found_bloodpool = FALSE

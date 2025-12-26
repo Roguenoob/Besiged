@@ -1,5 +1,11 @@
 /mob/living/carbon/Initialize()
-	. = ..()
+	..()
+
+	pain_threshold = STAWIL * 10
+
+	if(HAS_TRAIT(src, TRAIT_NOPAIN))
+		pain_threshold = 250
+
 	create_reagents(1000)
 	update_body_parts() //to update the carbon's new bodyparts appearance
 	GLOB.carbon_list += src
@@ -12,34 +18,34 @@
 	QDEL_LIST(internal_organs)
 	QDEL_LIST(bodyparts)
 	QDEL_LIST(implants)
-	remove_from_all_data_huds()
 	QDEL_NULL(dna)
+	QDEL_NULL(underwear)
 	GLOB.carbon_list -= src
 
 /mob/living/carbon/ZImpactDamage(turf/T, levels)
 	var/obj/item/bodypart/affecting
 	if(prob(66))
 		affecting = get_bodypart("[pick("r","l")]_leg")
-		to_chat(src, span_warning("I land on my leg!"))
+		to_chat(src, "<span class='warning'>I land on my leg!</span>")
 		if(affecting && apply_damage((levels * 10), BRUTE, affecting))		// 100 brute damage
 			update_damage_overlays()
 	else
 		switch(rand(1,3))
 			if(1)
 				affecting = get_bodypart("[pick("r","l")]_arm")
-				to_chat(src, span_warning("I land on my arm!"))
+				to_chat(src, "<span class='warning'>I land on my arm!</span>")
 				if(affecting && apply_damage((levels * 10), BRUTE, affecting))		// 100 brute damage
 					update_damage_overlays()
 			if(2)
 				affecting = get_bodypart("chest")
-				to_chat(src, span_warning("I land on my chest!"))
+				to_chat(src, "<span class='warning'>I land on my chest!</span>")
 				adjustOxyLoss(50)
 				emote("breathgasp")
 				if(affecting && apply_damage((levels * 10), BRUTE, affecting))		// 100 brute damage
 					update_damage_overlays()
 			if(3)
 				affecting = get_bodypart("head")
-				to_chat(src, span_warning("I land on my head!"))
+				to_chat(src, "<span class='warning'>I land on my head!</span>")
 				if(levels > 2)
 					AdjustUnconscious(levels * 100)
 					if(affecting && apply_damage((levels * 10), BRUTE, affecting))		// 100 brute damage
@@ -52,6 +58,7 @@
 	AdjustKnockdown(levels * 20)
 
 /mob/living/carbon/swap_hand(held_index)
+	SEND_SIGNAL(src, COMSIG_CARBON_SWAPHANDS)
 	if(!held_index)
 		held_index = (active_hand_index % held_items.len)+1
 
@@ -59,7 +66,7 @@
 	if(item_in_hand) //this segment checks if the item in your hand is twohanded.
 		if(istype(item_in_hand))
 			if(item_in_hand.wielded == 1)
-				to_chat(usr, span_warning("My other hand is too busy holding [item_in_hand]."))
+				to_chat(usr, "<span class='warning'>My other hand is too busy holding [item_in_hand].</span>")
 				return FALSE
 	if(atkswinging || atkreleasing)
 		stop_attack(FALSE)
@@ -79,7 +86,10 @@
 	oactive = FALSE
 	update_a_intents()
 
-	givingto = null
+	if(ishuman(src))
+		var/mob/living/carbon/human/H = src
+		if(H.has_status_effect(/datum/status_effect/buff/clash))
+			H.bad_guard(span_warning("I swapped away from the weapon!"))
 	return TRUE
 
 
@@ -100,6 +110,10 @@
 		mode() // Activate held item
 
 /mob/living/carbon/attackby(obj/item/I, mob/user, params)
+	// Special case for scissors with snip intent targeting the head or skull
+	if(istype(I, /obj/item/rogueweapon/huntingknife/scissors) && user.used_intent.type == /datum/intent/snip && (user.zone_selected == BODY_ZONE_HEAD || user.zone_selected == BODY_ZONE_PRECISE_SKULL))
+		return I.attack(src, user)
+
 	if(!user.cmode)
 		var/try_to_fail = istype(user.rmb_intent, /datum/rmb_intent/strong)
 		var/list/possible_steps = list()
@@ -133,39 +147,40 @@
 /mob/living/carbon/throw_impact(atom/hit_atom, datum/thrownthing/throwingdatum)
 	. = ..()
 	var/hurt = TRUE
-	if(istype(throwingdatum, /datum/thrownthing))
-		var/datum/thrownthing/D = throwingdatum
-		if(iscyborg(D.thrower))
-			var/mob/living/silicon/robot/R = D.thrower
-			if(!R.emagged)
-				hurt = FALSE
 	if(hit_atom.density && isturf(hit_atom))
 		if(hurt)
+			take_bodypart_damage(10,check_armor = TRUE)
 			if(IsOffBalanced())
 				Paralyze(20)
-			if(prob(20))
-				emote("scream") // lifeweb reference ?? xd
-			take_bodypart_damage(10,check_armor = TRUE)
-			playsound(src,"genblunt",100,TRUE)
 	if(iscarbon(hit_atom) && hit_atom != src)
 		var/mob/living/carbon/victim = hit_atom
 		if(victim.movement_type & FLYING)
 			return
+		if(cmode && m_intent == MOVE_INTENT_RUN)
+			if(ishuman(src))
+				var/mob/living/carbon/human/H = src
+				if(!get_active_held_item())
+					var/grabprob
+					if(dir != turn(get_dir(victim, src), 180))
+						grabprob = 100
+					else
+						grabprob = ((get_stat(STATKEY_LCK) - 10) * 10) + ((get_stat(STATKEY_SPD) - 10) * 10) + ((get_stat(STATKEY_PER) - 10) * 10)
+						if(prob(grabprob))
+							H.dna?.species?.grab(H, victim)
+							visible_message("<span class='danger'>[src] leaps onto [victim]!",\
+								"<span class='danger'>I leap onto [victim]!</span>")
+							return
 		if(hurt)
-			if(HAS_TRAIT(src, TRAIT_MARTIALARTIST))
-				victim.take_bodypart_damage(25,check_armor = TRUE)
-				if(victim.IsOffBalanced())
-					victim.Knockdown(30)
-				visible_message("<span class='danger'>[src] jump kick's [victim]!",\
-					span_danger("I jump kick [victim]!"))
-			else
-				victim.take_bodypart_damage(10,check_armor = TRUE)
-				take_bodypart_damage(10,check_armor = TRUE)
-				if(victim.IsOffBalanced())
-					victim.Knockdown(30)
-				visible_message("<span class='danger'>[src] crashes into [victim]!",\
-					span_danger("I violently crash into [victim]!"))
-		playsound(src,"genblunt",100,TRUE)
+			victim.take_bodypart_damage(10,check_armor = TRUE)
+			take_bodypart_damage(10,check_armor = TRUE)
+			visible_message("<span class='danger'>[src] crashes into [victim]!",\
+				"<span class='danger'>I violently crash into [victim]!</span>")
+			playsound(src,"genblunt",100,TRUE)
+			var/nomprob
+			if(voremode)
+				nomprob = ((get_stat(STATKEY_LCK - 10) * 10) + ((get_stat(STATKEY_STR) - 10) * 10) + (get_stat(STATKEY_SPD)))
+				if(prob(nomprob))
+					spontaneous_vore_attackby(victim, src)
 
 
 //Throwing stuff
@@ -221,17 +236,21 @@
 					if(!throwable_mob.buckled)
 						thrown_thing = throwable_mob
 						thrown_speed = 1
-						thrown_range = max(round((STASTR/throwable_mob.STACON)*2), 1)
+						if(STASTR > throwable_mob.STACON)
+							thrown_range = 4
+						else
+							thrown_range = 1
 						stop_pulling()
-						if(G.grab_state < GRAB_AGGRESSIVE)
-							return
-						if(HAS_TRAIT(src, TRAIT_PACIFISM))
-							to_chat(src, span_notice("I gently let go of [throwable_mob]."))
-							return
+						if(G.grab_state < GRAB_AGGRESSIVE)		//If we have the Giant Virtue, and aren't throwing another Giant, we can do it w/o aggro grab
+							if(HAS_TRAIT(throwable_mob, TRAIT_BIGGUY))
+								return
+							if(!HAS_TRAIT(src,TRAIT_BIGGUY))
+								return
 						var/turf/start_T = get_turf(loc) //Get the start and target tile for the descriptors
 						var/turf/end_T = get_turf(target)
-						if(start_T.z != end_T.z && throwable_mob.mobility_flags & MOBILITY_STAND)
-							return
+						if(throwable_mob.cmode)
+							if(start_T.z != end_T.z && throwable_mob.mobility_flags & MOBILITY_STAND)
+								return
 						if(start_T && end_T)
 							log_combat(src, throwable_mob, "thrown", addition="grab from tile in [AREACOORD(start_T)] towards tile at [AREACOORD(end_T)]")
 				else
@@ -245,7 +264,7 @@
 			dropItemToGround(I, silent = TRUE)
 
 			if(HAS_TRAIT(src, TRAIT_PACIFISM) && I.throwforce)
-				to_chat(src, span_notice("I set [I] down gently on the ground."))
+				to_chat(src, "<span class='notice'>I set [I] down gently on the ground.</span>")
 				return
 
 
@@ -254,14 +273,15 @@
 			thrown_speed = thrown_thing.throw_speed
 		if(!thrown_range)
 			thrown_range = thrown_thing.throw_range
-		visible_message(span_danger("[src] throws [thrown_thing]."), \
-						span_danger("I toss [thrown_thing]."))
+		do_attack_animation(target, no_effect = TRUE)
+		visible_message("<span class='danger'>[src] throws [thrown_thing].</span>", \
+						"<span class='danger'>I toss [thrown_thing].</span>")
 		log_message("has thrown [thrown_thing]", LOG_ATTACK)
-		newtonian_move(get_dir(target, src))
 		thrown_thing.safe_throw_at(target, thrown_range, thrown_speed, src, null, null, null, move_force)
+		changeNext_move(CLICK_CD_MELEE)
 		if(!used_sound)
 			used_sound = pick(PUNCHWOOSH)
-		playsound(get_turf(src), used_sound, 100, FALSE)
+		playsound(get_turf(src), used_sound, 60, FALSE)
 
 /mob/living/carbon/restrained(ignore_grab = TRUE)
 //	. = (handcuffed || (!ignore_grab && pulledby && pulledby.grab_state >= GRAB_AGGRESSIVE))
@@ -269,7 +289,8 @@
 		return TRUE
 	if(pulledby && !ignore_grab)
 		if(pulledby != src)
-			return TRUE
+			if(pulledby.grab_state >= GRAB_AGGRESSIVE)
+				return TRUE
 
 /mob/living/carbon/proc/canBeHandcuffed()
 	return 0
@@ -301,14 +322,14 @@
 
 	dat += "<BR><B>Back:</B> <A href='?src=[REF(src)];item=[SLOT_BACK]'>[back ? back : "Nothing"]</A>"
 
-
-	if(istype(wear_mask, /obj/item/clothing/mask) && istype(back, /obj/item/tank))
-		dat += "<BR><A href='?src=[REF(src)];internal=1'>[internal ? "Disable Internals" : "Set Internals"]</A>"
-
 	if(handcuffed)
 		dat += "<BR><A href='?src=[REF(src)];item=[SLOT_HANDCUFFED]'>Handcuffed</A>"
 	if(legcuffed)
 		dat += "<BR><A href='?src=[REF(src)];item=[SLOT_LEGCUFFED]'>Legcuffed</A>"
+
+	var/datum/status_effect/bugged/effect = has_status_effect(/datum/status_effect/bugged)
+	if(effect && HAS_TRAIT(user, TRAIT_INQUISITION))
+		dat += "<BR><A href='?src=[REF(src)];item=[effect.device]'>BUGGED</A>"
 
 	dat += {"
 	<BR>
@@ -318,7 +339,7 @@
 	onclose(user, "mob[REF(src)]")
 
 /mob/living/carbon/fall(forced)
-    loc.handle_fall(src, forced)//it's loc so it doesn't call the mob's handle_fall which does nothing
+	loc?.handle_fall(src, forced)//it's loc so it doesn't call the mob's handle_fall which does nothing
 
 /mob/living/carbon/is_muzzled()
 	return(istype(src.wear_mask, /obj/item/clothing/mask/muzzle))
@@ -330,46 +351,62 @@
 		return FALSE
 
 /obj/structure
-	var/breakoutextra = 10 SECONDS
+	var/breakoutextra = 30 SECONDS
 
 /mob/living/carbon/resist_buckle()
 	if(restrained())
 		changeNext_move(CLICK_CD_BREAKOUT)
 		last_special = world.time + CLICK_CD_BREAKOUT
-		var/buckle_cd = 600
+		var/buckle_cd = 1 MINUTES
 		if(handcuffed)
 			var/obj/item/restraints/O = src.get_item_by_slot(SLOT_HANDCUFFED)
-			buckle_cd = O.breakouttime
+			if(STASTR > 15)
+				buckle_cd = O.breakouttime
+			else if(STASTR > 10)
+				buckle_cd = O.slipouttime - ((STASTR - 10) * 20 SECONDS)
 		if(istype(buckled, /obj/structure))
 			var/obj/structure/S = buckled
-			buckle_cd += S.breakoutextra
-		if(STASTR > 15)
-			buckle_cd = 3 SECONDS
-		visible_message(span_warning("[src] attempts to struggle free!"), \
-					span_notice("I attempt to struggle free..."))
+			if(STASTR > 15)
+				buckle_cd += 10 SECONDS
+			else
+				buckle_cd += S.breakoutextra
+		visible_message("<span class='warning'>[src] attempts to struggle free!</span>", \
+					"<span class='notice'>I attempt to struggle free...</span>")
 		if(do_after(src, buckle_cd, 0, target = src))
 			if(!buckled)
 				return
 			buckled.user_unbuckle_mob(src,src)
 		else
 			if(src && buckled)
-				to_chat(src, span_warning("I fail to struggle free!"))
+				to_chat(src, "<span class='warning'>I fail to struggle free!</span>")
 	else
 		buckled.user_unbuckle_mob(src,src)
 
 /mob/living/carbon/resist_fire()
-	fire_stacks -= 2
-	if(fire_stacks > 10)
-		Paralyze(60, TRUE, TRUE)
+	adjust_fire_stacks(-2, /datum/status_effect/fire_handler/fire_stacks)
+	adjust_fire_stacks(-2, /datum/status_effect/fire_handler/fire_stacks/sunder)
+	adjust_fire_stacks(-2, /datum/status_effect/fire_handler/fire_stacks/divine)
+
+	var/datum/status_effect/fire_handler/fire_stacks/fire_status = has_status_effect(/datum/status_effect/fire_handler/fire_stacks)
+	var/datum/status_effect/fire_handler/fire_stacks/sunder_status = has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder)
+	var/datum/status_effect/fire_handler/fire_stacks/divine_status = has_status_effect(/datum/status_effect/fire_handler/fire_stacks/divine)
+	var/datum/status_effect/fire_handler/fire_stacks/sunder/blessed/blessed_sunder = has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder/blessed)
+
+	if(fire_status?.stacks + sunder_status?.stacks + divine_status?.stacks + blessed_sunder?.stacks > 10 || !(mobility_flags & MOBILITY_STAND))
+		Paralyze(50, TRUE, TRUE)
 		spin(32,2)
-		fire_stacks -= 5
+		adjust_fire_stacks(-5, /datum/status_effect/fire_handler/fire_stacks)
+		adjust_fire_stacks(-5, /datum/status_effect/fire_handler/fire_stacks/sunder)
+		adjust_fire_stacks(-5, /datum/status_effect/fire_handler/fire_stacks/divine)
+		adjust_fire_stacks(-5, /datum/status_effect/fire_handler/fire_stacks/sunder/blessed)
 		visible_message(span_warning("[src] rolls on the ground, trying to put [p_them()]self out!"))
 	else
 		visible_message(span_notice("[src] pats the flames to extinguish them."))
-	sleep(30)
-	if(fire_stacks <= 0)
-		ExtinguishMob(TRUE)
-	return
+	addtimer(CALLBACK(src, PROC_REF(check_try_extinguish)), 3 SECONDS)
+
+/mob/living/carbon/proc/check_try_extinguish()
+	if(!has_status_effect(/datum/status_effect/fire_handler))
+		extinguish_mob(TRUE)
 
 /mob/living/carbon/resist_restraints()
 	var/obj/item/I = null
@@ -392,28 +429,31 @@
 
 /mob/living/carbon/proc/cuff_resist(obj/item/I, breakouttime = 600, cuff_break = 0)
 	if(I.item_flags & BEING_REMOVED)
-		to_chat(src, span_warning("I'm already trying to get out of \the [I]\s!"))
+		to_chat(src, "<span class='warning'>You're already attempting to remove [I]!</span>")
 		return
 	I.item_flags |= BEING_REMOVED
 	breakouttime = I.slipouttime
-	if(STASTR > 10)
-		cuff_break = FAST_CUFFBREAK
-		breakouttime = I.breakouttime
-	if(STASTR > 15 || (mind && mind.has_antag_datum(/datum/antagonist/zombie)) )
+	if((STASTR > 10))
+		var/time_mod = breakouttime * (STASTR - 10) * 0.2
+		breakouttime = max(0, breakouttime - time_mod)
+	if(mind && mind.has_antag_datum(/datum/antagonist/zombie))
+		breakouttime = 10 SECONDS
+	if(STASTR > 15)
 		cuff_break = INSTANT_CUFFBREAK
+		breakouttime = I.breakouttime
 	if(!cuff_break)
-		to_chat(src, span_notice("I try to get out of \the [I]\s..."))
-		if(move_after(src, breakouttime, 0, target = src))
+		to_chat(src, "<span class='notice'>I attempt to remove [I]...</span>")
+		if(do_after(src, breakouttime, 0, target = src))
 			clear_cuffs(I, cuff_break)
 		else
-			to_chat(src, span_danger("I fail to get out of \the [I]\s!"))
+			to_chat(src, "<span class='danger'>I fail to remove [I]!</span>")
 
 	else if(cuff_break == FAST_CUFFBREAK)
-		to_chat(src, span_notice("I attempt to break \the [I]\s..."))
-		if(move_after(src, breakouttime, 0, target = src))
+		to_chat(src, "<span class='notice'>I attempt to break [I]...</span>")
+		if(do_after(src, breakouttime, 0, target = src))
 			clear_cuffs(I, cuff_break)
 		else
-			to_chat(src, span_danger("I fail to break \the [I]\s!"))
+			to_chat(src, "<span class='danger'>I fail to break [I]!</span>")
 
 	else if(cuff_break == INSTANT_CUFFBREAK)
 		clear_cuffs(I, cuff_break)
@@ -434,7 +474,7 @@
 			if (W)
 				W.layer = initial(W.layer)
 				W.plane = initial(W.plane)
-		changeNext_move(0)
+		changeNext_move(0, override = TRUE)
 	if (legcuffed)
 		var/obj/item/W = legcuffed
 		legcuffed = null
@@ -447,20 +487,21 @@
 			if (W)
 				W.layer = initial(W.layer)
 				W.plane = initial(W.plane)
-		changeNext_move(0)
+		changeNext_move(0, override = TRUE)
 
 /mob/living/carbon/proc/clear_cuffs(obj/item/I, cuff_break)
 	if(!I.loc || buckled)
 		return FALSE
 	if(I != handcuffed && I != legcuffed)
 		return FALSE
-	var/stupid_msg = "[src] manages to [cuff_break ? "break" : "slip"] out of [I]!"
+	visible_message("[cuff_break ? "<span class='danger'>" : "<span class='warning'>"][src] manages to [cuff_break ? "break" : "slip"] out of [I]!</span>")
 	if(cuff_break)
-		stupid_msg = span_danger("[src] manages to break out of [I]!")
-	else
-		stupid_msg = span_warning("[src] manages to slip out of [I]!")
-	visible_message(stupid_msg)
-	to_chat(src, span_notice("I [cuff_break ? "break" : "slip"] out of [I]!"))
+		playsound(src, 'sound/misc/chain_snap.ogg', 100, FALSE, 10)
+	to_chat(src, "<span class='notice'>I [cuff_break ? "break" : "slip"] out of [I]!</span>")
+
+	if(istype(I, /obj/item/net))
+		if(has_status_effect(/datum/status_effect/debuff/netted))
+			remove_status_effect(/datum/status_effect/debuff/netted)
 
 	if(cuff_break)
 		. = !((I == handcuffed) || (I == legcuffed))
@@ -495,8 +536,6 @@
 	dropItemToGround(I)
 
 	var/modifier = 0
-	if(HAS_TRAIT(src, TRAIT_CLUMSY))
-		modifier -= 40 //Clumsy people are more likely to hit themselves -Honk!
 
 	switch(rand(1,100)+modifier) //91-100=Nothing special happens
 		if(-INFINITY to 0) //attack yourself
@@ -517,7 +556,7 @@
 			I.safe_throw_at(target,I.throw_range,I.throw_speed,src, force = move_force)
 
 /mob/living/carbon/proc/get_str_arms(num)
-	if(!domhand || !num)
+	if(!domhand || !num || HAS_TRAIT(src, TRAIT_DUALWIELDER))
 		return STASTR
 	var/used = STASTR
 	if(num == domhand)
@@ -535,18 +574,13 @@
 		stat("PER: \Roman [STAPER]")
 		stat("INT: \Roman [STAINT]")
 		stat("CON: \Roman [STACON]")
-		stat("END: \Roman [STAEND]")
+		stat("WIL: \Roman [STAWIL]")
 		stat("SPD: \Roman [STASPD]")
+		stat("FOR: \Roman [STALUC]")
 		stat("PATRON: [patron]")
 
 /mob/living/carbon/Stat()
 	..()
-	if(statpanel("Status"))
-		var/obj/item/organ/alien/plasmavessel/vessel = getorgan(/obj/item/organ/alien/plasmavessel)
-		if(vessel)
-			stat(null, "Plasma Stored: [vessel.storedPlasma]/[vessel.max_plasma]")
-		if(locate(/obj/item/assembly/health) in src)
-			stat(null, "Health: [health]")
 	add_abilities_to_panel()
 
 /mob/living/carbon/attack_ui(slot)
@@ -556,25 +590,30 @@
 
 /mob/living/carbon
 	var/nausea = 0
+	var/bleeding_tier = 0 
 
 /mob/living/carbon/proc/add_nausea(amt)
 	nausea = clamp(nausea + amt, 0, 300)
 
 /mob/living/carbon/proc/handle_nausea()
+	if(HAS_TRAIT(src, TRAIT_ROTMAN))
+		return TRUE
+	if(stat == DEAD)
+		return TRUE
 	if(nausea >= 100)
 		if(mob_timers["puke"])
 			if(world.time > mob_timers["puke"] + 16 SECONDS)
 				mob_timers["puke"] = world.time
 				if(getorgan(/obj/item/organ/stomach))
-					to_chat(src, span_warning("I'm going to puke..."))
+					to_chat(src, "<span class='warning'>I'm going to puke...</span>")
 					addtimer(CALLBACK(src, PROC_REF(vomit), 50), rand(8 SECONDS, 15 SECONDS))
 			else
 				if(prob(3))
-					to_chat(src, span_warning("I feel sick..."))
+					to_chat(src, "<span class='warning'>I feel sick...</span>")
 		else
 			if(getorgan(/obj/item/organ/stomach))
 				mob_timers["puke"] = world.time
-				to_chat(src, span_warning("I'm going to puke..."))
+				to_chat(src, "<span class='warning'>I'm going to puke...</span>")
 				addtimer(CALLBACK(src, PROC_REF(vomit), 50), rand(8 SECONDS, 15 SECONDS))
 	add_nausea(-1)
 
@@ -584,6 +623,15 @@
 		return TRUE
 
 	mob_timers["puke"] = world.time
+
+	var/obj/item/bodypart/head/dullahan/vomitrelay
+	if(isdullahan(src))
+		var/mob/living/carbon/human = src
+		var/datum/species/dullahan/dullahan = human.dna.species
+		if(dullahan.headless)
+			vomitrelay = dullahan.my_head
+
+	var/atom/movable/vomit_source = vomitrelay ? vomitrelay : src
 
 	if(nutrition <= 50 && !blood)
 		if(message)
@@ -595,38 +643,48 @@
 		if(HAS_TRAIT(src, TRAIT_NOHUNGER))
 			return TRUE
 		add_nausea(-100)
-		rogstam_add(-50)
-		if(is_mouth_covered()) //make this add a blood/vomit overlay later it'll be hilarious
+		energy_add(-50)
+		if(vomitrelay && ishuman(vomitrelay.loc))
+			var/mob/living/carbon/human/parent = vomitrelay.loc
 			if(message)
-				visible_message(span_danger("[src] throws up all over [p_them()]self!"), \
-								span_danger("I puke all over myself!"))
-				SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "vomit", /datum/mood_event/vomitself)
-				add_stress(/datum/stressevent/vomitself)
+				visible_message("<span class='danger'>[vomitrelay] throws up all over [parent]!</span>", \
+								"<span class='danger'>I puke all over [parent]!</span>")
+				parent.add_stress(/datum/stressevent/vomitother)
+
+				src.add_stress(/datum/stressevent/vomitedonother)
+			distance = 0
+		else if(is_mouth_covered()) //make this add a blood/vomit overlay later it'll be hilarious
+			if(message)
+				visible_message("<span class='danger'>[src] throws up all over [p_them()]self!</span>", \
+								"<span class='danger'>I puke all over myself!</span>")
+				if(iscarbon(src))
+					var/mob/living/carbon/C = src
+					C.add_stress(/datum/stressevent/vomitself)
 			distance = 0
 		else
 			if(message)
-				visible_message(span_danger("[src] pukes!"), span_danger("I puke!"))
-				if(!isflyperson(src))
-					SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "vomit", /datum/mood_event/vomit)
-					add_stress(/datum/stressevent/vomit)
+				visible_message("<span class='danger'>[vomit_source] pukes!</span>", "<span class='danger'>I puke!</span>")
+				if(iscarbon(src))
+					var/mob/living/carbon/C = src
+					C.add_stress(/datum/stressevent/vomit)
 	else
 		if(NOBLOOD in dna?.species?.species_traits)
 			return TRUE
 		if(message)
-			visible_message(span_danger("[src] coughs up blood!"), span_danger("I cough up blood!"))
+			visible_message("<span class='danger'>[vomit_source] coughs up blood!</span>", "<span class='danger'>I cough up blood!</span>")
 
 	if(stun)
 		Immobilize(59)
 
+	var/turf/T = get_turf(vomit_source)
 	if(!blood)
-		playsound(get_turf(src), pick('sound/vo/vomit.ogg','sound/vo/vomit_2.ogg'), 100, TRUE)
+		playsound(T, pick('sound/vo/vomit.ogg','sound/vo/vomit_2.ogg'), 100, TRUE)
 	else
 		if(stat != DEAD)
-			playsound(src, pick('sound/vo/throat.ogg','sound/vo/throat2.ogg','sound/vo/throat3.ogg'), 100, FALSE)
+			playsound(vomit_source, pick('sound/vo/throat.ogg','sound/vo/throat2.ogg','sound/vo/throat3.ogg'), 100, FALSE)
 
 	blur_eyes(10)
 
-	var/turf/T = get_turf(src)
 	if(!blood)
 		if(nutrition > 50)
 			adjust_nutrition(-lost_nutrition)
@@ -637,10 +695,25 @@
 	for(var/i=0 to distance)
 		if(blood)
 			if(T)
-				bleed(5)
-		else if(src.reagents.has_reagent(/datum/reagent/consumable/ethanol/blazaam, needs_metabolizing = TRUE))
-			if(T)
-				T.add_vomit_floor(src, VOMIT_PURPLE)
+				if(vomitrelay && blood_volume > 0)
+					var/mob/living/carbon/human/parent = vomitrelay.loc
+					var/amt = 5 * parent.physiology.bleed_mod
+					blood_volume = max(blood_volume - amt, 0)
+					GLOB.azure_round_stats[STATS_BLOOD_SPILT] += amt
+					if(isturf(vomit_source.loc))
+						add_drip_floor(vomit_source.loc, amt)
+					var/vol2use
+					if(amt > 1)
+						var/index = min(amt - 1, 3)
+						vol2use = "sound/misc/bleed ([index]).ogg"
+					if(!(mobility_flags & MOBILITY_STAND))
+						vol2use = null
+					if(vol2use)
+						playsound(T, vol2use, 100, FALSE)
+
+					updatehealth()
+				else
+					bleed(5)
 		else
 			if(T)
 				T.add_vomit_floor(src, VOMIT_TOXIC)//toxic barf looks different
@@ -654,6 +727,8 @@
 		if(!internal_organs.len)
 			break //Guess we're out of organs!
 		var/obj/item/organ/guts = pick(internal_organs)
+		if(istype(guts, /obj/item/organ/brain)) //Don't hurl brains for mind sanity reasons
+			continue
 		var/turf/T = get_turf(src)
 		guts.Remove(src)
 		guts.forceMove(T)
@@ -690,7 +765,8 @@
 	for(var/obj/item/bodypart/bodypart as anything in bodyparts) //hardcoded to streamline things a bit
 		if(!(bodypart.body_zone in lethal_zones))
 			continue
-		var/my_burn = abs((bodypart.burn_dam / bodypart.max_damage) * DAMAGE_THRESHOLD_FIRE_CRIT)
+		var/hardcrit_divisor = !mind ? FIRE_HARDCRIT_DIVISOR_MINDLESS : FIRE_HARDCRIT_DIVISOR
+		var/my_burn = abs((bodypart.burn_dam / bodypart.max_damage) * hardcrit_divisor)
 		total_burn = max(total_burn, my_burn)
 		used_damage = max(used_damage, my_burn)
 	if(used_damage < total_tox)
@@ -701,24 +777,12 @@
 	staminaloss = round(total_stamina, DAMAGE_PRECISION)
 	update_stat()
 	update_mobility()
-//	if(((maxHealth - total_burn) < HEALTH_THRESHOLD_DEAD) && stat == DEAD )
-//		become_husk("burn")
 
-	med_hud_set_health()
 	if(stat == SOFT_CRIT)
 		add_movespeed_modifier(MOVESPEED_ID_CARBON_SOFTCRIT, TRUE, multiplicative_slowdown = SOFTCRIT_ADD_SLOWDOWN)
 	else
 		remove_movespeed_modifier(MOVESPEED_ID_CARBON_SOFTCRIT, TRUE)
-
-/mob/living/carbon/update_stamina()
-	var/stam = getStaminaLoss()
-	if(stam > DAMAGE_PRECISION && (maxHealth - stam) <= crit_threshold && !stat)
-		enter_stamcrit()
-	else if(stam_paralyzed)
-		stam_paralyzed = FALSE
-	else
-		return
-	update_health_hud()
+	SEND_SIGNAL(src, COMSIG_LIVING_HEALTH_UPDATE)
 
 /mob/living/carbon
 	var/lightning_flashing = FALSE
@@ -766,6 +830,16 @@
 
 	if(HAS_TRAIT(src, TRAIT_DARKVISION))
 		lighting_alpha = min(lighting_alpha, LIGHTING_PLANE_ALPHA_DARKVISION)
+		see_in_dark = max(see_in_dark, 12)
+
+	if(HAS_TRAIT(src, TRAIT_NOCSHADES))
+		lighting_alpha = min(lighting_alpha, LIGHTING_PLANE_ALPHA_NOCSHADES)
+		see_in_dark = max(see_in_dark, 12)
+		add_client_colour(/datum/client_colour/nocshaded)
+		overlay_fullscreen("inqvision", /atom/movable/screen/fullscreen/inqvision)
+	else
+		remove_client_colour(/datum/client_colour/nocshaded)
+		clear_fullscreen("inqvision")
 
 	if(HAS_TRAIT(src, TRAIT_THERMAL_VISION))
 		sight |= (SEE_MOBS)
@@ -775,8 +849,8 @@
 		sight |= (SEE_TURFS|SEE_MOBS|SEE_OBJS)
 		see_in_dark = max(see_in_dark, 8)
 
-	if(HAS_TRAIT(src, TRAIT_NOCSIGHT))
-		lighting_alpha = min(lighting_alpha, LIGHTING_PLANE_ALPHA_NOCVISION)
+	if(HAS_TRAIT(src, TRAIT_ZIZOSIGHT))
+		lighting_alpha = min(lighting_alpha, LIGHTING_PLANE_ALPHA_ZIZOVISION)
 		see_in_dark = max(see_in_dark, 8)
 
 	if(see_override)
@@ -823,21 +897,6 @@
 		protection += tally[key]
 	protection *= INVERSE(target_zones.len)
 	return protection
-
-//Returns a total count of covered limbs.
-/mob/living/carbon/get_covered_limbs(list/target_zones = list(HANDS,CHEST,GROIN,LEGS,FEET,ARMS,HEAD))
-	var/list/tally = list()
-	for(var/obj/item/I in get_equipped_items())
-		for(var/zone in target_zones)
-			if(I.body_parts_covered & zone)
-				tally["[zone]"] = max(1, target_zones["[zone]"])
-	var/protection = 0
-	for(var/key in tally)
-		protection += tally[key]
-	return protection
-
-/mob/living
-	var/succumb_timer = 0
 
 //this handles hud updates
 /mob/living/carbon/update_damage_hud()
@@ -890,14 +949,10 @@
 			overlay_fullscreen("critvision", /atom/movable/screen/fullscreen/crit/vision, visionseverity)
 		else
 			clear_fullscreen("critvision")
-		if(!succumb_timer)
-			succumb_timer = world.time
 		overlay_fullscreen("crit", /atom/movable/screen/fullscreen/crit, severity)
 		overlay_fullscreen("DD", /atom/movable/screen/fullscreen/crit/death)
 		overlay_fullscreen("DDZ", /atom/movable/screen/fullscreen/crit/zeth)
 	else
-		if(succumb_timer)
-			succumb_timer = 0
 		clear_fullscreen("crit")
 		clear_fullscreen("critvision")
 		clear_fullscreen("DD")
@@ -953,8 +1008,8 @@
 	else
 		clear_fullscreen("brute")*/
 
-	var/hurtdamage = ((get_complex_pain() / (STAEND * 10)) * 100) //what percent out of 100 to max pain
-	if(hurtdamage)
+	var/hurtdamage = ((get_complex_pain() / (STAWIL * 10)) * 100) //what percent out of 100 to max pain
+	if(hurtdamage > 5) //float
 		var/severity = 0
 		switch(hurtdamage)
 			if(5 to 20)
@@ -963,15 +1018,23 @@
 				severity = 2
 			if(40 to 60)
 				severity = 3
+				if(!check_epilepsy())
+					overlay_fullscreen("painflash", /atom/movable/screen/fullscreen/painflash)
 			if(60 to 80)
 				severity = 4
+				if(!check_epilepsy())
+					overlay_fullscreen("painflash", /atom/movable/screen/fullscreen/painflash)
 			if(80 to 99)
 				severity = 5
-				overlay_fullscreen("painflash", /atom/movable/screen/fullscreen/painflash)
+				if(!check_epilepsy())
+					overlay_fullscreen("painflash", /atom/movable/screen/fullscreen/painflash)
 			if(99 to INFINITY)
 				severity = 6
-				overlay_fullscreen("painflash", /atom/movable/screen/fullscreen/painflash)
-		overlay_fullscreen("brute", /atom/movable/screen/fullscreen/brute, severity)
+				if(!check_epilepsy())
+					overlay_fullscreen("painflash", /atom/movable/screen/fullscreen/painflash)
+		
+		if(!check_epilepsy())
+			overlay_fullscreen("brute", /atom/movable/screen/fullscreen/brute, severity)
 	else
 		clear_fullscreen("brute")
 		clear_fullscreen("painflash")
@@ -1009,13 +1072,22 @@
 	if(status_flags & GODMODE)
 		return
 	if(stat != DEAD)
+		if(health <= HEALTH_THRESHOLD_NEARDEATH && HAS_TRAIT(src, TRAIT_DEATHBARGAIN))
+			src.apply_status_effect(/datum/status_effect/buff/undermaidenbargainheal)
+			return
 		if(health <= HEALTH_THRESHOLD_DEAD && !HAS_TRAIT(src, TRAIT_NODEATH))
-			emote("deathgurgle")
+			//Cove edit start
+			if (!istype(loc, /obj/belly))
+			//Cove edit end
+				INVOKE_ASYNC(src, PROC_REF(emote), "deathgurgle")
 			death()
 			cure_blind(UNCONSCIOUS_BLIND)
 			return
 		if(((blood_volume in -INFINITY to BLOOD_VOLUME_SURVIVE) && !HAS_TRAIT(src, TRAIT_BLOODLOSS_IMMUNE)) || IsUnconscious() || IsSleeping() || getOxyLoss() > 75 || (HAS_TRAIT(src, TRAIT_DEATHCOMA)) || (health <= HEALTH_THRESHOLD_FULLCRIT && !HAS_TRAIT(src, TRAIT_NOHARDCRIT)))
 			stat = UNCONSCIOUS
+			if(ishuman(src))
+				var/mob/living/carbon/human/H = src
+				H.dna?.species?.stop_wagging_tail(H)
 			become_blind(UNCONSCIOUS_BLIND)
 			if(CONFIG_GET(flag/near_death_experience) && health <= HEALTH_THRESHOLD_NEARDEATH && !HAS_TRAIT(src, TRAIT_NODEATH))
 				ADD_TRAIT(src, TRAIT_SIXTHSENSE, "near-death")
@@ -1033,7 +1105,6 @@
 	update_health_hud()
 //	update_tod_hud()
 	update_spd()
-	med_hud_set_status()
 
 //called when we get cuffed/uncuffed
 /mob/living/carbon/proc/update_handcuffed()
@@ -1041,10 +1112,8 @@
 //		drop_all_held_items()
 		stop_pulling()
 		throw_alert("handcuffed", /atom/movable/screen/alert/restrained/handcuffed, new_master = src.handcuffed)
-		SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "handcuffed", /datum/mood_event/handcuffed)
 	else
 		clear_alert("handcuffed")
-		SEND_SIGNAL(src, COMSIG_CLEAR_MOOD_EVENT, "handcuffed")
 	update_action_buttons_icon() //some of our action buttons might be unusable when we're handcuffed.
 	update_inv_handcuffed()
 	update_hud_handcuffed()
@@ -1061,10 +1130,6 @@
 	var/obj/item/organ/brain/B = getorgan(/obj/item/organ/brain)
 	if(B)
 		B.brain_death = FALSE
-	for(var/thing in diseases)
-		var/datum/disease/D = thing
-		if(D.severity != DISEASE_SEVERITY_POSITIVE)
-			D.cure(FALSE)
 	var/datum/component/rot/corpse/CR = GetComponent(/datum/component/rot/corpse)
 	if(CR)
 		CR.amount = 0
@@ -1091,8 +1156,8 @@
 
 /mob/living/carbon/can_be_revived()
 	. = ..()
-	if(!getorgan(/obj/item/organ/brain) && (!mind || !mind.has_antag_datum(/datum/antagonist/changeling)))
-		testing("norescarbon")
+	if(!getorgan(/obj/item/organ/brain) && (!mind))
+
 		return 0
 
 /mob/living/carbon/harvest(mob/living/user)
@@ -1106,19 +1171,20 @@
 			O.Remove(src)
 			O.forceMove(drop_location())
 	if(organs_amt)
-		to_chat(user, span_notice("I retrieve some of [src]\'s internal organs!"))
+		to_chat(user, "<span class='notice'>I retrieve some of [src]\'s internal organs!</span>")
 
-/mob/living/carbon/ExtinguishMob(itemz = TRUE)
+/mob/living/carbon/extinguish_mob(itemz = TRUE)
 	if(itemz)
 		for(var/X in get_equipped_items())
 			var/obj/item/I = X
+			if(I.extinguishable)
+				I.extinguish() //extinguishes our clothes
 			I.acid_level = 0 //washes off the acid on our clothes
-			I.extinguish() //extinguishes our clothes
 		var/obj/item/I = get_active_held_item()
-		if(I)
+		if(I && I.extinguishable)
 			I.extinguish()
 		I = get_inactive_held_item()
-		if(I)
+		if(I && I.extinguishable)
 			I.extinguish()
 	..()
 
@@ -1148,16 +1214,6 @@
 			O.held_index = r_arm_index_next //2, 4, 6, 8...
 			hand_bodyparts += O
 
-/mob/living/carbon/do_after_coefficent()
-	. = ..()
-	var/datum/component/mood/mood = src.GetComponent(/datum/component/mood) //Currently, only carbons or higher use mood, move this once that changes.
-	if(mood)
-		switch(mood.sanity) //Alters do_after delay based on how sane you are
-			if(-INFINITY to SANITY_DISTURBED)
-				. *= 1.25
-			if(SANITY_NEUTRAL to INFINITY)
-				. *= 0.90
-
 /mob/living/carbon/proc/create_internal_organs()
 	for(var/X in internal_organs)
 		var/obj/item/organ/I = X
@@ -1171,7 +1227,6 @@
 /mob/living/carbon/vv_get_dropdown()
 	. = ..()
 	VV_DROPDOWN_OPTION("", "---------")
-	VV_DROPDOWN_OPTION(VV_HK_MAKE_AI, "Make AI")
 	VV_DROPDOWN_OPTION(VV_HK_MODIFY_BODYPART, "Modify bodypart")
 	VV_DROPDOWN_OPTION(VV_HK_MODIFY_ORGANS, "Modify organs")
 	VV_DROPDOWN_OPTION(VV_HK_HALLUCINATION, "Hallucinate")
@@ -1205,28 +1260,22 @@
 					if(BP)
 						BP.drop_limb()
 					else
-						to_chat(usr, span_boldwarning("[src] doesn't have such bodypart."))
+						to_chat(usr, "<span class='boldwarning'>[src] doesn't have such bodypart.</span>")
 				if("add")
 					if(BP)
-						to_chat(usr, span_boldwarning("[src] already has such bodypart."))
+						to_chat(usr, "<span class='boldwarning'>[src] already has such bodypart.</span>")
 					else
 						if(!regenerate_limb(result))
-							to_chat(usr, span_boldwarning("[src] cannot have such bodypart."))
+							to_chat(usr, "<span class='boldwarning'>[src] cannot have such bodypart.</span>")
 				if("augment")
 					if(ishuman(src))
 						if(BP)
 							BP.change_bodypart_status(BODYPART_ROBOTIC, TRUE, TRUE)
 						else
-							to_chat(usr, span_boldwarning("[src] doesn't have such bodypart."))
+							to_chat(usr, "<span class='boldwarning'>[src] doesn't have such bodypart.</span>")
 					else
-						to_chat(usr, span_boldwarning("Only humans can be augmented."))
+						to_chat(usr, "<span class='boldwarning'>Only humans can be augmented.</span>")
 		admin_ticket_log("[key_name_admin(usr)] has modified the bodyparts of [src]")
-	if(href_list[VV_HK_MAKE_AI])
-		if(!check_rights(R_SPAWN))
-			return
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")
-			return
-		usr.client.holder.Topic("vv_override", list("makeai"=href_list[VV_HK_TARGET]))
 	if(href_list[VV_HK_MODIFY_ORGANS])
 		if(!check_rights(NONE))
 			return
@@ -1243,14 +1292,14 @@
 		if(!usr)
 			return
 		if(QDELETED(src))
-			to_chat(usr, span_boldwarning("Mob doesn't exist anymore."))
+			to_chat(usr, "<span class='boldwarning'>Mob doesn't exist anymore.</span>")
 			return
 		if(result)
 			var/chosenart = artnames[result]
 			var/datum/martial_art/MA = new chosenart
 			MA.teach(src)
 			log_admin("[key_name(usr)] has taught [MA] to [key_name(src)].")
-			message_admins(span_notice("[key_name_admin(usr)] has taught [MA] to [key_name_admin(src)]."))
+			message_admins("<span class='notice'>[key_name_admin(usr)] has taught [MA] to [key_name_admin(src)].</span>")
 	if(href_list[VV_HK_GIVE_TRAUMA])
 		if(!check_rights(NONE))
 			return
@@ -1266,13 +1315,13 @@
 		var/datum/brain_trauma/BT = gain_trauma(result)
 		if(BT)
 			log_admin("[key_name(usr)] has traumatized [key_name(src)] with [BT.name]")
-			message_admins(span_notice("[key_name_admin(usr)] has traumatized [key_name_admin(src)] with [BT.name]."))
+			message_admins("<span class='notice'>[key_name_admin(usr)] has traumatized [key_name_admin(src)] with [BT.name].</span>")
 	if(href_list[VV_HK_CURE_TRAUMA])
 		if(!check_rights(NONE))
 			return
 		cure_all_traumas(TRAUMA_RESILIENCE_ABSOLUTE)
 		log_admin("[key_name(usr)] has cured all traumas from [key_name(src)].")
-		message_admins(span_notice("[key_name_admin(usr)] has cured all traumas from [key_name_admin(src)]."))
+		message_admins("<span class='notice'>[key_name_admin(usr)] has cured all traumas from [key_name_admin(src)].</span>")
 	if(href_list[VV_HK_HALLUCINATION])
 		if(!check_rights(NONE))
 			return
@@ -1298,10 +1347,6 @@
 		return TRUE
 	if(HAS_TRAIT(src, TRAIT_DUMB))
 		return TRUE
-	var/datum/component/mood/mood = src.GetComponent(/datum/component/mood)
-	if(mood)
-		if(mood.sanity < SANITY_UNSTABLE)
-			return TRUE
 
 /mob/living/carbon/can_speak_vocal()
 	. = ..()
@@ -1310,7 +1355,13 @@
 	if(mouth?.muteinmouth)
 		return FALSE
 	for(var/obj/item/grabbing/grab in grabbedby)
-		if(grab.sublimb_grabbed == BODY_ZONE_PRECISE_MOUTH)
+		if((grab.sublimb_grabbed == BODY_ZONE_PRECISE_MOUTH) && (get_location_accessible(src, BODY_ZONE_PRECISE_MOUTH)))
 			return FALSE
 	if(istype(loc, /turf/open/water) && !(mobility_flags & MOBILITY_STAND))
 		return FALSE
+
+
+/mob/living/carbon/can_buckle()
+	if((cmode) && (mind) && (!handcuffed) && (stat == CONSCIOUS))
+		return 0
+	. = ..()

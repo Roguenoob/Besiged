@@ -27,13 +27,14 @@
 	if(stat >= DEAD || HAS_TRAIT(src, TRAIT_FAKEDEATH) || HAS_TRAIT(src, TRAIT_ROTMAN))
 		if(suiciding)
 			message += "<span class='deadsay'>[p_they(TRUE)] commited suicide... Nothing can be done..."
+		if(HAS_TRAIT(src, TRAIT_DNR))
+			message += "<span class='deadsay'>[p_their(TRUE)] heart will never beat again...</span>"
 		if(isobserver(user) || HAS_TRAIT(user, TRAIT_SOUL_EXAMINE))
 			if(!key && !get_ghost(FALSE, TRUE))
 				message += span_deadsay("[p_their(TRUE)] soul has departed...")
 			else
 				message += span_deadsay("[p_they(TRUE)] [p_are()] still earthbound.")
 	return message
-
 
 //Vrell - Moved this here
 /mob/living/proc/has_penis()

@@ -13,7 +13,7 @@
 	see_in_dark = 6
 	maxHealth = 5
 	health = 5
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/meat/slab/mouse = 1)
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 1)
 	response_help_continuous = "pets"
 	response_help_simple = "pet"
 	response_disarm_continuous = "gently pushes aside"
@@ -27,7 +27,6 @@
 	mob_biotypes = MOB_ORGANIC|MOB_BEAST
 	var/body_color //brown, gray and white, leave blank for random
 	gold_core_spawnable = FRIENDLY_SPAWN
-	var/chew_probability = 1
 
 /mob/living/simple_animal/mouse/Initialize()
 	. = ..()
@@ -64,21 +63,6 @@
 			var/mob/M = AM
 			to_chat(M, span_notice("[icon2html(src, M)] Squeak!"))
 	..()
-
-/mob/living/simple_animal/mouse/handle_automated_action()
-	if(prob(chew_probability))
-		var/turf/open/floor/F = get_turf(src)
-		if(istype(F) && !F.intact)
-			var/obj/structure/cable/C = locate() in F
-			if(C && prob(15))
-				if(C.avail())
-					visible_message(span_warning("[src] chews through the [C]. It's toast!"))
-					playsound(src, 'sound/blank.ogg', 100, TRUE)
-					C.deconstruct()
-					death(toast=1)
-				else
-					C.deconstruct()
-					visible_message(span_warning("[src] chews through the [C]."))
 
 /*
  * Mouse types
@@ -127,7 +111,7 @@
 /obj/item/reagent_containers/food/snacks/deadmouse/attackby(obj/item/I, mob/user, params)
 	if(I.get_sharpness() && user.used_intent.type == INTENT_HARM)
 		if(isturf(loc))
-			new /obj/item/reagent_containers/food/snacks/meat/slab/mouse(loc)
+			new /obj/item/reagent_containers/food/snacks/rogue/meat/steak(loc)
 			to_chat(user, span_notice("I butcher [src]."))
 			qdel(src)
 		else

@@ -1,5 +1,4 @@
 /atom/movable/screen/human
-	icon = 'icons/mob/screen_midnight.dmi'
 
 /atom/movable/screen/human/toggle
 	name = "toggle"
@@ -28,8 +27,6 @@
 	icon_state = "act_equip"
 
 /atom/movable/screen/human/equip/Click()
-	if(ismecha(usr.loc)) // stops inventory actions in a mech
-		return 1
 	var/mob/living/carbon/human/H = usr
 	H.quick_equip()
 
@@ -62,24 +59,6 @@
 /atom/movable/screen/devil/soul_counter/proc/clear()
 	invisibility = INVISIBILITY_ABSTRACT
 
-/atom/movable/screen/ling
-	invisibility = INVISIBILITY_ABSTRACT
-
-/atom/movable/screen/ling/sting
-	name = "current sting"
-	screen_loc = ui_lingstingdisplay
-
-/atom/movable/screen/ling/sting/Click()
-	if(isobserver(usr))
-		return
-	var/mob/living/carbon/U = usr
-	U.unset_sting()
-
-/atom/movable/screen/ling/chems
-	name = "chemical storage"
-	icon_state = "power_display"
-	screen_loc = ui_lingchemdisplay
-
 /datum/hud/human/New(mob/living/carbon/human/owner)
 
 	..()
@@ -99,7 +78,8 @@
 	grain = new /atom/movable/screen/grain
 	grain.hud = src
 	static_inventory += grain
-
+	if(owner.client?.prefs?.grain == TRUE)
+		grain.alpha = 55
 
 	reads = new /atom/movable/screen/read
 	reads.hud = src
@@ -408,10 +388,7 @@
 	using.hud = src
 	static_inventory += using
 
-	using = new /atom/movable/screen/advsetup
-	using.screen_loc = rogueui_advsetup
-	using.hud = src
-	static_inventory += using
+	set_advclass()
 
 /*
 	healthdoll = new /atom/movable/screen/healthdoll()
@@ -428,11 +405,11 @@
 
 	zone_select.update_icon()
 
-	fats = new /atom/movable/screen/rogfat()
-	infodisplay += fats
+	stamina = new /atom/movable/screen/stamina()
+	infodisplay += stamina
 
-	stams = new /atom/movable/screen/rogstam()
-	infodisplay += stams
+	energy = new /atom/movable/screen/energy()
+	infodisplay += energy
 
 	for(var/atom/movable/screen/inventory/inv in (static_inventory + toggleable_inventory))
 		if(inv.slot_id)
@@ -802,3 +779,12 @@
 	else
 		client.screen -= hud_used.hotkeybuttons
 		hud_used.hotkey_ui_hidden = TRUE
+
+//Handles advanced class - Simpler this way.
+/datum/hud/proc/set_advclass()
+	var/atom/movable/screen/using
+
+	using = new /atom/movable/screen/advsetup
+	using.screen_loc = rogueui_advsetup
+	using.hud = src
+	static_inventory += using

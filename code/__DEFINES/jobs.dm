@@ -55,6 +55,8 @@
 #define JOB_UNAVAILABLE_LASTCLASS 10
 #define JOB_UNAVAILABLE_JOB_COOLDOWN 11
 #define JOB_UNAVAILABLE_SLOTFULL 12
+#define JOB_UNAVAILABLE_VIRTUESVICE 13
+#define JOB_UNAVAILABLE_PQ 14
 
 #define DEFAULT_RELIGION "Christianity"
 #define DEFAULT_DEITY "Space Jesus"
@@ -104,25 +106,24 @@
 #define GUARD_CAPTAIN		(1<<5)
 #define MARSHAL		(1<<6)
 #define HOSTAGE		(1<<7)
+#define SUITOR		(1<<8)
 
 #define GARRISON		(1<<1)
 
 #define GUARDSMAN	(1<<0)
 #define MANATARMS	(1<<1)
 #define DUNGEONEER	(1<<2)
-#define GATEMASTER	(1<<3)
+#define SQUIRE		(1<<3)
 #define BOGGUARD	(1<<4)
-#define BOGMASTER	(1<<5)
+#define SERGEANT	(1<<5)
 #define SHERIFF		(1<<6)
 
 #define CHURCHMEN		(1<<2)
 
 #define PRIEST		(1<<0)
-#define PURITAN		(1<<2)
-#define MONK		(1<<3)
-#define GRAVEDIGGER	(1<<4)
-#define CONFESSOR	(1<<5)
-#define DRUID		(1<<6)
+#define MONK		(1<<1)
+#define GRAVEDIGGER	(1<<2)
+#define DRUID		(1<<3)
 
 #define COURTIERS	(1<<3)
 
@@ -136,21 +137,16 @@
 
 #define BARKEEP		(1<<0)
 #define ARCHIVIST	(1<<1)
-#define ARMORSMITH	(1<<2)
-#define WEAPONSMITH (1<<3)
-#define BLACKSMITH  (1<<4)
 #define ALCHEMIST	(1<<5)
-#define ARTIFICER	(1<<6)
-#define TAILOR		(1<<7)
 #define MERCHANT	(1<<8)
 #define SCRIBE		(1<<9)
-#define ELDER		(1<<10)
+#define CRIER		(1<<10)
+#define KEEPER		(1<<11)
 
 #define PEASANTS	(1<<5)
 
 #define HUNTER		(1<<0)
 #define FARMER		(1<<1)
-#define BUTCHER		(1<<2)
 #define FISHER		(1<<3)
 #define LUMBERJACK	(1<<4)
 #define MINER		(1<<5)
@@ -160,57 +156,66 @@
 #define NITEMASTER	(1<<9)
 #define WENCH		(1<<10)
 #define BEGGAR		(1<<11)
-#define ADVENTURER	(1<<12)
 #define PILGRIM		(1<<13)
 #define VILLAGER	(1<<14)
 #define PRISONERR	(1<<15)
 #define PRISONERB	(1<<16)
 #define LUNATIC		(1<<17)
 #define MIGRANT		(1<<18)
-#define BANDIT		(1<<19)
-
 #define YOUNGFOLK	(1<<6)
 
 #define APPRENTICE	(1<<0)
 #define CHURCHLING	(1<<1)
-#define SQUIRE		(1<<2)
-#define SERVANT		(1<<3)
-#define ORPHAN		(1<<4)
-#define PRINCE		(1<<5)
-#define SHOPHAND	(1<<6)
-#define CLERK 		(1<<7)
-#define MAGEAPPRENTICE	(1<<8)
-#define APOTHECARY	(1<<9)
+#define SERVANT		(1<<2)
+#define ORPHAN		(1<<3)
+#define PRINCE		(1<<4)
+#define SHOPHAND	(1<<5)
+#define CLERK 		(1<<6)
+#define MAGEAPPRENTICE	(1<<7)
+#define APOTHECARY	(1<<8)
 
-#define MERCENARIES		(1<<7)
+#define WANDERERS		(1<<7)
 
 #define VETERAN			(1<<1)
-#define MERCENARY		(1<<2)
-#define DESERT_RIDER	(1<<3)	//Unused
-#define GRENZELHOFT		(1<<4)	//Unused
-
-
-#define TRIBAL		(1<<8)
-
-#define CHIEFTAIN	(1<<0)
-#define TRIBALCOOK	(1<<1)
-#define TRIBALGUARD	(1<<2)
-#define TRIBALSMITH	(1<<3)
+#define WANDERER		(1<<2)
+#define ADVENTURER      (1<<3)
+#define BANDIT		    (1<<4)
+#define ASSASSIN		(1<<5)
+#define COURTAGENT	    (1<<6)
+#define WRETCH          (1<<7)
+#define TRADER			(1<<8)
 
 #define SLOP		(1<<9)
 
 #define TESTER		(1<<0)
 #define DEATHKNIGHT (1<<1)
 #define SKELETON	(1<<2)
+#define GOBLIN		(1<<3)
+#define VAMPIRE_SERVANT (1<<4)
+#define VAMPIRE_GUARD (1<<5)
+#define VAMPIRE_SPAWN (1<<6)
+
+#define INQUISITION (1<<10)
+
+#define PURITAN		(1<<0)
+#define ORTHODOXIST	(1<<1)
+#define ABSOLVER (1<<2)
+
+#define GUILDSMEN	(1<<11)
+
+#define GUILDMASTER (1<<1)
+#define GUILDSMAN  	(1<<2)
+#define TAILOR		(1<<3)
 
 #define JCOLOR_NOBLE "#aa83b9"
 #define JCOLOR_COURTIER "#81adc8"
 #define JCOLOR_CHURCH "#c0ba8d"
 #define JCOLOR_SOLDIER "#b18484"
 #define JCOLOR_YEOMAN "#819e82"
+#define JCOLOR_GUILD "#6e6259"
 #define JCOLOR_PEASANT "#b09262"
-#define JCOLOR_MERCENARY "#c86e3a"
-
+#define JCOLOR_WANDERER  "#c86e3a"
+#define JCOLOR_INQUISITION "#FF0000"
 
 // job display orders //
 
@@ -218,6 +223,7 @@
 #define JDO_LORD 1
 #define JDO_LADY 1.1
 #define JDO_PRINCE 1.2
+#define JDO_SUITOR 1.3
 #define JDO_HAND 2
 #define JDO_STEWARD 3
 #define JDO_CLERK 3.1
@@ -236,37 +242,33 @@
 #define JDO_GUARD_CAPTAIN 8
 #define JDO_KNIGHT 8.1
 #define JDO_SQUIRE 8.2
-#define JDO_CASTLEGUARD 8.3
-#define JDO_GATEMASTER 8.4
-#define JDO_SHERIFF 8.5
-#define JDO_TOWNGUARD 8.6
-#define JDO_DUNGEONEER 8.7
-#define JDO_BOGMASTER 9
+#define JDO_SERGEANT 8.3
+#define JDO_CASTLEGUARD 8.4
+#define JDO_GATEMASTER 8.5
+#define JDO_SHERIFF 8.6
+#define JDO_TOWNGUARD 8.7
+#define JDO_DUNGEONEER 8.8
 #define JDO_BOGGUARD 9.1
 
 #define JDO_PRIEST 10
-#define JDO_PURITAN 11
+#define JDO_MARTYR 11
 #define JDO_TEMPLAR 12
 #define JDO_MONK 13
 #define JDO_DRUID 13.1
 #define JDO_CHURCHLING 14
+#define JDO_KEEPER 14.1
 #define JDO_GRAVEMAN 15
-#define JDO_SHEPHERD 16
 
 #define JDO_MERCHANT 17
 #define JDO_SHOPHAND 17.1
 #define JDO_GRABBER 17.2
 
 #define JDO_ARCHIVIST 18
+#define JDO_CRIER 18.1
 
-#define JDO_CHIEF 18.1
-#define JDO_ARMORER 19.1
-#define JDO_WEAPONSMITH 19.2
-#define JDO_BLACKSMITH 20
-#define JDO_APPRENTICE 21
-
-#define JDO_ARTIFICER 22
-#define JDO_TAILOR 24
+#define JDO_GUILDMASTER 19.1
+#define JDO_GUILDSMAN 19.2
+#define JDO_TAILOR 19.3
 
 #define JDO_BARKEEP 26
 #define JDO_COOK 27
@@ -281,12 +283,18 @@
 #define JDO_PILGRIM 30.2
 #define JDO_MIGRANT 32.3
 #define JDO_BANDIT 31.3
+#define JDO_COURTAGENT 30.3
+#define JDO_WRETCH 30.4
+#define JDO_ASSASSIN 30.5
+#define JDO_TRADER 30.6
 
 #define JDO_MERCENARY 31
 #define JDO_GRENZELHOFT 31.1
 #define JDO_DESERT_RIDER 31.2
 #define JDO_VET 31.4
-
+//Caustic edit
+#define JDO_WILDSOUL 32.2
+//Caustic edit end
 #define JDO_VAGRANT 33
 #define JDO_ORPHAN 34
 
@@ -299,6 +307,25 @@
 #define JDO_TRIBALCOOK 37
 #define JDO_TRIBALGUARD 38
 #define JDO_TRIBALSMITH 39
+#define JDO_PURITAN 40
+#define JDO_ORTHODOXIST 40.1
+#define JDO_ABSOLVER 40.2
+
+#define BITFLAG_HOLY_WARRIOR (1<<0)
+#define BITFLAG_ROYALTY (1<<1)
+#define BITFLAG_CONSTRUCTOR (1<<2)
+#define BITFLAG_GARRISON (1<<3)
+
+// START OF THE ECONOMY SECTION 
+#define ECONOMIC_RICH rand(120, 140)
+#define ECONOMIC_UPPER_CLASS rand(100, 120)
+#define ECONOMIC_UPPER_MIDDLE_CLASS rand(80, 100)
+#define ECONOMIC_LOWER_MIDDLE_CLASS rand(40, 80)
+#define ECONOMIC_WORKING_CLASS rand(40, 60)
+#define ECONOMIC_LOWER_CLASS rand(20, 40)
+#define ECONOMIC_DESTITUTE rand(0, 6)
+#define ECONOMIC_LETSGOGAMBLING pick(ECONOMIC_DESTITUTE, ECONOMIC_DESTITUTE, ECONOMIC_DESTITUTE, ECONOMIC_WORKING_CLASS, ECONOMIC_WORKING_CLASS, ECONOMIC_WORKING_CLASS, ECONOMIC_WORKING_CLASS, ECONOMIC_RICH)
+// END OF THE ECONOMY SECTION
 
 #define MANOR_ROLES \
 	/datum/job/roguetown/jester,\
@@ -306,7 +333,6 @@
 	/datum/job/roguetown/clerk,\
 	/datum/job/roguetown/wapprentice,\
 	/datum/job/roguetown/servant,\
-	/datum/job/roguetown/squire,\
 	/datum/job/roguetown/butler,\
 	/datum/job/roguetown/apothecary,\
 	/datum/job/roguetown/magician
@@ -332,14 +358,12 @@
 	/datum/job/roguetown/druid,\
 	/datum/job/roguetown/monk,\
 	/datum/job/roguetown/priest,\
-	/datum/job/roguetown/puritan,\
 	/datum/job/roguetown/templar
 
 #define PEASANT_ROLES \
 	/datum/job/roguetown/villager,\
 	/datum/job/roguetown/nightmaiden,\
 	/datum/job/roguetown/beggar,\
-	/datum/job/roguetown/butcher,\
 	/datum/job/roguetown/cook,\
 	/datum/job/roguetown/knavewench,\
 	/datum/job/roguetown/lunatic,\
@@ -352,32 +376,36 @@
 	/datum/job/roguetown/prisonerr
 
 #define YEOMEN_ROLES \
-	/datum/job/roguetown/woodsman,\
+	/datum/job/roguetown/keeper,\
+	/datum/job/roguetown/crier,\
 	/datum/job/roguetown/niteman,\
 	/datum/job/roguetown/archivist,\
 	/datum/job/roguetown/barkeep,\
-	/datum/job/roguetown/armorsmith,\
-	/datum/job/roguetown/weaponsmith,\
-	/datum/job/roguetown/blacksmith,\
-	/datum/job/roguetown/artificer,\
-	/datum/job/roguetown/merchant,\
+	/datum/job/roguetown/guildsmaster,\
+	/datum/job/roguetown/guildsman,\
 	/datum/job/roguetown/tailor,\
+	/datum/job/roguetown/merchant,\
 	/datum/job/roguetown/scribe
-
-
 
 #define WANDERER_ROLES \
 	/datum/job/roguetown/pilgrim,\
 	/datum/job/roguetown/adventurer,\
 	/datum/job/roguetown/mercenary/desert_rider,\
 	/datum/job/roguetown/mercenary/grenzelhoft,\
-	/datum/job/roguetown/bandit
+	/datum/job/roguetown/bandit,\
+	/datum/job/roguetown/wretch,\
+	/datum/job/roguetown/wildsoul //caustic edit
 
 #define GARRISON_ROLES \
 	/datum/job/roguetown/bogguardsman,\
-	/datum/job/roguetown/bogmaster,\
+	/datum/job/roguetown/sergeant,\
 	/datum/job/roguetown/dungeoneer,\
 	/datum/job/roguetown/gatemaster,\
 	/datum/job/roguetown/manorguard,\
 	/datum/job/roguetown/sheriff,\
+	/datum/job/roguetown/squire,\
 	/datum/job/roguetown/guardsman
+
+#define INQUISITION_ROLES \
+	/datum/job/roguetown/puritan,\
+	/datum/job/roguetown/orthodoxist

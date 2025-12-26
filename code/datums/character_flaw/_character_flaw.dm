@@ -5,22 +5,31 @@ GLOBAL_LIST_INIT(character_flaws, list(
 	"Colorblind"=/datum/charflaw/colorblind,
 	"Smoker"=/datum/charflaw/addiction/smoker,
 	"Junkie"=/datum/charflaw/addiction/junkie,
+	"Unintelligible"=/datum/charflaw/unintelligible,
 	"Greedy"=/datum/charflaw/greedy,
 	"Narcoleptic"=/datum/charflaw/narcoleptic,
 	"Nymphomaniac"=/datum/charflaw/addiction/lovefiend,
 	"Sadist"=/datum/charflaw/addiction/sadist,
-	"Masochist"=/datum/charflaw/masochist,
+	"Masochist"=/datum/charflaw/addiction/masochist,
 	"Paranoid"=/datum/charflaw/paranoid,
 	"Clingy"=/datum/charflaw/clingy,
 	"Isolationist"=/datum/charflaw/isolationist,
 	"Bad Sight"=/datum/charflaw/badsight,
 	"Cyclops (R)"=/datum/charflaw/noeyer,
 	"Cyclops (L)"=/datum/charflaw/noeyel,
+	"Blindness"=/datum/charflaw/noeyeall,
 	"Wood Arm (R)"=/datum/charflaw/limbloss/arm_r,
 	"Wood Arm (L)"=/datum/charflaw/limbloss/arm_l,
-	//"Cursed Blood (Vampire)"=/datum/charflaw/vampire,
+	"Sleepless"=/datum/charflaw/sleepless,
+	"Mute"=/datum/charflaw/mute,
+	"Critical Weakness"=/datum/charflaw/critweakness,
+	//Caustic edit
+	"Bottomless"=/datum/charflaw/bottomless,
+	"Asundered Mind"=/datum/charflaw/mind_broken,
+	//Caustic edit end
+	"Hunted"=/datum/charflaw/hunted,
 	"Random or No Flaw"=/datum/charflaw/randflaw,
-	"No Flaw (3 TRIUMPHS)"=/datum/charflaw/noflaw
+	"No Flaw (4 TRIUMPHS)"=/datum/charflaw/noflaw, // Caustic Cove Edit start - Our rounds are now 4 hours long, so this has to cost a tiny bit more!
 	))
 
 /datum/charflaw
@@ -46,52 +55,42 @@ GLOBAL_LIST_INIT(character_flaws, list(
 	if(istype(charflaw, flaw))
 		return TRUE
 
-/mob/proc/get_flaw(flaw_type)
+/mob/proc/get_flaw()
 	return
 
-/mob/living/carbon/human/get_flaw(flaw_type)
-	if(!flaw_type)
-		return
-	if(charflaw != flaw_type)
-		return
+/mob/living/carbon/human/get_flaw()
 	return charflaw
 
 /datum/charflaw/randflaw
 	name = "Random or None"
 	desc = "A 50% chance to be given a random flaw, or a 50% chance to have NO flaw."
-	var/nochekk = TRUE
 
-/datum/charflaw/randflaw/flaw_on_life(mob/user)
-	if(!nochekk)
-		return
-	if(ishuman(user))
-		var/mob/living/carbon/human/H = user
-		if(H.ckey)
-			nochekk = FALSE
-			if(prob(50))
-				var/flawz = GLOB.character_flaws.Copy()
-				var/charflaw = pick_n_take(flawz)
-				charflaw = GLOB.character_flaws[charflaw]
-				if((charflaw == type) || (charflaw == /datum/charflaw/noflaw))
-					charflaw = pick_n_take(flawz)
-					charflaw = GLOB.character_flaws[charflaw]
-				if((charflaw == type) || (charflaw == /datum/charflaw/noflaw))
-					charflaw = pick_n_take(flawz)
-					charflaw = GLOB.character_flaws[charflaw]
-				H.charflaw = new charflaw()
-				H.charflaw.on_mob_creation(H)
-			else
-				H.charflaw = new /datum/charflaw/eznoflaw()
-				H.charflaw.on_mob_creation(H)
+/datum/charflaw/randflaw/apply_post_equipment(mob/user)
+	var/mob/living/carbon/human/H = user
+	if(prob(50))
+		var/flawz = GLOB.character_flaws.Copy()
+		var/charflaw = pick_n_take(flawz)
+		charflaw = GLOB.character_flaws[charflaw]
+		if((charflaw == type) || (charflaw == /datum/charflaw/noflaw))
+			charflaw = pick_n_take(flawz)
+			charflaw = GLOB.character_flaws[charflaw]
+		if((charflaw == type) || (charflaw == /datum/charflaw/noflaw))
+			charflaw = pick_n_take(flawz)
+			charflaw = GLOB.character_flaws[charflaw]
+		H.charflaw = new charflaw()
+		H.charflaw.on_mob_creation(H)
+	else
+		H.charflaw = new /datum/charflaw/eznoflaw()
+		H.charflaw.on_mob_creation(H)
 
 
 /datum/charflaw/eznoflaw
 	name = "No Flaw"
 	desc = "I'm a normal person, how rare!"
 
-/datum/charflaw/noflaw
-	name = "No Flaw (3 TRI)"
-	desc = "I'm a normal person, how rare! (Consumes 3 triumphs or gives a random flaw.)"
+/datum/charflaw/noflaw // Caustic Cove Edit start - Our rounds are now 4 hours long, so this has to cost a tiny bit more!
+	name = "No Flaw (4 TRI)" // Edit here
+	desc = "I'm a normal person, how rare! (Consumes 4 triumphs or gives a random flaw.)"
 	var/nochekk = TRUE
 
 /datum/charflaw/noflaw/flaw_on_life(mob/user)
@@ -100,7 +99,7 @@ GLOBAL_LIST_INIT(character_flaws, list(
 	if(ishuman(user))
 		var/mob/living/carbon/human/H = user
 		if(H.ckey)
-			if(H.get_triumphs() < 3)
+			if(H.get_triumphs() < 4) // Edit here
 				nochekk = FALSE
 				var/flawz = GLOB.character_flaws.Copy()
 				var/charflaw = pick_n_take(flawz)
@@ -115,7 +114,8 @@ GLOBAL_LIST_INIT(character_flaws, list(
 				H.charflaw.on_mob_creation(H)
 			else
 				nochekk = FALSE
-				H.adjust_triumphs(-3)
+				H.adjust_triumphs(-4) // Edit here
+// Caustic Cove Edit end
 
 /datum/charflaw/badsight
 	name = "Bad Eyesight"
@@ -137,7 +137,7 @@ GLOBAL_LIST_INIT(character_flaws, list(
 /datum/status_effect/debuff/badvision
 	id = "badvision"
 	alert_type = null
-	effectedstats = list("perception" = -20, "speed" = -5)
+	effectedstats = list(STATKEY_PER = -20, STATKEY_SPD = -5)
 	duration = 10 SECONDS
 
 /datum/charflaw/badsight/on_mob_creation(mob/user)
@@ -154,8 +154,7 @@ GLOBAL_LIST_INIT(character_flaws, list(
 	addtimer(CALLBACK(src, PROC_REF(apply_reading_skill), H), 5 SECONDS)
 
 /datum/charflaw/badsight/proc/apply_reading_skill(mob/living/carbon/human/H)
-	if(H.mind)
-		H.mind.adjust_skillrank(/datum/skill/misc/reading, 1, TRUE)
+	H.adjust_skillrank(/datum/skill/misc/reading, 1, TRUE)
 
 /datum/charflaw/paranoid
 	name = "Paranoid"
@@ -273,13 +272,60 @@ GLOBAL_LIST_INIT(character_flaws, list(
 	head?.add_wound(/datum/wound/facial/eyes/left/permanent)
 	H.update_fov_angles()
 
+/datum/charflaw/noeyeall
+	name = "Blindness"
+	desc = "I lost both of my eyes long ago."
+
+/datum/charflaw/noeyeall/on_mob_creation(mob/user)
+	..()
+	if(!ishuman(user))
+		return
+	var/mob/living/carbon/human/H = user
+	if(!H.wear_mask)
+		H.equip_to_slot_or_del(new /obj/item/clothing/glasses/blindfold(H), SLOT_WEAR_MASK)
+	var/obj/item/bodypart/head/head = H.get_bodypart(BODY_ZONE_HEAD)
+	head?.add_wound(/datum/wound/facial/eyes/left/permanent)
+	head?.add_wound(/datum/wound/facial/eyes/right/permanent)
+	H.update_fov_angles()
+
 /datum/charflaw/colorblind
 	name = "Colorblind"
-	desc = "I was cursed with flawed eyesight from birth, and can't discern things others can."
+	desc = "I was cursed with flawed eyesight from birth, and can't discern things others can. Incompatible with Night-eyed virtue."
 
 /datum/charflaw/colorblind/on_mob_creation(mob/user)
 	..()
 	user.add_client_colour(/datum/client_colour/monochrome)
+
+/datum/charflaw/hunted
+	name = "Hunted"
+	desc = "Something in my past has made me a target. I'm always looking over my shoulder.	\
+	\nTHIS IS A DIFFICULT FLAW, YOU WILL BE HUNTED BY ASSASSINS AND HAVE ASSASINATION ATTEMPTS MADE AGAINST YOU WITHOUT ANY ESCALATION. \
+	EXPECT A MORE DIFFICULT EXPERIENCE. PLAY AT YOUR OWN RISK."
+	var/logged = FALSE
+
+/datum/charflaw/hunted/flaw_on_life(mob/user)
+	if(!ishuman(user))
+		return
+	var/mob/living/carbon/human/H = user
+	if(logged == FALSE)
+		if(H.name) // If you don't check this, the log entry wont have a name as flaw_on_life is checked at least once before the name is set.
+			log_hunted("[H.ckey] playing as [H.name] had the hunted flaw by vice.")
+			logged = TRUE
+
+/datum/charflaw/unintelligible
+	name = "Unintelligible"
+	desc = "I cannot speak the common tongue!"
+
+/datum/charflaw/unintelligible/on_mob_creation(mob/user)
+	var/mob/living/carbon/human/recipient = user
+	addtimer(CALLBACK(src, PROC_REF(unintelligible_apply), recipient), 5 SECONDS)
+
+/datum/charflaw/unintelligible/proc/unintelligible_apply(mob/living/carbon/human/user)
+	if(user.advsetup)
+		addtimer(CALLBACK(src, PROC_REF(unintelligible_apply), user), 5 SECONDS)
+		return
+	user.remove_language(/datum/language/common)
+	user.adjust_skillrank(/datum/skill/misc/reading, -6, TRUE)
 
 /datum/charflaw/greedy
 	name = "Greedy"
@@ -294,7 +340,7 @@ GLOBAL_LIST_INIT(character_flaws, list(
 /datum/charflaw/greedy/on_mob_creation(mob/user)
 	next_mammon_increase = world.time + rand(15 MINUTES, 25 MINUTES)
 	last_passed_check = world.time
-	ADD_TRAIT(user, TRAIT_SEEPRICES, "[type]")
+	ADD_TRAIT(user, TRAIT_SEEPRICES_SHITTY, "[type]")
 
 /datum/charflaw/greedy/flaw_on_life(mob/user)
 	if(!first_tick)
@@ -401,75 +447,19 @@ GLOBAL_LIST_INIT(character_flaws, list(
 	else
 		// Been conscious for ~10 minutes (whatever is the conscious timer)
 		if(last_unconsciousness + concious_timer < world.time)
-			drugged_up = FALSE
-			to_chat(user, span_blue("I'm getting drowsy..."))
+			do_sleep = TRUE
 			user.emote("yawn", forced = TRUE)
 			next_sleep = world.time + rand(7 SECONDS, 11 SECONDS)
-			do_sleep = TRUE
+			if(drugged_up)
+				to_chat(user, span_blue("The drugs keeps me awake, for now..."))
+			else
+				to_chat(user, span_blue("I'm getting drowsy..."))
 
 /proc/narcolepsy_drug_up(mob/living/living)
-	var/datum/charflaw/narcoleptic/narco = living.get_flaw(/datum/charflaw/narcoleptic)
-	if(!narco)
+	var/datum/charflaw/narcoleptic/narco = living.get_flaw()
+	if (!istype(narco, /datum/charflaw/narcoleptic))
 		return
 	narco.drugged_up = TRUE
-
-#define MASO_THRESHOLD_ONE 1
-#define MASO_THRESHOLD_TWO 2
-#define MASO_THRESHOLD_THREE 3
-#define MASO_THRESHOLD_FOUR 4
-
-/datum/charflaw/masochist
-	name = "Masochist"
-	desc = "I love the feeling of pain, so much I can't get enough of it."
-	var/next_paincrave = 0
-	var/last_pain_threshold = NONE
-
-/datum/charflaw/masochist/on_mob_creation(mob/living/carbon/human/user)
-	next_paincrave = world.time + rand(15 MINUTES, 25 MINUTES)
-
-/datum/charflaw/masochist/flaw_on_life(mob/living/carbon/human/user)
-	if(next_paincrave > world.time)
-		last_pain_threshold = NONE
-		return
-	user.add_stress(/datum/stressevent/vice)
-	user.apply_status_effect(/datum/status_effect/debuff/addiction)
-	var/current_pain = user.get_complex_pain()
-	// Bloodloss makes the pain count as extra large to allow people to bloodlet themselves with cutting weapons to satisfy vice
-	var/bloodloss_factor = clamp(1.0 - (user.blood_volume / BLOOD_VOLUME_NORMAL), 0.0, 0.5)
-	var/new_pain_threshold = get_pain_threshold(current_pain * (1.0 + (bloodloss_factor * 1.4))) // Bloodloss factor goes up to 50%, and then counts at 140% value of that
-	if(last_pain_threshold == NONE)
-		to_chat(user, span_boldwarning("I could really use some pain right now..."))
-	else if (new_pain_threshold != last_pain_threshold)
-		var/ascending = (new_pain_threshold > last_pain_threshold)
-		switch(new_pain_threshold)
-			if(MASO_THRESHOLD_ONE)
-				to_chat(user, span_warning("The pain is gone..."))
-			if(MASO_THRESHOLD_TWO)
-				if(ascending)
-					to_chat(user, span_blue("Yes, more pain!"))
-				else
-					to_chat(user, span_warning("No, my pain!"))
-			if(MASO_THRESHOLD_THREE)
-				to_chat(user, span_blue("More, I love it!"))
-
-	last_pain_threshold = new_pain_threshold
-	if(new_pain_threshold == MASO_THRESHOLD_FOUR)
-		to_chat(user, span_blue("<b>That's more like it...</b>"))
-		next_paincrave = world.time + rand(35 MINUTES, 45 MINUTES)
-		user.remove_stress(/datum/stressevent/vice)
-		user.remove_status_effect(/datum/status_effect/debuff/addiction)
-
-
-/datum/charflaw/masochist/proc/get_pain_threshold(pain_amt)
-	switch(pain_amt)
-		if(-INFINITY to 50)
-			return MASO_THRESHOLD_ONE
-		if(50 to 95)
-			return MASO_THRESHOLD_TWO
-		if(95 to 140)
-			return MASO_THRESHOLD_THREE
-		if(140 to INFINITY)
-			return MASO_THRESHOLD_FOUR
 
 /proc/get_mammons_in_atom(atom/movable/movable)
 	var/static/list/coins_types = typecacheof(/obj/item/roguecoin)
@@ -480,15 +470,49 @@ GLOBAL_LIST_INIT(character_flaws, list(
 	for(var/atom/movable/content in movable.contents)
 		mammons += get_mammons_in_atom(content)
 	return mammons
-/***
-/datum/charflaw/vampire
-	name = "Cursed Blood (Vampire)"
-	desc = "You were gifted or cursed by Zizo, A lone vampire forced to roam the lands and drink blood to survive, albeit 'immortal'. Whether you are Ancient or a new vampire, you are no lord nor spawn, and you do not have any reason to antagonize the mortals beyond occasionally finding blood to keep you going. (This doesn't give you the rights to be a antag.)"
 
-/datum/charflaw/vampire/flaw_on_life(mob/user)
-	if(!ishuman(user))
+/datum/charflaw/sleepless
+	name = "Sleepless"
+	desc = "I do not sleep. I cannot sleep. I've tried everything."
+	var/drugged_up = FALSE
+	var/dream_prob = 1000
+
+/datum/charflaw/sleepless/on_mob_creation(mob/user)
+	ADD_TRAIT(user, TRAIT_NOSLEEP, TRAIT_GENERIC)
+
+/proc/sleepless_drug_up(mob/living/living)
+	var/datum/charflaw/sleepless/sleeper = living.get_flaw()
+	if (!istype(sleeper, /datum/charflaw/sleepless))
 		return
+	sleeper.drugged_up = TRUE
+
+/datum/charflaw/mute
+	name = "Mute"
+	desc = "I was born without the ability to speak."
+
+/datum/charflaw/mute/on_mob_creation(mob/user)
+	ADD_TRAIT(user, TRAIT_PERMAMUTE, TRAIT_GENERIC)
+
+/datum/charflaw/critweakness
+	name = "Critical Weakness"
+	desc = "My body is as fragile as an eggshell. A critical strike is like to end me then and there."
+
+/datum/charflaw/critweakness/on_mob_creation(mob/user)
+	ADD_TRAIT(user, TRAIT_CRITICAL_WEAKNESS, TRAIT_GENERIC)
+
+/datum/charflaw/leprosy
+	name = "Leper (+1 TRI)"
+	desc = "I am cursed with leprosy! Too poor to afford treatment, my skin now lays violated by lesions, my extremities are numb, and my presence disturbs even the most stalwart men."
+
+/datum/charflaw/leprosy/apply_post_equipment(mob/user)
 	var/mob/living/carbon/human/H = user
-	var/datum/antagonist/vampirelord/lesser/secret/new_vamp = new ()
-	H.mind.add_antag_datum(new_vamp)
-***/
+	to_chat(user, "I am afflicted. I am outcast and weak. I am a pox on this world.")
+	ADD_TRAIT(user, TRAIT_LEPROSY, TRAIT_GENERIC)
+	H.change_stat(STATKEY_STR, -1)
+	H.change_stat(STATKEY_INT, -1)
+	H.change_stat(STATKEY_PER, -1)
+	H.change_stat(STATKEY_CON, -1)
+	H.change_stat(STATKEY_WIL, -1)
+	H.change_stat(STATKEY_SPD, -1)
+	H.change_stat(STATKEY_LCK, -1)
+	H.adjust_triumphs(1)

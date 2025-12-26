@@ -26,6 +26,7 @@
 		. += span_info("There is some ready compost.")
 	if(show_dry && unflipped_compost >= COMPOST_PER_PRODUCED_ITEM)
 		. += span_warning("The compost requires flipping!")
+		. += span_notice("Flip it by right clicking it with an empty hand.")
 
 /obj/structure/composter/update_icon()
 	. = ..()
@@ -58,6 +59,7 @@
 	if(attacking_item)
 		if(istype(attacking_item, /obj/item/rogueweapon/pitchfork) || istype(attacking_item, /obj/item/rogueweapon/shovel))
 			using_tool = TRUE
+			to_chat(user, span_notice("I dig my pitchfork into the compost..."))
 	var/do_time = using_tool ? 4 SECONDS : 7 SECONDS
 	var/fatigue = using_tool ? 10 : 20
 	if(do_after(user, get_farming_do_time(user, do_time), target = src))
@@ -184,6 +186,8 @@
 	icon_state = "ash"
 	color = "#ffac38"
 	w_class = WEIGHT_CLASS_SMALL
+	grid_width = 32
+	grid_height = 32
 
 /obj/item/fertilizer
 	name = "fertilizer"
@@ -191,3 +195,9 @@
 	icon = 'icons/roguetown/items/misc.dmi'
 	icon_state = "fertilizer"
 	w_class = WEIGHT_CLASS_SMALL
+	grid_width = 32
+	grid_height = 32
+
+#undef MAXIMUM_TOTAL_COMPOST
+#undef COMPOST_PER_PRODUCED_ITEM
+#undef COMPOST_PROCESS_RATE

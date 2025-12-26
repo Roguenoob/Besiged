@@ -82,6 +82,7 @@
 #define VV_HK_TRIGGER_EMP "empulse"
 #define VV_HK_TRIGGER_EXPLOSION "explode"
 #define VV_HK_AUTO_RENAME "auto_rename"
+#define VV_HK_ADD_AI "add_ai"
 
 // /obj
 #define VV_HK_OSAY "osay"
@@ -113,13 +114,14 @@
 // /mob/living/carbon/human
 #define VV_HK_APPLY_SPECIAL "apply_special"
 #define VV_HK_REAPPLY_PREFS "reapply_prefs"
+#define VV_HK_PURGE_SLOT "purge_slot"
+#define VV_HK_PURGE_PARTOF_SLOT "purge_partof_slot"
 #define VV_HK_COPY_OUTFIT "copy_outfit"
 #define VV_HK_MOD_MUTATIONS "quirkmut"
 #define VV_HK_MOD_QUIRKS "quirkmod"
 #define VV_HK_MAKE_MONKEY "human_monkify"
 #define VV_HK_MAKE_CYBORG "human_cyborgify"
 #define VV_HK_MAKE_SLIME "human_slimeify"
-#define VV_HK_MAKE_ALIEN "human_alienify"
 #define VV_HK_SET_SPECIES "setspecies"
 #define VV_HK_PURRBATION "purrbation"
 

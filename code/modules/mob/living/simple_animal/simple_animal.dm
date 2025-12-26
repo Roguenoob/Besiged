@@ -10,7 +10,7 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	gender = PLURAL //placeholder
 
 	status_flags = CANPUSH
-
+	fire_stack_decay_rate = -3
 	var/icon_living = ""
 	///Icon when the animal is dead. Don't use animated icons for this.
 	var/icon_dead = ""
@@ -111,6 +111,7 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	var/breedchildren = 3
 
 	///Simple_animal access.
+	var/list/lock_hashes
 	///Innate access uses an internal ID card.
 	var/obj/item/card/id/access_card = null
 	///In the event that you want to have a buffing effect on the mob, but don't want it to stack with other effects, any outside force that applies a buff to a simple mob should at least set this to 1, so we have something to check against.
@@ -138,13 +139,10 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	var/dextrous = FALSE
 	var/dextrous_hud_type = /datum/hud/dextrous
 
-	///The Status of our AI, can be set to AI_ON (On, usual processing), AI_IDLE (Will not process, but will return to AI_ON if an enemy comes near), AI_OFF (Off, Not processing ever), AI_Z_OFF (Temporarily off due to nonpresence of players).
+	///The Status of our AI, can be set to AI_ON (On, usual processing), AI_IDLE (Will not process, but will return to AI_ON if an enemy comes near), NPC_AI_OFF (Off, Not processing ever), AI_Z_OFF (Temporarily off due to nonpresence of players).
 	var/AIStatus = AI_ON
 	///once we have become sentient, we can never go back.
 	var/can_have_ai = TRUE
-
-	///convenience var for forcibly waking up an idling AI on next check.
-	var/shouldwakeup = FALSE
 
 	///Domestication.
 	var/tame = FALSE
@@ -154,6 +152,8 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	var/tame_chance
 	///Added success chance after every failed tame attempt.
 	var/bonus_tame_chance
+
+	var/mob/owner = null
 
 	///I don't want to confuse this with client registered_z.
 	var/my_z
@@ -167,10 +167,24 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 
 	var/swinging = FALSE
 
+	var/familiar_headshot_link = null
+	var/familiar_ooc_notes = null
+	var/familiar_flavortext = null
+
 	buckle_lying = FALSE
 	cmode = 1
 
 	var/remains_type
+	var/binded = FALSE // Whether it is bound to a summoning circle or not
+
+	var/botched_butcher_results
+	var/perfect_butcher_results
+	var/list/inherent_spells = list()
+
+	///What distance should we be checking for interesting things when considering idling/deidling? Defaults to AI_DEFAULT_INTERESTING_DIST
+	var/interesting_dist = AI_DEFAULT_INTERESTING_DIST
+	///our current cell grid
+	var/datum/cell_tracker/our_cells
 
 /mob/living/simple_animal/Initialize()
 	. = ..()
@@ -182,13 +196,18 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	if(!loc)
 		stack_trace("Simple animal being instantiated in nullspace")
 	update_simplemob_varspeed()
+	our_cells = new(interesting_dist, interesting_dist, 1)
+	set_new_cells()
 //	if(dextrous)
 //		AddComponent(/datum/component/personal_crafting)
+	for(var/spell in inherent_spells)
+		var/obj/effect/proc_holder/spell/newspell = new spell()
+		AddSpell(newspell)
 
 /mob/living/simple_animal/Destroy()
+	our_cells = null
 	GLOB.simple_animals[AIStatus] -= src
-	if (SSnpcpool.state == SS_PAUSED && LAZYLEN(SSnpcpool.currentrun))
-		SSnpcpool.currentrun -= src
+	SSnpcpool.currentrun -= src
 
 	if(nest)
 		nest.spawned_mobs -= src
@@ -214,20 +233,25 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 			playsound(loc,'sound/misc/eat.ogg', rand(30,60), TRUE)
 			qdel(O)
 			food = min(food + 30, 100)
-			if(tame)
+			adjustHealth(-rand(10,20))
+			if(tame && owner == user)
 				return
 			var/realchance = tame_chance
 			if(realchance)
 				if(prob(realchance))
-					tamed()
+					tamed(user)
 				else
 					tame_chance += bonus_tame_chance
 
+
 ///Extra effects to add when the mob is tamed, such as adding a riding component
-/mob/living/simple_animal/proc/tamed()
-	emote("smile", forced = TRUE)
+/mob/living/simple_animal/proc/tamed(mob/user)
+	INVOKE_ASYNC(src, PROC_REF(emote), "lower_head", null, null, null, TRUE)
 	tame = TRUE
 	stop_automated_movement_when_pulled = TRUE
+	if(user)
+		owner = user
+		SEND_SIGNAL(user, COMSIG_ANIMAL_TAMED, src)
 	return
 
 //mob/living/simple_animal/examine(mob/user)
@@ -256,11 +280,13 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 		retreating = null
 		retreat_distance = initial(retreat_distance)
 		minimum_distance = initial(minimum_distance)
+	if(HAS_TRAIT(src, TRAIT_RIGIDMOVEMENT))
+		return
 	if(HAS_TRAIT(src, TRAIT_IGNOREDAMAGESLOWDOWN))
 		move_to_delay = initial(move_to_delay)
 		return
 	var/health_deficiency = getBruteLoss() + getFireLoss()
-	if(health_deficiency >= ( maxHealth - (maxHealth*0.75) ))
+	if(health_deficiency >= ( maxHealth - (maxHealth*0.50) ))
 		move_to_delay = initial(move_to_delay) + 2
 	else
 		move_to_delay = initial(move_to_delay)
@@ -280,10 +306,11 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	if(stat != DEAD)
 		if(health <= 0)
 			death()
+			SEND_SIGNAL(src, COMSIG_MOB_STATCHANGE, DEAD)
 			return
-	med_hud_set_status()
 	if(footstep_type)
-		AddComponent(/datum/component/footstep, footstep_type)
+		if(!QDELING(src))
+			AddComponent(/datum/component/footstep, footstep_type)
 
 /mob/living/simple_animal/handle_status_effects()
 	..()
@@ -299,14 +326,10 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	if(!stop_automated_movement && wander && !doing)
 		if(ssaddle && has_buckled_mobs())
 			return 0
+		if(binded)
+			return FALSE
 		if((isturf(loc) || allow_movement_on_non_turfs) && (mobility_flags & MOBILITY_MOVE))		//This is so it only moves if it's not inside a closet, gentics machine, etc.
 			turns_since_move++
-			if(turns_since_move >= turns_per_move)
-				if(!(stop_automated_movement_when_pulled && pulledby)) //Some animals don't move when pulled
-					var/anydir = pick(GLOB.cardinals)
-					if(Process_Spacemove(anydir))
-						Move(get_step(src, anydir), anydir)
-						turns_since_move = 0
 			return 1
 
 /mob/living/simple_animal/proc/handle_automated_speech(override)
@@ -345,62 +368,30 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 						emote("me", 2, pick(emote_hear))
 
 
-/mob/living/simple_animal/proc/environment_is_safe(datum/gas_mixture/environment, check_temp = FALSE)
+/mob/living/simple_animal/proc/environment_is_safe(check_temp = FALSE)
 	. = TRUE
 
 	if(pulledby && pulledby.grab_state >= GRAB_KILL && atmos_requirements["min_oxy"])
 		. = FALSE //getting choked
 
-	if(isturf(src.loc) && isopenturf(src.loc))
-		var/turf/open/ST = src.loc
-		if(ST.air)
-			var/ST_gases = ST.air.gases
-			ST.air.assert_gases(arglist(GLOB.hardcoded_gases))
-
-			var/tox = ST_gases[/datum/gas/plasma][MOLES]
-			var/oxy = ST_gases[/datum/gas/oxygen][MOLES]
-			var/n2  = ST_gases[/datum/gas/nitrogen][MOLES]
-			var/co2 = ST_gases[/datum/gas/carbon_dioxide][MOLES]
-
-			ST.air.garbage_collect()
-
-			if(atmos_requirements["min_oxy"] && oxy < atmos_requirements["min_oxy"])
-				. = FALSE
-			else if(atmos_requirements["max_oxy"] && oxy > atmos_requirements["max_oxy"])
-				. = FALSE
-			else if(atmos_requirements["min_tox"] && tox < atmos_requirements["min_tox"])
-				. = FALSE
-			else if(atmos_requirements["max_tox"] && tox > atmos_requirements["max_tox"])
-				. = FALSE
-			else if(atmos_requirements["min_n2"] && n2 < atmos_requirements["min_n2"])
-				. = FALSE
-			else if(atmos_requirements["max_n2"] && n2 > atmos_requirements["max_n2"])
-				. = FALSE
-			else if(atmos_requirements["min_co2"] && co2 < atmos_requirements["min_co2"])
-				. = FALSE
-			else if(atmos_requirements["max_co2"] && co2 > atmos_requirements["max_co2"])
-				. = FALSE
-		else
-			if(atmos_requirements["min_oxy"] || atmos_requirements["min_tox"] || atmos_requirements["min_n2"] || atmos_requirements["min_co2"])
-				. = FALSE
-
 	if(check_temp)
-		var/areatemp = get_temperature(environment)
+		//ATMO/TURF/TEMPERATURE
+		var/turf/cur_turf = get_turf(src)
+		var/areatemp = cur_turf.temperature
 		if((areatemp < minbodytemp) || (areatemp > maxbodytemp))
 			. = FALSE
 
 
-/mob/living/simple_animal/handle_environment(datum/gas_mixture/environment)
+/mob/living/simple_animal/handle_environment()
 	var/atom/A = src.loc
 	if(isturf(A))
-		var/areatemp = get_temperature(environment)
+		//ATMO/TURF/TEMPERATURE
+		var/turf/cur_turf = A
+		var/areatemp = cur_turf.temperature
 		if( abs(areatemp - bodytemperature) > 5)
 			var/diff = areatemp - bodytemperature
 			diff = diff / 5
 			adjust_bodytemperature(diff)
-
-	if(!environment_is_safe(environment))
-		adjustHealth(unsuitable_atmos_damage)
 
 	handle_temperature_damage()
 
@@ -412,43 +403,124 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	if(stat == DEAD)
 		var/obj/item/held_item = user.get_active_held_item()
 		if(held_item)
-			if((butcher_results || guaranteed_butcher_results) && held_item.get_sharpness() && held_item.wlength == WLENGTH_SHORT)
-				var/used_time = 210
+			if((butcher_results || guaranteed_butcher_results) && ((held_item.get_sharpness() && held_item.wlength == WLENGTH_SHORT) || istype(held_item, /obj/item/contraption/shears)))
+				var/used_time = 3 SECONDS
+				var/on_meathook = FALSE
+				if((src.buckled && istype(src.buckled, /obj/structure/meathook))|| istype(held_item, /obj/item/contraption/shears))
+					on_meathook = TRUE //will work efficiently if they are using autosheers as well
+					used_time -= 3 SECONDS
+					visible_message("[user] begins to efficiently butcher [src]...")
+				else
+					visible_message("[user] begins to butcher [src]...")
 				if(user.mind)
-					used_time -= (user.mind.get_skill_level(/datum/skill/labor/butchering) * 30)
-				visible_message("[user] begins to butcher [src].")
+					used_time -= (user.get_skill_level(/datum/skill/labor/butchering) * 30)
 				playsound(src, 'sound/foley/gross.ogg', 100, FALSE)
-				if(do_after(user, used_time, target = src))
-					gib()
-					if(user.mind)
-						user.mind.add_sleep_experience(/datum/skill/labor/butchering, user.STAINT * 4)
+				if(used_time <= 0 || do_after(user, used_time, target = src))
+					butcher(user, on_meathook)
+
+	else if (stat != DEAD && istype(ssaddle, /obj/item/natural/saddle))		//Fallback saftey for saddles
+		var/datum/component/storage/saddle_storage = ssaddle.GetComponent(/datum/component/storage)
+		var/access_time = (user in buckled_mobs) ? 10 : 30
+		if (do_after(user, access_time, target = src))
+			saddle_storage.show_to(user)
 	..()
 
-/mob/living/simple_animal/gib()
+/mob/living/simple_animal/proc/butcher(mob/living/user, on_meathook = FALSE)
 	if(ssaddle)
 		ssaddle.forceMove(get_turf(src))
 		ssaddle = null
-	if(butcher_results || guaranteed_butcher_results)
-		var/list/butcher = list()
 
-		if(butcher_results)
-			butcher += butcher_results
-		if(guaranteed_butcher_results)
-			butcher += guaranteed_butcher_results
-		var/rotstuff = FALSE
-		var/datum/component/rot/simple/CR = GetComponent(/datum/component/rot/simple)
-		if(CR)
-			if(CR.amount >= 10 MINUTES)
-				rotstuff = TRUE
-		var/atom/Tsec = drop_location()
-		for(var/path in butcher)
-			for(var/i in 1 to butcher[path])
-				var/obj/item/I = new path(Tsec)
-				I.add_mob_blood(src)
-				if(rotstuff && istype(I,/obj/item/reagent_containers/food/snacks))
+	var/butchery_skill_level = user.get_skill_level(/datum/skill/labor/butchering)
+	var/time_per_cut = max(5, 30 - butchery_skill_level * 5) // 3 seconds for no skill, 5 ticks for master
+	if(on_meathook)
+		time_per_cut *= 0.75
+	var/botch_chance = 0
+	if(length(botched_butcher_results) && butchery_skill_level < SKILL_LEVEL_JOURNEYMAN)
+		botch_chance = 70 - (20 * butchery_skill_level) // 70% at unskilled, 20% lower for each level above it, 0% at journeyman or higher
+
+	var/perfect_chance = 0
+	if(length(perfect_butcher_results))
+		switch(butchery_skill_level)
+			if(SKILL_LEVEL_NONE to SKILL_LEVEL_APPRENTICE)
+				perfect_chance = 0
+			if(SKILL_LEVEL_JOURNEYMAN)
+				perfect_chance = 10
+			if(SKILL_LEVEL_EXPERT)
+				perfect_chance = 50
+			if(SKILL_LEVEL_MASTER to INFINITY)
+				perfect_chance = 100
+
+	var/rotstuff = FALSE
+	var/datum/component/rot/simple/CR = GetComponent(/datum/component/rot/simple)
+	if(CR && CR.amount >= 10 MINUTES)
+		rotstuff = TRUE
+	var/atom/Tsec = drop_location()
+
+	// Track results
+	var/botch_count = 0
+	var/perfect_count = 0
+	var/normal_count = 0
+
+	for(var/path in butcher_results)
+		var/amount = butcher_results[path]
+		if(!do_after(user, time_per_cut, target = src))
+			if(botch_count || normal_count || perfect_count)
+				to_chat(user, "<span class='notice'>I stop butchering: [butcher_summary(botch_count, normal_count, perfect_count, botch_chance, perfect_chance)].</span>")
+			else
+				to_chat(user, "<span class='notice'>I stop butchering for now.</span>")
+			break
+
+		// Check for botch first
+		if(prob(botch_chance))
+			botch_count++
+			if(length(botched_butcher_results) && (path in botched_butcher_results))
+				amount = botched_butcher_results[path]
+			else
+				amount = 0
+
+		// Otherwise check for perfect
+		else if(length(perfect_butcher_results) && (path in perfect_butcher_results) && prob(perfect_chance))
+			amount = perfect_butcher_results[path]
+			perfect_count++
+
+		else
+			normal_count++
+
+		butcher_results -= path
+
+		// Spawn the item(s)
+		for(var/j in 1 to amount)
+			var/obj/item/I = new path(Tsec)
+			I.add_mob_blood(src)
+			if(istype(I,/obj/item/reagent_containers/food/snacks))
+				I.item_flags |= FRESH_FOOD_ITEM
+				if(rotstuff)
 					var/obj/item/reagent_containers/food/snacks/F = I
 					F.become_rotten()
-	..()
+
+		if(user.mind)
+			user.mind.add_sleep_experience(/datum/skill/labor/butchering, user.STAINT * 0.5)
+		playsound(src, 'sound/foley/gross.ogg', 100, FALSE)
+	if(isemptylist(butcher_results))
+		to_chat(user, "<span class='notice'>I finish butchering: [butcher_summary(botch_count, normal_count, perfect_count, botch_chance, perfect_chance)].</span>")
+		gib()
+
+/mob/living/proc/butcher_summary(botch_count, normal_count, perfect_count, botch_chance, perfect_chance)
+    var/list/parts = list()
+    if(botch_count)
+        parts += "[botch_count] botched ([botch_chance]%)"
+    if(normal_count)
+        parts += "[normal_count] normal"
+    if(perfect_count)
+        parts += "[perfect_count] perfect ([perfect_chance]%)"
+
+    var/msg = ""
+    for(var/i = 1, i <= length(parts), i++)
+        msg += parts[i]
+        if(i < length(parts))
+            msg += ", "
+
+    return msg
 
 /mob/living/simple_animal/spawn_dust(just_ash = FALSE)
 	if(just_ash || !remains_type)
@@ -510,6 +582,8 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 		..()
 
 /mob/living/simple_animal/proc/CanAttack(atom/the_target)
+	if(binded)
+		return FALSE
 	if(see_invisible < the_target.invisibility)
 		return FALSE
 	if(ismob(the_target))
@@ -520,23 +594,12 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 		var/mob/living/L = the_target
 		if(L.stat == DEAD)
 			return FALSE
-	if (ismecha(the_target))
-		var/obj/mecha/M = the_target
-		if (M.occupant)
-			return FALSE
 	return TRUE
 
-/mob/living/simple_animal/handle_fire()
-	. = ..()
-	if(fire_stacks > 0)
-		apply_damage(5, BURN)
-		if(fire_stacks > 5)
-			apply_damage(10, BURN)
-
-//mob/living/simple_animal/IgniteMob()
+//mob/living/simple_animal/ignite_mob()
 //	return FALSE
 
-///mob/living/simple_animal/ExtinguishMob()
+///mob/living/simple_animal/extinguish_mob()
 //	return
 
 /mob/living/simple_animal/revive(full_heal = FALSE, admin_revive = FALSE)
@@ -576,20 +639,11 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 				continue
 			else if(!istype(M, childtype) && M.gender == MALE && !(M.flags_1 & HOLOGRAM_1)) //Better safe than sorry ;_;
 				partner = M
-				testing("[src] foudnpartner [M]")
-
-//		else if(isliving(M) && !faction_check_mob(M)) //shyness check. we're not shy in front of things that share a faction with us.
-//			testing("[src] wenotalon [M]")
-//			return //we never mate when not alone, so just abort early
-
 	if(alone && partner && children < 3)
 		var/childspawn = pickweight(childtype)
 		var/turf/target = get_turf(loc)
 		if(target)
 			return new childspawn(target)
-//			visible_message(span_warning("[src] finally gives birth."))
-//			playsound(src, 'sound/foley/gross.ogg', 100, FALSE)
-//			breedchildren--
 
 /mob/living/simple_animal/canUseTopic(atom/movable/M, be_close=FALSE, no_dexterity=FALSE, no_tk=FALSE)
 	if(incapacitated())
@@ -667,9 +721,6 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 			return
 	sync_lighting_plane_alpha()
 
-/mob/living/simple_animal/get_idcard(hand_first)
-	return access_card
-
 /mob/living/simple_animal/can_hold_items()
 	return dextrous
 
@@ -742,7 +793,7 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 		return
 	var/time2mount = 12
 	if(M.mind)
-		var/amt = M.mind.get_skill_level(/datum/skill/misc/riding)
+		var/amt = M.get_skill_level(/datum/skill/misc/riding)
 		if(amt)
 			if(amt > 3)
 				time2mount = 0
@@ -761,12 +812,12 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 /mob/living/simple_animal/hostile/user_buckle_mob(mob/living/M, mob/user)
 	if(user != M)
 		return
-	var/datum/component/riding/riding_datum = GetComponent(/datum/component/riding)
+	var/datum/component/riding/riding_datum = GetComponent(/datum/component/riding/no_ocean)
 	if(riding_datum)
 		var/time2mount = 12
 		riding_datum.vehicle_move_delay = move_to_delay
 		if(M.mind)
-			var/amt = M.mind.get_skill_level(/datum/skill/misc/riding)
+			var/amt = M.get_skill_level(/datum/skill/misc/riding)
 			if(amt)
 				if(amt > 3)
 					time2mount = 0
@@ -793,7 +844,7 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 	if (stat == DEAD)
 		return
 	var/oldloc = loc
-	var/datum/component/riding/riding_datum = GetComponent(/datum/component/riding)
+	var/datum/component/riding/riding_datum = GetComponent(/datum/component/riding/no_ocean)
 	if(tame && riding_datum)
 		if(riding_datum.handle_ride(user, direction))
 			riding_datum.vehicle_move_delay = move_to_delay
@@ -815,21 +866,25 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 					else
 						do_footstep = FALSE
 			if(user.mind)
-				var/amt = user.mind.get_skill_level(/datum/skill/misc/riding)
+				var/amt = user.get_skill_level(/datum/skill/misc/riding)
 				if(amt)
-					riding_datum.vehicle_move_delay -= 5
+					riding_datum.vehicle_move_delay -= 5 + amt/6
 				else
 					riding_datum.vehicle_move_delay -= 3
 			if(loc != oldloc)
 				var/obj/structure/mineral_door/MD = locate() in loc
 				if(MD && !MD.ridethrough)
-					if(isliving(user))
-						var/mob/living/L = user
-						unbuckle_mob(L)
-						L.Paralyze(50)
-						L.Stun(50)
-						playsound(L.loc, 'sound/foley/zfall.ogg', 100, FALSE)
-						L.visible_message(span_danger("[L] falls off [src]!"))
+					if(!HAS_TRAIT(user, TRAIT_EQUESTRIAN))
+						violent_dismount(user)
+
+/mob/living/simple_animal/proc/violent_dismount(mob/living/user)
+	if(isliving(user))
+		var/mob/living/L = user
+		unbuckle_mob(L)
+		L.Paralyze(50)
+		L.Stun(50)
+		playsound(L.loc, 'sound/foley/zfall.ogg', 100, FALSE)
+		L.visible_message(span_danger("[L] falls off [src]!"))
 
 /mob/living/simple_animal/buckle_mob(mob/living/buckled_mob, force = 0, check_loc = 1)
 	. = ..()
@@ -853,8 +908,13 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 			stack_trace("Something attempted to set simple animals AI to an invalid state: [togglestatus]")
 
 /mob/living/simple_animal/proc/consider_wakeup()
-	if (pulledby || shouldwakeup)
-		toggle_ai(AI_ON)
+	for(var/datum/spatial_grid_cell/grid as anything in our_cells.member_cells)
+		if(length(grid.client_contents))
+			toggle_ai(AI_ON)
+			return TRUE
+
+	toggle_ai(AI_OFF)
+	return FALSE
 
 /mob/living/simple_animal/adjustHealth(amount, updating_health = TRUE, forced = FALSE)
 	. = ..()
@@ -870,19 +930,13 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 		toggle_ai(initial(AIStatus))
 
 /mob/living/simple_animal/Move()
+	if(binded)
+		return FALSE
 	. = ..()
 //	if(!stat)
 //		eat_plants()
 
 /mob/living/simple_animal/proc/eat_plants()
-//	if(food >= 10 MINUTES)
-//		return
-
-//	var/obj/structure/spacevine/SV = locate(/obj/structure/spacevine) in loc
-//	if(SV)
-//		SV.eat(src)
-//		eaten = TRUE
-//		food = min(food + 5 MINUTES, 10 MINUTES)
 
 	var/obj/item/reagent_containers/food/I = locate(/obj/item/reagent_containers/food) in loc
 	if(is_type_in_list(I, food_type))
@@ -890,6 +944,8 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 		food = max(food + 30, 100)
 
 /mob/living/simple_animal/Life()
+	if(!client && can_have_ai && (AIStatus == AI_Z_OFF || AIStatus == AI_OFF))
+		return
 	. = ..()
 	if(.)
 		if(food > 0)
@@ -906,3 +962,48 @@ GLOBAL_VAR_INIT(farm_animals, FALSE)
 		if(isturf(loc))
 			playsound(src, "fart", 100, TRUE)
 			new pooptype(loc)
+
+/mob/living/simple_animal/proc/on_client_enter(datum/source, atom/target)
+	SIGNAL_HANDLER
+	if(AIStatus == AI_IDLE)
+		toggle_ai(AI_ON)
+
+/mob/living/simple_animal/proc/on_client_exit(datum/source, datum/exited)
+	SIGNAL_HANDLER
+	consider_wakeup()
+
+/mob/living/simple_animal/proc/set_new_cells()
+	var/turf/our_turf = get_turf(src)
+	if(isnull(our_turf))
+		return
+
+	var/list/cell_collections = our_cells.recalculate_cells(our_turf)
+
+	for(var/datum/old_grid as anything in cell_collections[2])
+		UnregisterSignal(old_grid, list(SPATIAL_GRID_CELL_ENTERED(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS), SPATIAL_GRID_CELL_EXITED(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS)))
+
+	for(var/datum/spatial_grid_cell/new_grid as anything in cell_collections[1])
+		RegisterSignal(new_grid, SPATIAL_GRID_CELL_ENTERED(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS), PROC_REF(on_client_enter))
+		RegisterSignal(new_grid, SPATIAL_GRID_CELL_EXITED(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS), PROC_REF(on_client_exit))
+	consider_wakeup()
+
+/mob/living/simple_animal/Moved()
+	. = ..()
+	update_grid()
+
+/mob/living/simple_animal/proc/update_grid()
+	var/turf/our_turf = get_turf(src)
+	if(isnull(our_turf) || isnull(our_cells))
+		return
+
+	var/list/cell_collections = our_cells.recalculate_cells(our_turf)
+
+	for(var/datum/old_grid as anything in cell_collections[2])
+		UnregisterSignal(old_grid, list(SPATIAL_GRID_CELL_ENTERED(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS), SPATIAL_GRID_CELL_EXITED(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS)))
+
+	for(var/datum/spatial_grid_cell/new_grid as anything in cell_collections[1])
+		RegisterSignal(new_grid, SPATIAL_GRID_CELL_ENTERED(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS), PROC_REF(on_client_enter))
+		RegisterSignal(new_grid, SPATIAL_GRID_CELL_EXITED(SPATIAL_GRID_CONTENTS_TYPE_CLIENTS), PROC_REF(on_client_exit))
+	consider_wakeup()
+
+#undef MAX_FARM_ANIMALS

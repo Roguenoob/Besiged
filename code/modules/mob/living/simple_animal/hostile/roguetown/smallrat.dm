@@ -1,6 +1,6 @@
 /obj/item/reagent_containers/food/snacks/smallrat
 	name = "rat"
-	desc = ""
+	desc = "A scurrying rodent often found in sewers and pantries."
 	icon_state = "srat"
 	icon = 'icons/roguetown/mob/monster/rat.dmi'
 	list_reagents = list(/datum/reagent/consumable/nutriment = 5)
@@ -12,33 +12,34 @@
 	eat_effect = /datum/status_effect/debuff/uncookedfood
 	fried_type = /obj/item/reagent_containers/food/snacks/rogue/friedrat
 	max_integrity = 10
-	sellprice = 0
+	sellprice = 5 //It has... some light fur on it, I guess.
 	rotprocess = null
+	grid_width = 32
+	grid_height = 32
 
 
 /obj/item/reagent_containers/food/snacks/smallrat/onbite(mob/living/carbon/human/user)
 	if(loc == user)
-		if(user.mind && user.mind.has_antag_datum(/datum/antagonist/vampirelord))
+		if(user.mind && user.mind.has_antag_datum(/datum/antagonist/vampire))
 			if(dead)
 				to_chat(user, span_warning("It's dead."))
 				return
-			var/datum/antagonist/vampirelord/VD = user.mind.has_antag_datum(/datum/antagonist/vampirelord)
 			if(do_after(user, 30, target = src))
 				user.visible_message(span_warning("[user] drinks from [src]!"),\
 				span_warning("I drink from [src]!"))
 				playsound(user.loc, 'sound/misc/drink_blood.ogg', 100, FALSE, -4)
-				VD.handle_vitae(50)
+				user.adjust_bloodpool(50)
 				dead = TRUE
 				playsound(get_turf(user), 'sound/vo/mobs/rat/rat_death.ogg', 100, FALSE, -1)
 				icon_state = "srat1"
-				rotprocess = 15 MINUTES
+				rotprocess = SHELFLIFE_SHORT
 				user.add_stress(/datum/stressevent/drankrat)
 			return
 	return ..()
 
 /obj/item/reagent_containers/food/snacks/rogue/friedrat
 	name = "fried rat"
-	desc = ""
+	desc = "It's charred body looks rather sad. Better eat it before you grow too attached to your once, not so crispy friend..."
 	icon = 'icons/roguetown/items/food.dmi'
 	icon_state = "cookedrat"
 	bitesize = 2
@@ -46,8 +47,8 @@
 	w_class = WEIGHT_CLASS_TINY
 	tastes = list("burnt flesh" = 1)
 	eat_effect = null
-	rotprocess = 15 MINUTES
-	sellprice = 0
+	rotprocess = SHELFLIFE_SHORT
+	sellprice = 2 //I-it's something?...
 
 /obj/item/reagent_containers/food/snacks/smallrat/burning(input as num)
 	if(!dead)
@@ -55,7 +56,7 @@
 			dead = TRUE
 			playsound(src, 'sound/vo/mobs/rat/rat_death.ogg', 100, FALSE, -1)
 			icon_state = "srat1"
-			rotprocess = 15 MINUTES
+			rotprocess = SHELFLIFE_SHORT
 	. = ..()
 
 /obj/item/reagent_containers/food/snacks/smallrat/Crossed(mob/living/L)
@@ -71,21 +72,21 @@
 
 /obj/item/reagent_containers/food/snacks/smallrat/dead
 	dead = TRUE
-	rotprocess = 15 MINUTES
+	rotprocess = SHELFLIFE_SHORT
 
 /obj/item/reagent_containers/food/snacks/smallrat/Initialize()
 	. = ..()
 	START_PROCESSING(SSobj, src)
 	if(dead)
 		icon_state = "sratl"
-		rotprocess = 15 MINUTES
+		rotprocess = SHELFLIFE_SHORT
 
 /obj/item/reagent_containers/food/snacks/smallrat/attack_hand(mob/user)
 	if(isliving(user))
 		var/mob/living/L = user
 		if(!(L.mobility_flags & MOBILITY_PICKUP))
 			return
-	user.changeNext_move(CLICK_CD_MELEE)
+	user.changeNext_move(CLICK_CD_INTENTCAP)
 	if(dead)
 		..()
 	else
@@ -129,7 +130,7 @@
 	//..()
 	if(!dead)
 		dead = TRUE
-		rotprocess = 15 MINUTES
+		rotprocess = SHELFLIFE_SHORT
 		playsound(src, 'sound/vo/mobs/rat/rat_death.ogg', 100, FALSE, -1)
 		icon_state = "[icon_state]1"
 		return 1

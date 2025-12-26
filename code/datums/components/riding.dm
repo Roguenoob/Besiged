@@ -13,13 +13,16 @@
 	var/list/allowed_turf_typecache
 	var/list/forbid_turf_typecache					//allow typecache for only certain turfs, forbid to allow all but those. allow only certain turfs will take precedence.
 	var/allow_one_away_from_valid_turf = TRUE		//allow moving one tile away from a valid turf but not more.
-	var/override_allow_spacemove = FALSE
 	var/drive_verb = "drive"
 	var/ride_check_rider_incapacitated = FALSE
 	var/ride_check_rider_restrained = FALSE
 	var/ride_check_ridden_incapacitated = FALSE
 
 	var/del_on_unbuckle_all = FALSE
+
+/datum/component/riding/no_ocean/Initialize()//no copy paste
+	. = ..()
+	forbid_turf_typecache = typecacheof(/turf/open/water/ocean/deep)
 
 /datum/component/riding/Initialize()
 	if(!ismovableatom(parent))
@@ -81,26 +84,32 @@
 	var/atom/movable/AM = parent
 	var/AM_dir = "[AM.dir]"
 	var/passindex = 0
+	var/has_fixedeye = FALSE
 	if(AM.has_buckled_mobs())
 		for(var/m in AM.buckled_mobs)
+			if(ishuman(m))
+				var/mob/living/carbon/human/H = m
+				if(H.fixedeye)
+					has_fixedeye = TRUE
 			passindex++
 			var/mob/living/buckled_mob = m
 			var/list/offsets = get_offsets(passindex)
 			var/rider_dir = get_rider_dir(passindex)
-			buckled_mob.setDir(rider_dir)
-			dir_loop:
-				for(var/offsetdir in offsets)
-					if(offsetdir == AM_dir)
-						var/list/diroffsets = offsets[offsetdir]
-						var/x2off
-						var/y2off
-						x2off = diroffsets[1]
-						if(diroffsets.len >= 2)
-							y2off = diroffsets[2]
-						if(diroffsets.len == 3)
-							buckled_mob.layer = diroffsets[3]
-						buckled_mob.set_mob_offsets("riding", _x = x2off, _y = y2off)
-						break dir_loop
+			if(!has_fixedeye)
+				buckled_mob.setDir(rider_dir)
+				dir_loop:
+					for(var/offsetdir in offsets)
+						if(offsetdir == AM_dir)
+							var/list/diroffsets = offsets[offsetdir]
+							var/x2off
+							var/y2off
+							x2off = diroffsets[1]
+							if(diroffsets.len >= 2)
+								y2off = diroffsets[2]
+							if(diroffsets.len == 3)
+								buckled_mob.layer = diroffsets[3]
+							buckled_mob.set_mob_offsets("riding", _x = x2off, _y = y2off)
+							break dir_loop
 	var/list/static/default_vehicle_pixel_offsets = list(TEXT_NORTH = list(0, 0), TEXT_SOUTH = list(0, 0), TEXT_EAST = list(0, 0), TEXT_WEST = list(0, 0))
 /*	var/px = default_vehicle_pixel_offsets[AM_dir]
 	var/py = default_vehicle_pixel_offsets[AM_dir]
@@ -171,9 +180,9 @@
 		if(!istype(next) || !istype(current))
 			return	//not happening.
 		if(!turf_check(next, current))
-			to_chat(user, span_warning("My \the [AM] can not go onto [next]!"))
+			to_chat(user, span_warning("My [AM] can not go onto [next]!"))
 			return
-		if(!Process_Spacemove(direction) || !isturf(AM.loc))
+		if(!isturf(AM.loc))
 			return
 		step(AM, direction)
 
@@ -190,10 +199,6 @@
 
 /datum/component/riding/proc/Unbuckle(atom/movable/M)
 	addtimer(CALLBACK(parent, TYPE_PROC_REF(/atom/movable, unbuckle_mob), M), 0, TIMER_UNIQUE)
-
-/datum/component/riding/proc/Process_Spacemove(direction)
-	var/atom/movable/AM = parent
-	return override_allow_spacemove || AM.has_gravity()
 
 /datum/component/riding/proc/account_limbs(mob/living/M)
 	if(M.get_num_legs() < 2 && !slowed)
@@ -253,11 +258,16 @@
 		AM.layer = MOB_LAYER
 
 /datum/component/riding/human/get_offsets(pass_index)
-	var/mob/living/carbon/human/H = parent
-	if(H.buckle_lying)
+	var/mob/living/carbon/human/human = parent
+	var/obj/item/bodypart/taur/taur = human.get_taur_tail()
+	if(human.buckle_lying)
 		return list(TEXT_NORTH = list(0, 6), TEXT_SOUTH = list(0, 6), TEXT_EAST = list(0, 6), TEXT_WEST = list(0, 6))
+	else if(istype(parent, /mob/living/carbon/human/species/wildshape)) //Snowflake druid travel
+		return list(TEXT_NORTH = list(8, 6), TEXT_SOUTH = list(8, 6), TEXT_EAST = list(8, 6), TEXT_WEST = list(8, 6))
+	else if(taur)
+		return list(TEXT_NORTH = list(0, 6), TEXT_SOUTH = list(0, 6), TEXT_EAST = list(-12, 4), TEXT_WEST = list(12, 4))
 	else
-		return list(TEXT_NORTH = list(0, 6), TEXT_SOUTH = list(0, 6), TEXT_EAST = list(-6, 4), TEXT_WEST = list( 6, 4))
+		return list(TEXT_NORTH = list(0, 6), TEXT_SOUTH = list(0, 6), TEXT_EAST = list(-6, 4), TEXT_WEST = list(6, 4))
 
 
 /datum/component/riding/human/force_dismount(mob/living/user)
@@ -274,10 +284,6 @@
 	var/atom/movable/AM = parent
 	if(user.incapacitated())
 		var/kick = TRUE
-		if(iscyborg(AM))
-			var/mob/living/silicon/robot/R = AM
-			if(R.module && R.module.ride_allow_incapacitated)
-				kick = FALSE
 		if(kick)
 			to_chat(user, span_danger("I fall off of [AM]!"))
 			Unbuckle(user)
@@ -307,13 +313,7 @@
 	if(AM.has_buckled_mobs())
 		for(var/mob/living/M in AM.buckled_mobs)
 			M.setDir(AM.dir)
-			if(iscyborg(AM))
-				var/mob/living/silicon/robot/R = AM
-				if(istype(R.module))
-					M.pixel_x = R.module.ride_offset_x[dir2text(AM.dir)]
-					M.pixel_y = R.module.ride_offset_y[dir2text(AM.dir)]
-			else
-				..()
+			..()
 
 /datum/component/riding/cyborg/force_dismount(mob/living/M)
 	var/atom/movable/AM = parent

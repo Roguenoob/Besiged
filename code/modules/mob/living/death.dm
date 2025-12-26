@@ -1,10 +1,11 @@
+GLOBAL_LIST_EMPTY(last_words)
+
 /mob/living/gib(no_brain, no_organs, no_bodyparts)
 	var/prev_lying = lying
 	if(stat != DEAD)
 		death(TRUE)
 	if(client)
 		SSdroning.kill_droning(client)
-		SSdroning.kill_ambient_loop(client)
 	playsound(src.loc, pick('sound/combat/gib (1).ogg','sound/combat/gib (2).ogg'), 200, FALSE, 3)
 
 	if(!prev_lying)
@@ -13,8 +14,6 @@
 	spill_embedded_objects()
 	
 	spill_organs(no_brain, no_organs, no_bodyparts)
-
-	release_vore_contents(silent = TRUE) // return of the bomb safe internals.
 
 	if(!no_bodyparts)
 		spread_bodyparts(no_brain, no_organs)
@@ -26,7 +25,7 @@
 	return
 
 /mob/living/proc/spawn_gibs()
-	new /obj/effect/gibspawner/generic(drop_location(), src, get_static_viruses())
+	new /obj/effect/gibspawner/generic(drop_location(), src)
 
 /mob/living/proc/spill_embedded_objects()
 	for(var/obj/item/embedded_item as anything in simple_embedded_objects)
@@ -37,6 +36,9 @@
 
 /mob/living/proc/spread_bodyparts()
 	return
+
+/// Length of the animation in dust_animation.dmi
+#define DUST_ANIMATION_TIME 1.3 SECONDS
 
 /mob/living/dust(just_ash, drop_items, force)
 	death(TRUE)
@@ -49,21 +51,44 @@
 	if(buckled)
 		buckled.unbuckle_mob(src, force = TRUE)
 
-	release_vore_contents(silent = TRUE) //technically grief protection, I guess? if they're SM'd it doesn't matter seconds after anyway.
-
 	dust_animation()
-	spawn_dust(just_ash)
-	QDEL_IN(src,5) // since this is sometimes called in the middle of movement, allow half a second for movement to finish, ghosting to happen and animation to play. Looks much nicer and doesn't cause multiple runtimes.
+	addtimer(CALLBACK(src, PROC_REF(spawn_dust), just_ash), DUST_ANIMATION_TIME - 0.3 SECONDS)
+	QDEL_IN(src, DUST_ANIMATION_TIME) // since this is sometimes called in the middle of movement, allow half a second for movement to finish, ghosting to happen and animation to play. Looks much nicer and doesn't cause multiple runtimes.
 
-/mob/living/proc/dust_animation()
-	return
+/// Animates turning into dust
+/// Does not delete src afterwards, BUT it will become invisible (and grey), so ensure you handle that yourself
+/atom/movable/proc/dust_animation(atom/anim_loc = src.loc)
+	if(isnull(anim_loc)) // the effect breaks if we have a null loc
+		return
+	var/obj/effect/temp_visual/dust_animation_filter/dustfx = new(anim_loc, REF(src))
+	add_filter("dust_animation", 1, displacement_map_filter(render_source = dustfx.render_target, size = 256))
+	add_filter("dust_color", 1, color_matrix_filter())
+	transition_filter("dust_color", color_matrix_filter(list(0.33,0.33,0.33,0, 0.59,0.59,0.59,0, 0.11,0.11,0.11,0, 0,0,0,1, 0,0,0,0)), DUST_ANIMATION_TIME - 0.3 SECONDS)
+	animate(src, alpha = 0, time = DUST_ANIMATION_TIME - 0.1 SECONDS, easing = SINE_EASING | EASE_IN)
+
+/// Holds the dust animation filter effect, so we can animate it
+/obj/effect/temp_visual/dust_animation_filter
+	icon = 'icons/mob/dust_animation.dmi'
+	icon_state = "dust.1"
+	duration = DUST_ANIMATION_TIME
+	randomdir = FALSE
+
+/obj/effect/temp_visual/dust_animation_filter/Initialize(mapload, anim_id = "random_default_anti_collision_text")
+	. = ..()
+	// we manually animate this, rather than just using an animated icon state or flick, to work around byond animated state memes
+	// (normally, all animated icon states are synced to the same time, which would bad here)
+	for(var/i in 2 to duration)
+		animate(src, time = 1, icon_state = "dust.[i]", flags = ANIMATION_CONTINUE)
+	render_target = "*dust-[anim_id]"
+
+#undef DUST_ANIMATION_TIME
 
 /mob/living/proc/spawn_dust(just_ash = FALSE)
 	for(var/i in 1 to 3)
 		new /obj/item/ash(loc)
 
 
-/mob/living/death(gibbed)
+/mob/living/death(gibbed, nocutscene = FALSE)
 	var/was_dead_before = stat == DEAD
 	stat = DEAD
 	unset_machine()
@@ -84,12 +109,11 @@
 	SSdroning.kill_rain(src.client)
 	SSdroning.kill_loop(src.client)
 	SSdroning.kill_droning(src.client)
-	SSdroning.kill_ambient_loop(src.client)
-	src.playsound_local(src, 'sound/misc/deth.ogg', 100)
+	if(!nocutscene)
+		src.playsound_local(src, 'sound/misc/deth.ogg', 100)
 
 	set_drugginess(0)
 	set_disgust(0)
-	cure_holdbreath()
 	SetSleeping(0, 0)
 	reset_perspective(null)
 	reload_fullscreen()
@@ -97,27 +121,27 @@
 	update_damage_hud()
 	update_health_hud()
 	update_mobility()
-	med_hud_set_health()
-	med_hud_set_status()
-	if(!gibbed && !QDELETED(src))
-		addtimer(CALLBACK(src, PROC_REF(med_hud_set_status)), (DEFIB_TIME_LIMIT * 10) + 1)
 	stop_pulling()
 
 	. = ..()
 
+	SEND_SIGNAL(src, COMSIG_LIVING_DEATH, gibbed) 
 	if(client)
 		client.move_delay = initial(client.move_delay)
-		var/atom/movable/screen/gameover/hog/H = new()
-		H.layer = SPLASHSCREEN_LAYER+0.1
-		client.screen += H
+		if(!nocutscene)
+			var/atom/movable/screen/gameover/hog/H = new()
+			H.layer = SPLASHSCREEN_LAYER+0.1
+			client.screen += H
+			H.Fade()
+			addtimer(CALLBACK(H, TYPE_PROC_REF(/atom/movable/screen/gameover, Fade), TRUE), 100)
 //		flick("gameover",H)
 //		addtimer(CALLBACK(H, TYPE_PROC_REF(/atom/movable/screen/gameover, Fade)), 29)
-		H.Fade()
 		mob_timers["lastdied"] = world.time
-		addtimer(CALLBACK(H, TYPE_PROC_REF(/atom/movable/screen/gameover, Fade), TRUE), 100)
 //		addtimer(CALLBACK(client, PROC_REF(ghostize), 1, src), 150)
 		add_client_colour(/datum/client_colour/monochrome)
 		client.verbs.Add(GLOB.ghost_verbs)
+		if(last_words)
+			GLOB.last_words |= last_words
 
 	for(var/s in ownedSoullinks)
 		var/datum/soullink/S = s
@@ -128,43 +152,36 @@
 
 //	for(var/datum/death_tracker/D in target.death_trackers)
 
-	if(!gibbed && rot_type)
+	if(!gibbed && !QDELETED(src) && rot_type)
 		LoadComponent(rot_type)
 
-	set_typing_indicator(FALSE)
+	clear_typing_indicator()
 
 	// AZURE EDIT BEGIN: necra acolyte/priest deathsight trait
 	// this was a player that just died, so do the honors
 	if (client)
-		if (!gibbed)
-			var/locale = prepare_deathsight_message()
-			for (var/mob/living/player in GLOB.player_list)
-				if (player.stat == DEAD || isbrain(player))
-					continue
-				if (HAS_TRAIT(player, TRAIT_DEATHSIGHT))
-					if (HAS_TRAIT(player, TRAIT_CABAL))
-						to_chat(player, span_warning("I feel the faint passage of disjointed life essence as it flees [locale]."))
-					else
-						to_chat(player, span_warning("Veiled whispers herald the Undermaiden's gaze in my mind's eye as it turn towards [locale] for but a brief, singular moment."))
+		//Cove edit start
+		if (!istype(src.loc, /obj/belly))
+			if(istype(src, /mob/living/simple_animal))
+				return
+		//Cove edit end
+		// Stop necrans from freaking out from digestion and unrevivable simplemob deaths
+			if (!gibbed)
+				var/locale = prepare_deathsight_message()
+				for (var/mob/living/player in GLOB.player_list)
+					if (player.stat == DEAD || isbrain(player))
+						continue
+					if (HAS_TRAIT(player, TRAIT_DEATHSIGHT))
+						if (HAS_TRAIT(player, TRAIT_CABAL))
+							to_chat(player, span_warning("I feel the faint passage of disjointed life essence as it flees [locale]."))
+						else
+							to_chat(player, span_warning("Veiled whispers herald the Undermaiden's gaze in my mind's eye as it turn towards [locale] for but a brief, singular moment."))
 	// AZURE EDIT END
 
 	return TRUE
 
 /mob/living/proc/prepare_deathsight_message()
-	var/area_of_death = lowertext(get_area_name(src))
-	var/locale = "a locale wreathed in enigmatic fog"
-	switch (area_of_death) // we're deliberately obtuse with this.
-		if ("mountains", "mt decapitation")
-			locale = "a twisted tangle of soaring peaks"
-		if ("wilderness", "azure basin")
-			locale = "somewhere in the wilds"
-		if ("bog", "dense bog")
-			locale = "a wretched, fetid bog"
-		if ("coast", "coastforest")
-			locale = "somewhere betwixt Abyssor's realm and Dendor's bounty"
-		if ("indoors", "shop", "physician", "outdoors", "roofs", "manor", "wizard's tower", "garrison", "dungeon cell", "baths", "tavern")
-			locale = "the city of Azure Peak and all its bustling souls"
-		if ("church")
-			locale = "a hallowed place, sworn to the Ten" // special bit for the church since it's sacred ground
-	
-	return locale
+	var/area/A = get_area(src)
+	if(!A)
+		return "a locale wreathed in enigmatic fog" // fallback if we can't find the area somehow??
+	return A.deathsight_message

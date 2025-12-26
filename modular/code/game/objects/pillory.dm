@@ -1,7 +1,7 @@
 #define PILLORY_HEAD_OFFSET      2 // How much we need to move the player to center their head
 
 /obj/structure/pillory
-	name = "Pillory"
+	name = "pillory"
 	desc = "To keep the criminals locked!"
 	icon_state = "pillory_single"
 	icon = 'modular/icons/obj/pillory.dmi'
@@ -141,7 +141,7 @@
 				//H.cut_overlays()
 				H.update_body_parts_head_only()
 				switch(H.dna.species.name)
-					if ("Dwarf", "Dwarf", "Kobold", "Goblin", "Verminvolk")
+					if ("Dwarf", "Kobold", "Goblin", "Verminvolk")
 						H.set_mob_offsets("bed_buckle", _x = 0, _y = PILLORY_HEAD_OFFSET)
 				icon_state = "[base_icon]-over"
 				update_icon()
@@ -161,20 +161,39 @@
 	update_icon()
 	..()
 
-/obj/structure/pillory/unbuckle_mob(mob/living/user, force=FALSE)
-	if(latched)
-		if(user.STASTR >= 18)
-			if(do_after(user, 25))
-				user.visible_message(span_warning("[user] breaks [src] open!"))
+/obj/structure/pillory/user_unbuckle_mob(mob/living/buckled_mob, mob/user)
+	if(!latched)
+		return ..()
+	if(buckled_mob == user)
+		if(buckled_mob.STASTR >= 18)
+			if(do_after(buckled_mob, 2.5 SECONDS))
+				buckled_mob.visible_message(span_warning("[buckled_mob] breaks [src] open!"))
 				locked = FALSE
 				latched = FALSE
-				..()
-		else
-			to_chat(usr, span_warning("Unlock it first!"))
-			return FALSE
-	else
-		..()
+				return ..()
+			return null
+		if(locked)	//can't be locked without also being latched anyway
+			to_chat(user, span_warning("It's locked! I can't free myself!"))
+			return
+		else if(latched)
+			buckled_mob.visible_message(span_warning("[buckled_mob] struggles in [src], trying to get the latch off!"))
+			if(do_after(buckled_mob, 12 SECONDS))
+				buckled_mob.visible_message(span_warning("[buckled_mob] forces [src]'s latch open!"))
+				latched = FALSE
+				return ..()
+			else
+				return null
+	if(locked)	//if user isn't the one in the pillory and it's also locked
+		to_chat(user, span_warning("[src] is locked! I'll need a key to unlatch it."))
+		return null
+	latched = FALSE //we pull them free, which implies unlatching
+	return ..()
 
-	..()
+/obj/structure/pillory/hitby(atom/movable/AM, skipcatch, hitpush, blocked, datum/thrownthing/throwingdatum, damage_flag)
+	if(!has_buckled_mobs())
+		return ..()
+
+	var/mob/living/victim = pick(buckled_mobs)
+	return AM.throw_impact(victim, throwingdatum)
 
 #undef PILLORY_HEAD_OFFSET

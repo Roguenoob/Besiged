@@ -8,21 +8,28 @@
 	allowed_sexes = list(MALE, FEMALE)
 	allowed_races = RACES_ALL_KINDS
 	outfit = /datum/outfit/job/roguetown/adventurer/masterchef
+	traits_applied = list(TRAIT_HOMESTEAD_EXPERT)
 
 	maximum_possible_slots = 1
 	pickprob = 5
-	category_tags = list(CTAG_PILGRIM)
+	category_tags = list(CTAG_TOWNER)
+	subclass_stats = list(
+		STATKEY_INT = 3,
+		STATKEY_CON = 2,
+	)
+	subclass_skills = list(
+		/datum/skill/combat/unarmed = SKILL_LEVEL_NOVICE,
+		/datum/skill/combat/knives = SKILL_LEVEL_EXPERT,
+		/datum/skill/craft/sewing = SKILL_LEVEL_NOVICE,
+		/datum/skill/misc/climbing = SKILL_LEVEL_NOVICE,
+		/datum/skill/labor/farming = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/misc/reading = SKILL_LEVEL_EXPERT,
+		/datum/skill/craft/crafting = SKILL_LEVEL_EXPERT,
+		/datum/skill/craft/cooking = SKILL_LEVEL_LEGENDARY,
+	)
 
 /datum/outfit/job/roguetown/adventurer/masterchef/pre_equip(mob/living/carbon/human/H)
 	..()
-	H.mind.adjust_skillrank(/datum/skill/combat/unarmed, 1, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/combat/knives, 4, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/sewing, 1, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/climbing, 1, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/labor/farming, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/reading, 4, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/craft/crafting, 4, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/craft/cooking, 6, TRUE)
 	belt = /obj/item/storage/belt/rogue/leather
 	pants = /obj/item/clothing/under/roguetown/tights/random
 	shirt = /obj/item/clothing/suit/roguetown/shirt/shortshirt/random
@@ -35,10 +42,7 @@
 	beltr = /obj/item/cooking/pan
 	mouth = /obj/item/rogueweapon/huntingknife/cleaver
 	beltl = /obj/item/flint
-	H.change_stat("intelligence", 3)
-	H.change_stat("constitution", 2)
-	if(H.age == AGE_OLD)
-		H.mind.adjust_skillrank(/datum/skill/craft/cooking, 1, TRUE)
+	r_hand = /obj/item/flashlight/flare/torch
 	var/packcontents = pickweight(list("Honey" = 1, "Truffles" = 1, "Bacon" = 1)) // What is our special ingredient? Honey, truffles, or BACON?
 	switch(packcontents)
 		if("Honey")
@@ -49,7 +53,7 @@
 				/obj/item/natural/cloth = 1,
 				/obj/item/reagent_containers/peppermill = 1,
 				/obj/item/reagent_containers/powder/flour = 2,
-				/obj/item/reagent_containers/food/snacks/rogue/honey = 2,
+				/obj/item/reagent_containers/food/snacks/rogue/honey/spider = 2,
 				/obj/item/reagent_containers/powder/salt = 1,
 				/obj/item/reagent_containers/food/snacks/butter = 1,
 				/obj/item/reagent_containers/food/snacks/rogue/meat/salami = 1,

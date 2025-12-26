@@ -57,7 +57,7 @@
 	/// Skill median used to apply success and speed bonuses
 	var/skill_median = SKILL_LEVEL_JOURNEYMAN
 	/// Modifiers to success chance when you're above the median
-	var/list/skill_bonuses = list(
+	var/list/skill_bonuses = alist(
 		1 = 0.5,
 		2 = 1,
 		3 = 1.5,
@@ -66,7 +66,7 @@
 		6 = 3,
 	)
 	/// Modifiers to success chance when you're below the median
-	var/list/skill_maluses = list(
+	var/list/skill_maluses = alist(
 		1 = -0.2,
 		2 = -0.4,
 		3 = -0.6,
@@ -84,9 +84,11 @@
 	var/replaced_by
 	/// Repeatable surgery steps will repeat until failure
 	var/repeating = FALSE
+	var/repeatingonfail = FALSE
 	var/preop_sound //Sound played when the step is started
 	var/success_sound //Sound played if the step succeeded
 	var/failure_sound //Sound played if the step fails
+	var/visible_required_skill = FALSE //gives you a message about lacking skill, just used for re-adding limbs
 
 /datum/surgery_step/proc/can_do_step(mob/user, mob/living/target, target_zone, obj/item/tool, datum/intent/intent, try_to_fail = FALSE)
 	if(!user || !target)
@@ -120,36 +122,6 @@
 	if(!requires_tech && !replaced_by)
 		return TRUE
 
-	if(iscyborg(user))
-		var/mob/living/silicon/robot/robot = user
-		var/obj/item/surgical_processor/surgical_processor = locate() in robot.module?.modules
-		// No early return for !surgical_processor since we want to check optable should this not exist.
-		if(surgical_processor)
-			if(replaced_by in surgical_processor.advanced_surgery_steps)
-				return FALSE
-			if(type in surgical_processor.advanced_surgery_steps)
-				return TRUE
-
-	var/turf/target_turf = get_turf(target)
-
-	// Get the relevant operating computer
-	var/obj/machinery/computer/operating/opcomputer
-	var/obj/structure/table/optable/table = locate(/obj/structure/table/optable) in target_turf
-	if(table?.computer)
-		opcomputer = table.computer
-	else
-		var/obj/machinery/stasis/the_stasis_bed = locate(/obj/machinery/stasis) in target_turf
-		if(the_stasis_bed?.op_computer)
-			opcomputer = the_stasis_bed.op_computer
-
-	if(!opcomputer || (opcomputer.stat & (NOPOWER | BROKEN)))
-		if(!requires_tech)
-			return TRUE
-		return FALSE
-	if(replaced_by in opcomputer.advanced_surgery_steps)
-		return FALSE
-	if(!(type in opcomputer.advanced_surgery_steps))
-		return FALSE
 	return TRUE
 
 /datum/surgery_step/proc/validate_user(mob/user, mob/living/target, target_zone, datum/intent/intent)
@@ -164,7 +136,9 @@
 				break
 		if(!found_intent)
 			return FALSE
-	if(skill_used && skill_min && (user.mind?.get_skill_level(skill_used) < skill_min))
+	if(skill_used && skill_min && (user.get_skill_level(skill_used) < skill_min))
+		if(visible_required_skill)
+			to_chat(user, span_warning("I'm not skilled enough to do this!"))
 		return FALSE
 	return TRUE
 
@@ -239,7 +213,7 @@
 /datum/surgery_step/proc/tool_check(mob/user, obj/item/tool)
 	SHOULD_CALL_PARENT(TRUE)
 	var/implement_type = FALSE
-	if(accept_hand && (!tool || iscyborg(user)))
+	if(accept_hand && (!tool))
 		implement_type = TOOL_HAND
 
 	if(tool)
@@ -291,7 +265,7 @@
 	return english_list(chems, and_text = require_all_chems ? " and " : " or ")
 
 /datum/surgery_step/proc/try_op(mob/user, mob/living/target, target_zone, obj/item/tool, datum/intent/intent, try_to_fail = FALSE)
-	testing("[user] doing surgery step [name] on [target] [target_zone || "body"] with tool [tool || "hands"] and [intent || "none"] intent")
+
 	if(!can_do_step(user, target, target_zone, tool, intent, try_to_fail))
 		return FALSE
 
@@ -315,7 +289,7 @@
 		return FALSE
 
 	LAZYREMOVE(target.surgeries, target_zone)
-	var/success = !try_to_fail && ((iscyborg(user) && !silicons_obey_prob) || prob(success_prob)) && chem_check(target)
+	var/success = !try_to_fail && (prob(success_prob)) && chem_check(target)
 	if(success && success(user, target, target_zone, tool, intent))
 		if(ishuman(user))
 			var/mob/living/carbon/human/doctor = user
@@ -331,6 +305,8 @@
 				to_chat(user, span_warning("Intentional surgery fail... [success_prob]%"))
 			else
 				to_chat(user, span_warning("Surgery fail... [success_prob]%"))
+		if(repeatingonfail && can_do_step(user, target, target_zone, tool, intent, try_to_fail))
+			initiate(user, target, target_zone, tool, intent, try_to_fail)
 		return FALSE
 
 	return FALSE
@@ -392,6 +368,12 @@
 	user.visible_message(vague_message, "", ignored_mobs = detailed_mobs)
 	return TRUE
 
+/// General proc for notifying people of a tool embedding inside deliberately.
+/datum/surgery_step/proc/notify_embed(mob/user, obj/item/tool, mob/living/carbon/target, target_zone)
+	display_results(user, target, span_notice("I leave \the [tool] inside [target]'s [parse_zone(target_zone)] for the next step."),
+	span_notice("\The [tool] is left in place inside [target]'s [parse_zone(target_zone)]."),
+	span_notice("\The [tool] is left in place inside [target]'s [parse_zone(target_zone)]."))
+
 /datum/surgery_step/proc/get_speed_modifier(mob/user, mob/living/target, target_zone, obj/item/tool, datum/intent/intent)
 	var/speed_mod = 1
 	if(tool)
@@ -400,7 +382,12 @@
 		var/implement_type = tool_check(user, tool)
 		if(implement_type)
 			speed_mod *= implements_speed[implement_type] || 1
-	speed_mod *= get_location_modifier(target)
+	speed_mod *= get_speed_location_modifier(target)
+	var/medskill = user.get_skill_level(/datum/skill/misc/medicine)
+	if(medskill == SKILL_LEVEL_MASTER)
+		speed_mod -= 0.2
+	else if(medskill == SKILL_LEVEL_LEGENDARY)
+		speed_mod -= 0.4
 
 	return speed_mod
 
@@ -419,7 +406,7 @@
 	if(!skill_used)
 		return 1
 	var/modifier = 1
-	var/skill_level = user.mind?.get_skill_level(skill_used) || 0
+	var/skill_level = user.get_skill_level(skill_used) || 0
 	var/skill_difference = skill_level - skill_median
 	if((skill_difference > 0) && length(skill_bonuses))
 		skill_difference = clamp(abs(skill_difference), 0, skill_bonuses.len)
@@ -439,6 +426,17 @@
 	else if(locate(/obj/structure/table) in patient_turf)
 		return 0.8
 	return 0.7
+
+/datum/surgery_step/proc/get_speed_location_modifier(mob/living/target)
+	var/turf/patient_turf = get_turf(target)
+	var/is_lying = !(target.mobility_flags & MOBILITY_STAND)
+	if(!is_lying)
+		return 1.4
+	if(locate(/obj/structure/bed) in patient_turf)
+		return 0.9
+	else if(locate(/obj/structure/table) in patient_turf)
+		return 0.8
+	return 1.1
 	/*
 	if(locate(/obj/structure/table/optable) in patient_turf)
 		return 1

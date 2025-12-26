@@ -86,15 +86,6 @@
 /datum/world_topic/ahelp_relay/Run(list/input)
 	relay_msg_admins(span_adminnotice("<b><font color=red>HELP: </font> [input["source"]] [input["message_sender"]]: [input["message"]]</b>"))
 
-/datum/world_topic/comms_console
-	keyword = "Comms_Console"
-	require_comms_key = TRUE
-
-/datum/world_topic/comms_console/Run(list/input)
-	minor_announce(input["message"], "Incoming message from [input["message_sender"]]")
-	for(var/obj/machinery/computer/communications/CM in GLOB.machines)
-		CM.overrideCooldown()
-
 /datum/world_topic/news_report
 	keyword = "News_Report"
 	require_comms_key = TRUE
@@ -166,10 +157,9 @@
 	if(key_valid)
 		.["active_players"] = get_active_player_count()
 		if(SSticker.HasRoundStarted())
-			.["real_mode"] = SSticker.mode.name
+			.["real_mode"] = "Storytellers"
 			// Key-authed callers may know the truth behind the "secret"
 
-	.["security_level"] = get_security_level()
 	.["round_duration"] = SSticker ? round((world.time-SSticker.round_start_time)/10) : 0
 	// Amount of world's ticks in seconds, useful for calculating round duration
 	
@@ -184,10 +174,5 @@
 	.["hard_popcap"] = CONFIG_GET(number/hard_popcap) || 0
 	.["extreme_popcap"] = CONFIG_GET(number/extreme_popcap) || 0
 	.["popcap"] = max(CONFIG_GET(number/soft_popcap), CONFIG_GET(number/hard_popcap), CONFIG_GET(number/extreme_popcap)) //generalized field for this concept for use across ss13 codebases
-	
-	if(SSshuttle && SSshuttle.emergency)
-		.["shuttle_mode"] = SSshuttle.emergency.mode
-		// Shuttle status, see /__DEFINES/stat.dm
-		.["shuttle_timer"] = SSshuttle.emergency.timeLeft()
-		// Shuttle timer, in seconds
+
 	

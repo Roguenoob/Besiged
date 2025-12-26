@@ -1,7 +1,7 @@
 //wip wip wup
 /obj/structure/mirror
 	name = "mirror"
-	desc = ""
+	desc = "Mirror, mirror, on the wall..."
 	icon = 'icons/roguetown/misc/structure.dmi'
 	icon_state = "mirror"
 	density = FALSE
@@ -18,76 +18,48 @@
 
 /obj/structure/mirror/Initialize(mapload)
 	. = ..()
-	if(icon_state == "mirror_broke" && !broken)
+	if(icon_state == "mirror_broke" && !obj_broken)
 		obj_break(null, mapload)
 
 /obj/structure/mirror/attack_hand(mob/user)
 	. = ..()
 	if(.)
 		return
-	if(broken || !Adjacent(user))
+	if(!ishuman(user))
 		return
 
-	if(ishuman(user))
-		var/mob/living/carbon/human/H = user
-		if(H.mob_timers["mirrortime"])
-			if(world.time < H.mob_timers["mirrortime"] + 6 MINUTES)
-				var/list/options = list("hairstyle", "facial hairstyle", "hair color", "skin", "detail", "eye color")
-				var/chosen = input(user, "Change what?", "ROGUETOWN")  as null|anything in options
-				var/should_update
-				switch(chosen)
-					if("skin")
-						var/listy = H.dna.species.get_skin_list()
-						var/new_s_tone = input(user, "Choose your character's skin tone:", "Sun")  as null|anything in listy
-						if(new_s_tone)
-							H.skin_tone = listy[new_s_tone]
-							should_update = TRUE
-					if("eye color")
-						var/new_eyes = input(user, "Choose your character's eye color:", "Character Preference","#"+H.eye_color) as color|null
-						if(new_eyes)
-							H.eye_color = sanitize_hexcolor(new_eyes)
-							should_update = TRUE
-				if(should_update)
-					H.update_body()
-					H.update_hair()
-					H.update_body_parts()
-/*
-	if(ishuman(user))
-		var/mob/living/carbon/human/H = user
+	var/mob/living/carbon/human/H = user
+	
+	if(obj_broken || !Adjacent(user))
+		return
 
-		//see code/modules/mob/dead/new_player/preferences.dm at approx line 545 for comments!
-		//this is largely copypasted from there.
-
-		//handle facial hair (if necessary)
-		if(H.gender != FEMALE)
-			var/new_style = input(user, "Select a facial hairstyle", "Grooming")  as null|anything in GLOB.facial_hairstyles_list
-			if(!user.canUseTopic(src, BE_CLOSE, FALSE, NO_TK))
-				return	//no tele-grooming
-			if(new_style)
-				H.facial_hairstyle = new_style
-		else
-			H.facial_hairstyle = "Shaved"
-
-		//handle normal hair
-		var/new_style = input(user, "Select a hairstyle", "Grooming")  as null|anything in GLOB.hairstyles_list
-		if(!user.canUseTopic(src, BE_CLOSE, FALSE, NO_TK))
-			return	//no tele-grooming
-		if(new_style)
-			H.hairstyle = new_style
-
-		H.update_hair()*/
+	if(!HAS_TRAIT(H, TRAIT_MIRROR_MAGIC))
+		to_chat(H, span_warning("You look into the mirror but see only your normal reflection."))
+		if(HAS_TRAIT(user, TRAIT_BEAUTIFUL))
+			H.add_stress(/datum/stressevent/beautiful)
+			to_chat(H, span_smallgreen("I look great!"))
+			// Apply Xylix buff when examining someone with the beautiful trait
+			if(HAS_TRAIT(H, TRAIT_XYLIX) && !H.has_status_effect(/datum/status_effect/buff/xylix_joy))
+				H.apply_status_effect(/datum/status_effect/buff/xylix_joy)
+				to_chat(H, span_info("My beauty brings a smile to my face, and fortune to my steps!"))
+		if(HAS_TRAIT(H, TRAIT_UNSEEMLY))
+			to_chat(H, span_warning("Another reminder of my own horrid visage."))
+			H.add_stress(/datum/stressevent/unseemly)
+		return
+	else
+		perform_mirror_transform(H)
 
 /obj/structure/mirror/examine_status(mob/user)
-	if(broken)
-		return list()// no message spam
+	if(obj_broken)
+		return list() // no message spam
 	return ..()
 
 /obj/structure/mirror/obj_break(damage_flag, mapload)
-	if(!broken && !(flags_1 & NODECONSTRUCT_1))
+	if(!obj_broken && !(flags_1 & NODECONSTRUCT_1))
 		icon_state = "[icon_state]1"
 		if(!mapload)
-			new /obj/item/shard (get_turf(src))
-		broken = TRUE
+			new /obj/item/natural/glass_shard (get_turf(src))
+		obj_broken = TRUE
 	..()
 
 /obj/structure/mirror/deconstruct(disassembled = TRUE)
@@ -101,7 +73,7 @@
 	if(user.used_intent.type == INTENT_HARM)
 		return FALSE
 
-	if(!broken)
+	if(!obj_broken)
 		return TRUE
 
 	if(!I.tool_start_check(user, amount=0))
@@ -110,7 +82,7 @@
 	to_chat(user, span_notice("I begin repairing [src]..."))
 	if(I.use_tool(src, user, 10, volume=50))
 		to_chat(user, span_notice("I repair [src]."))
-		broken = 0
+		obj_broken = 0
 		icon_state = initial(icon_state)
 		desc = initial(desc)
 
@@ -152,8 +124,9 @@
 		return
 
 	var/mob/living/carbon/human/H = user
+	var/should_update = FALSE
 
-	var/choice = input(user, "Something to change?", "Magical Grooming") as null|anything in list("name", "race", "gender", "hair", "eyes")
+	var/choice = input(user, "Something to change?", "Magical Grooming") as null|anything in list("name", "race", "gender", "hair", "eyes", "accessory", "face detail")
 
 	if(!user.canUseTopic(src, BE_CLOSE, FALSE, NO_TK))
 		return
@@ -209,31 +182,6 @@
 			H.update_body()
 			H.update_hair()
 			H.update_body_parts()
-			H.update_mutations_overlay() // no hulk lizard
-
-		if("gender")
-			if(!(H.gender in list("male", "female"))) //blame the patriarchy
-				return
-			if(H.gender == "male")
-				if(alert(H, "Become a Witch?", "Confirmation", "Yes", "No") == "Yes")
-					if(!user.canUseTopic(src, BE_CLOSE, FALSE, NO_TK))
-						return
-					H.gender = "female"
-					to_chat(H, span_notice("Man, you feel like a woman!"))
-				else
-					return
-
-			else
-				if(alert(H, "Become a Warlock?", "Confirmation", "Yes", "No") == "Yes")
-					if(!user.canUseTopic(src, BE_CLOSE, FALSE, NO_TK))
-						return
-					H.gender = "male"
-					to_chat(H, span_notice("Whoa man, you feel like a man!"))
-				else
-					return
-			H.dna.update_ui_block(DNA_GENDER_BLOCK)
-			H.update_body()
-			H.update_mutations_overlay() //(hulk male/female)
 
 		if("hair")
 			var/hairchoice = alert(H, "Hairstyle or hair color?", "Change Hair", "Style", "Color")
@@ -247,6 +195,7 @@
 					return
 				if(new_hair_color)
 					H.hair_color = sanitize_hexcolor(new_hair_color)
+					H.facial_hair_color = H.hair_color
 					H.dna.update_ui_block(DNA_HAIR_COLOR_BLOCK)
 				if(H.gender == "male")
 					var/new_face_color = input(H, "Choose your facial hair color", "Hair Color","#"+H.facial_hair_color) as color|null
@@ -255,16 +204,110 @@
 						H.dna.update_ui_block(DNA_FACIAL_HAIR_COLOR_BLOCK)
 				H.update_hair()
 
-		if(BODY_ZONE_PRECISE_R_EYE)
-			var/new_eye_color = input(H, "Choose your eye color", "Eye Color","#"+H.eye_color) as color|null
-			if(!user.canUseTopic(src, BE_CLOSE, FALSE, NO_TK))
-				return
+		if("eyes")
+			var/new_eye_color = color_pick_sanitized(user, "Choose your eye color", "Eye Color", H.eye_color)
 			if(new_eye_color)
-				H.eye_color = sanitize_hexcolor(new_eye_color)
+				new_eye_color = sanitize_hexcolor(new_eye_color, 6, TRUE)
+				var/obj/item/organ/eyes/eyes = H.getorganslot(ORGAN_SLOT_EYES)
+				if(eyes)
+					eyes.Remove(H)
+					eyes.eye_color = new_eye_color
+					eyes.Insert(H, TRUE, FALSE)
+				H.eye_color = new_eye_color
+				H.dna.features["eye_color"] = new_eye_color
 				H.dna.update_ui_block(DNA_EYE_COLOR_BLOCK)
-				H.update_body()
-	if(choice)
-		curse(user)
+				H.update_body_parts()
+				should_update = TRUE
+
+		if("accessory")
+			var/datum/customizer_choice/bodypart_feature/accessory/accessory_choice = CUSTOMIZER_CHOICE(/datum/customizer_choice/bodypart_feature/accessory)
+			var/list/valid_accessories = list("none")
+			for(var/accessory_type in accessory_choice.sprite_accessories)
+				var/datum/sprite_accessory/accessory/acc = new accessory_type()
+				valid_accessories[acc.name] = accessory_type
+			
+			var/new_style = input(user, "Choose your accessory", "Accessory Styling") as null|anything in valid_accessories
+			if(new_style)
+				var/obj/item/bodypart/head/head = H.get_bodypart(BODY_ZONE_HEAD)
+				if(head && head.bodypart_features)
+					// Remove existing accessory if any
+					for(var/datum/bodypart_feature/accessory/old_acc in head.bodypart_features)
+						head.remove_bodypart_feature(old_acc)
+						break
+					
+					// Add new accessory if not "none"
+					if(new_style != "none")
+						var/datum/bodypart_feature/accessory/accessory_feature = new()
+						accessory_feature.set_accessory_type(valid_accessories[new_style], H.hair_color, H)
+						head.add_bodypart_feature(accessory_feature)
+					should_update = TRUE
+
+		if("face detail")
+			var/datum/customizer_choice/bodypart_feature/face_detail/face_choice = CUSTOMIZER_CHOICE(/datum/customizer_choice/bodypart_feature/face_detail)
+			var/list/valid_details = list("none")
+			for(var/detail_type in face_choice.sprite_accessories)
+				var/datum/sprite_accessory/face_detail/detail = new detail_type()
+				valid_details[detail.name] = detail_type
+			
+			var/new_detail = input(user, "Choose your face detail", "Face Detail") as null|anything in valid_details
+			if(new_detail)
+				var/obj/item/bodypart/head/head = H.get_bodypart(BODY_ZONE_HEAD)
+				if(head && head.bodypart_features)
+					// Remove existing face detail if any
+					for(var/datum/bodypart_feature/face_detail/old_detail in head.bodypart_features)
+						head.remove_bodypart_feature(old_detail)
+						break
+					
+					// Add new face detail if not "none"
+					if(new_detail != "none")
+						var/datum/bodypart_feature/face_detail/detail_feature = new()
+						detail_feature.set_accessory_type(valid_details[new_detail], H.hair_color, H)
+						head.add_bodypart_feature(detail_feature)
+					should_update = TRUE
+
+	if(should_update)
+		H.update_body()
 
 /obj/structure/mirror/magic/proc/curse(mob/living/user)
+	return
+
+/obj/item/handmirror
+	name = "hand mirror"
+	desc = "Mirror, mirror, in my hand, who's the fairest in the land?"
+	icon = 'icons/roguetown/items/misc.dmi'
+	icon_state = "handmirror"
+	grid_width = 32
+	grid_height = 64
+	dropshrink = 0.8
+
+/obj/item/handmirror/attack_self(mob/user)
+	if(!ishuman(user))
+		return
+
+	var/mob/living/carbon/human/H = user
+
+	if(HAS_TRAIT(H, TRAIT_MIRROR_MAGIC))
+		to_chat(H, span_info("You tilt your jaw from side to side, concentrating on the glamoring magicks limning your form..."))
+		if(do_after(H, 3 SECONDS))
+			perform_mirror_transform(H)
+		return
+
+	if(HAS_TRAIT(user, TRAIT_BEAUTIFUL))
+		H.add_stress(/datum/stressevent/beautiful)
+		H.visible_message(span_notice("[H] admires [H.p_their()] reflection in [src]."), span_smallgreen("I look great!"))
+	if(HAS_TRAIT(H, TRAIT_BEAUTIFUL_UNCANNY))
+		if(prob(50) && !H.has_stress_event(/datum/stressevent/uncanny) && !H.has_stress_event(/datum/stressevent/beautiful))
+			H.add_stress(/datum/stressevent/beautiful)
+			H.visible_message(span_notice("[H] admires [H.p_their()] reflection in [src]."), span_smallgreen("I look great.. From this angle."))
+		else 
+			if(!H.has_stress_event(/datum/stressevent/beautiful) && !H.has_stress_event(/datum/stressevent/uncanny))
+				H.add_stress(/datum/stressevent/uncanny)
+				H.visible_message(span_notice("[H] admires [H.p_their()] reflection in [src]."), span_warning("I look like a monster from this angle..."))
+	if(HAS_TRAIT(H, TRAIT_UNSEEMLY))
+		to_chat(H, span_warning("Another reminder of my own horrid visage."))
+		H.add_stress(/datum/stressevent/unseemly)
+	// Apply Xylix buff when examining someone with the beautiful trait
+	if(HAS_TRAIT(H, TRAIT_XYLIX) && !H.has_status_effect(/datum/status_effect/buff/xylix_joy) && H.has_stress_event(/datum/stressevent/beautiful))
+		H.apply_status_effect(/datum/status_effect/buff/xylix_joy)
+		to_chat(H, span_info("My beauty brings a smile to my face, and fortune to my steps!"))
 	return

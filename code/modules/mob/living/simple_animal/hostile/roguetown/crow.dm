@@ -1,6 +1,6 @@
 /obj/item/reagent_containers/food/snacks/crow
 	name = "zad"
-	desc = "Pesky bird."
+	desc = "A black bird commonly associated with Necra. They were once trained for use in carrying messages around and respected for their cleverness, but are nowadays considered no better than vermin."
 	icon_state = "crow"
 	icon = 'icons/roguetown/mob/monster/crow.dmi'
 	list_reagents = list(/datum/reagent/consumable/nutriment = 4)
@@ -12,7 +12,7 @@
 	eat_effect = /datum/status_effect/debuff/uncookedfood
 	fried_type = null
 	max_integrity = 10
-	sellprice = 0
+	sellprice = 10 //It's an animal! A living being! Oh wait it has feathers and meat?...
 	blade_dulling = DULLING_CUT
 	rotprocess = null
 	static_debris = list(/obj/item/natural/feather=1)
@@ -20,7 +20,7 @@
 
 /obj/item/reagent_containers/food/snacks/rogue/friedcrow
 	name = "fried zad"
-	desc = ""
+	desc = "It took some work to pluck off all the feathers, but in the end you prevailed. The result is a surprisingly crispy, if bland, morsel."
 	icon = 'icons/roguetown/items/food.dmi'
 	icon_state = "fcrow"
 	bitesize = 2
@@ -28,8 +28,8 @@
 	w_class = WEIGHT_CLASS_TINY
 	tastes = list("burnt flesh" = 1)
 	eat_effect = null
-	rotprocess = 12 MINUTES
-	sellprice = 0
+	rotprocess = SHELFLIFE_SHORT
+	sellprice = 12 //Yummy...
 
 /obj/item/reagent_containers/food/snacks/crow/burning(input as num)
 	. = ..()
@@ -41,7 +41,7 @@
 
 /obj/item/reagent_containers/food/snacks/crow/dead
 	dead = TRUE
-	rotprocess = 15 MINUTES
+	rotprocess = SHELFLIFE_SHORT
 
 /obj/item/reagent_containers/food/snacks/crow/Initialize()
 	. = ..()
@@ -54,7 +54,7 @@
 		var/mob/living/L = user
 		if(!(L.mobility_flags & MOBILITY_PICKUP))
 			return
-	user.changeNext_move(CLICK_CD_MELEE)
+	user.changeNext_move(CLICK_CD_INTENTCAP)
 	if(dead)
 		..()
 	else
@@ -85,7 +85,7 @@
 		dead = TRUE
 		playsound(src, 'sound/vo/mobs/rat/rat_death.ogg', 100, FALSE, -1)
 		icon_state = "[icon_state]1"
-		rotprocess = 15 MINUTES
+		rotprocess = SHELFLIFE_SHORT
 		return 1
 	. = ..()
 

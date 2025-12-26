@@ -19,8 +19,6 @@ SUBSYSTEM_DEF(job)
 	SSmapping.HACK_LoadMapConfig()
 	if(!occupations.len)
 		SetupOccupations()
-	if(CONFIG_GET(flag/load_jobs_from_txt))
-		LoadJobs()
 	set_overflow_role(CONFIG_GET(string/overflow_job))
 	return ..()
 
@@ -55,13 +53,12 @@ SUBSYSTEM_DEF(job)
 			continue
 		if(!job.config_check())
 			continue
-		if(!job.map_check())	//Even though we initialize before mapping, this is fine because the config is loaded at new
-			testing("Removed [job.type] due to map config");
-			continue
 		occupations += job
 		name_occupations[job.title] = job
 		type_occupations[J] = job
 
+	if(SSmapping.map_adjustment)
+		SSmapping.map_adjustment.job_change()
 	return 1
 
 
@@ -141,13 +138,22 @@ SUBSYSTEM_DEF(job)
 		if(length(job.allowed_patrons) && !(player.client.prefs.selected_patron.type in job.allowed_patrons))
 			JobDebug("FOC incompatible with patron, Player: [player], Job: [job.title], Race: [player.client.prefs.pref_species.name]")
 			continue
+		if(length(job.virtue_restrictions) && ((player.client.prefs.virtue.type in job.virtue_restrictions) || (player.client.prefs.virtuetwo?.type in job.virtue_restrictions) || (player.client.prefs.extravirtue?.type in job.virtue_restrictions)))
+			JobDebug("FOC incompatible with virtues, Player: [player], Job: [job.title], Virtue 1: [player.client.prefs.virtue.name]")
+			continue
+		if(length(job.vice_restrictions) && (player.client.prefs.charflaw.type in job.vice_restrictions))
+			JobDebug("FOC incompatible with vices, Player: [player], Job: [job.title], Vice: [player.client.prefs.charflaw.name]")
+			continue
+		
 		if(job.plevel_req > player.client.patreonlevel())
 			JobDebug("FOC incompatible with PATREON LEVEL, Player: [player], Job: [job.title], Race: [player.client.prefs.pref_species.name]")
 			continue
+		#ifdef USES_PQ
 		if(!isnull(job.min_pq) && (get_playerquality(player.ckey) < job.min_pq))
 			continue
 		if(!isnull(job.max_pq) && (get_playerquality(player.ckey) > job.max_pq))
 			continue
+		#endif
 		if(!(player.client.prefs.gender in job.allowed_sexes))
 			JobDebug("FOC incompatible with sex, Player: [player], Job: [job.title]")
 			continue
@@ -215,6 +221,14 @@ SUBSYSTEM_DEF(job)
 			JobDebug("GRJ incompatible with patron, Player: [player], Job: [job.title], Race: [player.client.prefs.pref_species.name]")
 			continue
 
+		if(length(job.virtue_restrictions) && ((player.client.prefs.virtue.type in job.virtue_restrictions) || (player.client.prefs.virtuetwo?.type in job.virtue_restrictions) || (player.client.prefs.extravirtue?.type in job.virtue_restrictions)))
+			JobDebug("GRJ incompatible with virtues, Player: [player], Job: [job.title], Virtue 1: [player.client.prefs.virtue.name]")
+			continue
+
+		if(length(job.vice_restrictions) && (player.client.prefs.charflaw.type in job.vice_restrictions))
+			JobDebug("GRJ incompatible with vices, Player: [player], Job: [job.title], Vice: [player.client.prefs.charflaw.name]")
+			continue
+
 		if(job.plevel_req > player.client.patreonlevel())
 			JobDebug("GRJ incompatible with PATREON LEVEL, Player: [player], Job: [job.title], Race: [player.client.prefs.pref_species.name]")
 			continue
@@ -227,9 +241,11 @@ SUBSYSTEM_DEF(job)
 			JobDebug("GRJ incompatible with sex, Player: [player], Job: [job.title]")
 			continue
 
+		#ifdef USES_PQ
 		if(!isnull(job.min_pq) && (get_playerquality(player.ckey) < job.min_pq))
 			JobDebug("GRJ incompatible with minPQ, Player: [player], Job: [job.title]")
 			continue
+		#endif
 
 		if(!isnull(job.max_pq) && (get_playerquality(player.ckey) > job.max_pq))
 			JobDebug("GRJ incompatible with maxPQ, Player: [player], Job: [job.title]")
@@ -264,6 +280,7 @@ SUBSYSTEM_DEF(job)
 		if((player) && (player.mind))
 			player.mind.assigned_role = null
 			player.mind.special_role = null
+			player.mind.job_bitflag = NONE
 			SSpersistence.antag_rep_change[player.ckey] = 0
 	SetupOccupations()
 	unassigned = list()
@@ -345,13 +362,6 @@ SUBSYSTEM_DEF(job)
 /datum/controller/subsystem/job/proc/DivideOccupations(list/required_jobs)
 	//Setup new player list and get the jobs list
 	JobDebug("Running DO")
-
-	//Holder for Triumvirate is stored in the SSticker, this just processes it
-	if(SSticker.triai)
-		for(var/datum/job/ai/A in occupations)
-			A.spawn_positions = 3
-		for(var/obj/effect/landmark/start/ai/secondary/S in GLOB.start_landmarks_list)
-			S.latejoin_active = TRUE
 
 	//Get the players who are ready
 	for(var/i in GLOB.new_player_list)
@@ -455,15 +465,27 @@ SUBSYSTEM_DEF(job)
 					JobDebug("DO incompatible with patron, Player: [player], Job: [job.title], Race: [player.client.prefs.pref_species.name]")
 					continue
 
+				if(length(job.virtue_restrictions) && ((player.client.prefs.virtue.type in job.virtue_restrictions) || (player.client.prefs.virtuetwo?.type in job.virtue_restrictions) || (player.client.prefs.extravirtue?.type in job.virtue_restrictions)))
+					JobDebug("DO incompatible with virtues, Player: [player], Job: [job.title], Virtue 1: [player.client.prefs.virtue.name]")
+					continue
+
+				if(length(job.vice_restrictions) && (player.client.prefs.charflaw.type in job.vice_restrictions))
+					JobDebug("DO incompatible with vices, Player: [player], Job: [job.title], Vice: [player.client.prefs.charflaw.name]")
+					continue
+
 				if(job.plevel_req > player.client.patreonlevel())
 					JobDebug("DO incompatible with PATREON LEVEL, Player: [player], Job: [job.title], Race: [player.client.prefs.pref_species.name]")
 					continue
 
+				#ifdef USES_PQ
 				if(!isnull(job.min_pq) && (get_playerquality(player.ckey) < job.min_pq))
 					continue
+				#endif
 
+				#ifdef USES_PQ
 				if(!isnull(job.max_pq) && (get_playerquality(player.ckey) > job.max_pq))
 					continue
+				#endif
 
 				if((player.client.prefs.lastclass == job.title) && (!job.bypass_lastclass))
 					continue
@@ -492,7 +514,7 @@ SUBSYSTEM_DEF(job)
 				if(player.client.prefs.job_preferences[job.title] == level)
 					// If the job isn't filled
 					if((job.current_positions < job.spawn_positions) || job.spawn_positions == -1)
-						testing("DO pass, Player: [player], Level:[level], Job:[job.title]")
+
 						AssignRole(player, job.title)
 						unassigned -= player
 						break
@@ -548,11 +570,19 @@ SUBSYSTEM_DEF(job)
 				if(length(job.allowed_patrons) && !(player.client.prefs.selected_patron.type in job.allowed_patrons))
 					continue
 
-				if(job.plevel_req > player.client.patreonlevel())
+				if(length(job.virtue_restrictions) && ((player.client.prefs.virtue.type in job.virtue_restrictions) || (player.client.prefs.virtuetwo?.type in job.virtue_restrictions) || (player.client.prefs.extravirtue?.type in job.virtue_restrictions)))
+					continue
+					
+				if(length(job.vice_restrictions) && (player.client.prefs.charflaw.type in job.vice_restrictions))
 					continue
 
+				if(job.plevel_req > player.client.patreonlevel())
+					continue
+					
+				#ifdef USES_PQ
 				if(!isnull(job.min_pq) && (get_playerquality(player.ckey) < job.min_pq) && level != JP_LOW) //since its required people on low can roll for it
 					continue
+				#endif
 
 				if((player.client.prefs.lastclass == job.title) && (!job.bypass_lastclass))
 					continue
@@ -588,14 +618,12 @@ SUBSYSTEM_DEF(job)
 		for(var/rank in required_group)
 			var/datum/job/J = GetJob(rank)
 			if(!J)
-				SSticker.mode.setup_error = "Invalid job [rank] in gamemode required jobs."
 				return FALSE
 			if(J.current_positions < required_group[rank])
 				group_ok = FALSE
 				break
 		if(group_ok)
 			return TRUE
-	SSticker.mode.setup_error = "Required jobs not present."
 	return FALSE
 
 //We couldn't find a job from prefs for this guy.
@@ -720,10 +748,6 @@ SUBSYSTEM_DEF(job)
 		return
 	if((job.auto_deadmin_role_flags & DEADMIN_POSITION_HEAD) && (CONFIG_GET(flag/auto_deadmin_heads) || (C.prefs?.toggles & DEADMIN_POSITION_HEAD)))
 		return C.holder.auto_deadmin()
-	else if((job.auto_deadmin_role_flags & DEADMIN_POSITION_SECURITY) && (CONFIG_GET(flag/auto_deadmin_security) || (C.prefs?.toggles & DEADMIN_POSITION_SECURITY)))
-		return C.holder.auto_deadmin()
-	else if((job.auto_deadmin_role_flags & DEADMIN_POSITION_SILICON) && (CONFIG_GET(flag/auto_deadmin_silicons) || (C.prefs?.toggles & DEADMIN_POSITION_SILICON))) //in the event there's ever psuedo-silicon roles added, ie synths.
-		return C.holder.auto_deadmin()
 
 /datum/controller/subsystem/job/proc/setup_officer_positions()
 	var/datum/job/J = SSjob.GetJob("Security Officer")
@@ -738,26 +762,6 @@ SUBSYSTEM_DEF(job)
 			J.total_positions = officer_positions
 			J.spawn_positions = officer_positions
 
-	//Spawn some extra eqipment lockers if we have more than 5 officers
-	var/equip_needed = J.total_positions
-	if(equip_needed < 0) // -1: infinite available slots
-		equip_needed = 12
-	for(var/i=equip_needed-5, i>0, i--)
-		if(GLOB.secequipment.len)
-			var/spawnloc = GLOB.secequipment[1]
-			new /obj/structure/closet/secure_closet/security/sec(spawnloc)
-			GLOB.secequipment -= spawnloc
-		else //We ran out of spare locker spawns!
-			break
-
-
-/datum/controller/subsystem/job/proc/LoadJobs()
-	var/jobstext = file2text("[global.config.directory]/jobs.txt")
-	for(var/datum/job/J in occupations)
-		var/regex/jobs = new("[J.title]=(-1|\\d+),(-1|\\d+)")
-		jobs.Find(jobstext)
-		J.total_positions = text2num(jobs.group[1])
-		J.spawn_positions = text2num(jobs.group[2])
 
 /datum/controller/subsystem/job/proc/HandleFeedbackGathering()
 	for(var/datum/job/job in occupations)
@@ -854,39 +858,9 @@ SUBSYSTEM_DEF(job)
 		destination.JoinPlayerHere(M, buckle)
 		return
 
-	//bad mojo
-	var/area/shuttle/arrival/A = GLOB.areas_by_type[/area/shuttle/arrival]
-	if(A)
-		//first check if we can find a chair
-		var/obj/structure/chair/C = locate() in A
-		if(C)
-			C.JoinPlayerHere(M, buckle)
-			return
-
-		//last hurrah
-		var/list/avail = list()
-		for(var/turf/T in A)
-			if(!is_blocked_turf(T, TRUE))
-				avail += T
-		if(avail.len)
-			destination = pick(avail)
-			destination.JoinPlayerHere(M, FALSE)
-			return
-
-	//pick an open spot on arrivals and dump em
-	var/list/arrivals_turfs = shuffle(get_area_turfs(/area/shuttle/arrival))
-	if(arrivals_turfs.len)
-		for(var/turf/T in arrivals_turfs)
-			if(!is_blocked_turf(T, TRUE))
-				T.JoinPlayerHere(M, FALSE)
-				return
-		//last chance, pick ANY spot on arrivals and dump em
-		destination = arrivals_turfs[1]
-		destination.JoinPlayerHere(M, FALSE)
-	else
-		var/msg = "Unable to send mob [M] to late join!"
-		message_admins(msg)
-		CRASH(msg)
+	var/msg = "Unable to send mob [M] to late join!"
+	message_admins(msg)
+	CRASH(msg)
 
 
 ///////////////////////////////////

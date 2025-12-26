@@ -26,15 +26,21 @@
 		. = D.fibers
 
 /atom/proc/add_fingerprint_list(list/fingerprints)		//ASSOC LIST FINGERPRINT = FINGERPRINT
+	if(QDELETED(src))
+		return
 	if(length(fingerprints))
 		. = AddComponent(/datum/component/forensics, fingerprints)
 
 //Set ignoregloves to add prints irrespective of the mob having gloves on.
 /atom/proc/add_fingerprint(mob/M, ignoregloves = FALSE)
+	if(QDELETED(src))
+		return
 	var/datum/component/forensics/D = AddComponent(/datum/component/forensics)
 	. = D.add_fingerprint(M, ignoregloves)
 
 /atom/proc/add_fiber_list(list/fibertext)				//ASSOC LIST FIBERTEXT = FIBERTEXT
+	if(QDELETED(src))
+		return
 	if(length(fibertext))
 		. = AddComponent(/datum/component/forensics, null, null, null, fibertext)
 
@@ -58,6 +64,8 @@
 		. = AddComponent(/datum/component/forensics, null, hiddenprints)
 
 /atom/proc/add_hiddenprint(mob/M)
+	if(QDELETED(src))
+		return
 	var/datum/component/forensics/D = AddComponent(/datum/component/forensics)
 	. = D.add_hiddenprint(M)
 
@@ -66,21 +74,23 @@
 
 /obj/add_blood_DNA(list/dna)
 	. = ..()
+	if(QDELETED(src))
+		return
 	if(length(dna))
 		. = AddComponent(/datum/component/forensics, null, null, dna)
 
-/obj/item/clothing/gloves/add_blood_DNA(list/blood_dna, list/datum/disease/diseases)
+/obj/item/clothing/gloves/add_blood_DNA(list/blood_dna)
 	. = ..()
 	transfer_blood = rand(2, 4)
 
-/turf/add_blood_DNA(list/blood_dna, list/datum/disease/diseases)
+/turf/add_blood_DNA(list/blood_dna)
 	var/obj/effect/decal/cleanable/blood/splatter/B = locate() in src
 	if(!B)
-		B = new /obj/effect/decal/cleanable/blood/splatter(src, diseases)
+		B = new /obj/effect/decal/cleanable/blood/splatter(src)
 	B.add_blood_DNA(blood_dna) //give blood info to the blood decal.
 	return TRUE //we bloodied the floor
 
-/mob/living/carbon/human/add_blood_DNA(list/blood_dna, list/datum/disease/diseases)
+/mob/living/carbon/human/add_blood_DNA(list/blood_dna)
 	if(cloak)
 		cloak.add_blood_DNA(blood_dna)
 		update_inv_cloak()

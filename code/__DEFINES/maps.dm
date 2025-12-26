@@ -19,11 +19,8 @@ As of 2018-02-04, the typical z-levels for a single-level station are:
 Multi-Z stations are supported and multi-Z mining and away missions would
 require only minor tweaks.
 */
-
-// helpers for modifying jobs, used in various job_changes.dm files
-#define MAP_JOB_CHECK if(SSmapping.config.map_name != JOB_MODIFICATION_MAP_NAME) { return; }
-#define MAP_JOB_CHECK_BASE if(SSmapping.config.map_name != JOB_MODIFICATION_MAP_NAME) { return ..(); }
-#define MAP_REMOVE_JOB(jobpath) /datum/job/##jobpath/map_check() { return (SSmapping.config.map_name != JOB_MODIFICATION_MAP_NAME) && ..() }
+/// A map key that corresponds to being one exclusively for Space.
+#define SPACE_KEY "space"
 
 #define SPACERUIN_MAP_EDGE_PAD 15
 
@@ -41,10 +38,7 @@ require only minor tweaks.
 // number - bombcap is multiplied by this before being applied to bombs
 #define ZTRAIT_BOMBCAP_MULTIPLIER "Bombcap Multiplier"
 
-// number - default gravity if there's no gravity generators or area overrides present
-#define ZTRAIT_GRAVITY "Gravity"
-
-// numeric offsets - e.g. {"Down": -1} means that chasms will fall to z - 1 rather than oblivion
+// Whether this z level is linked up/down. Bool.
 #define ZTRAIT_UP "Up"
 #define ZTRAIT_DOWN "Down"
 
@@ -85,7 +79,7 @@ require only minor tweaks.
 #define CAMERA_LOCK_CENTCOM 4
 
 //Reserved/Transit turf type
-#define RESERVED_TURF_TYPE /turf/open/space/basic			//What the turf is when not being used
+#define RESERVED_TURF_TYPE /turf/open/floor/rogue/blocks			//What the turf is when not being used
 
 //Ruin Generation
 
@@ -97,3 +91,21 @@ require only minor tweaks.
 #define PLACE_LAVA_RUIN "lavaland" //On lavaland ruin z levels(s)
 #define PLACE_BELOW "below" //On z levl below - centered on same tile
 #define PLACE_ISOLATED "isolated" //On isolated ruin z level
+
+/// Map spot is allowed
+#define MAP_DEPLOY_ALLOWED "allowed"
+/// Map spot has turfs that restrict deployment
+#define MAP_DEPLOY_BAD_TURFS "bad turfs"
+/// Map spot has areas that restrict deployment
+#define MAP_DEPLOY_BAD_AREA "bad area"
+/// Map spot has anchored objects that restrict deployment
+#define MAP_DEPLOY_ANCHORED_OBJECTS "anchored objects"
+/// Map spot is out of bounds from the maps x/y coordinates
+#define MAP_DEPLOY_OUTSIDE_MAP "outside map"
+
+// Defines for SSmapping's multiz_levels
+/// TRUE if we're ok with going up
+#define Z_LEVEL_UP 1
+/// TRUE if we're ok with going down
+#define Z_LEVEL_DOWN 2
+#define LARGEST_Z_LEVEL_INDEX Z_LEVEL_DOWN

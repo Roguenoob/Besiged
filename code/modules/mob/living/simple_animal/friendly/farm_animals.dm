@@ -12,7 +12,7 @@
 	speak_chance = 1
 	turns_per_move = 5
 	see_in_dark = 6
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/meat/slab = 4)
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 4)
 	response_help_continuous = "pets"
 	response_help_simple = "pet"
 	response_disarm_continuous = "gently pushes aside"
@@ -65,7 +65,7 @@
 			for(var/direction in shuffle(list(1,2,4,8,5,6,9,10)))
 				var/step = get_step(src, direction)
 				if(step)
-					if(locate(/obj/structure/spacevine) in step || locate(/obj/structure/glowshroom) in step)
+					if(locate(/obj/structure/vine) in step || locate(/obj/structure/glowshroom) in step)
 						Move(step, get_dir(src, step))
 
 /mob/living/simple_animal/hostile/retaliate/goat/Retaliate()
@@ -79,16 +79,6 @@
 	else
 		return ..()
 
-
-/mob/living/simple_animal/hostile/retaliate/goat/AttackingTarget()
-	. = ..()
-	if(. && ishuman(target))
-		var/mob/living/carbon/human/H = target
-		if(istype(H.dna.species, /datum/species/pod))
-			var/obj/item/bodypart/NB = pick(H.bodyparts)
-			H.visible_message(span_warning("[src] takes a big chomp out of [H]!"), \
-								  span_danger("[src] takes a big chomp out of your [NB]!"))
-			NB.dismember()
 //cow
 /mob/living/simple_animal/cow
 	name = "cow"
@@ -106,7 +96,7 @@
 	speak_chance = 1
 	turns_per_move = 5
 	see_in_dark = 6
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/meat/slab = 6)
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat = 6)
 	response_help_continuous = "pets"
 	response_help_simple = "pet"
 	response_disarm_continuous = "gently pushes aside"
@@ -149,7 +139,7 @@
 	. = ..()
 	can_buckle = TRUE
 	buckle_lying = FALSE
-	var/datum/component/riding/D = LoadComponent(/datum/component/riding)
+	var/datum/component/riding/D = LoadComponent(/datum/component/riding/no_ocean)
 	D.set_riding_offsets(RIDING_OFFSET_ALL, list(TEXT_NORTH = list(0, 8), TEXT_SOUTH = list(0, 8), TEXT_EAST = list(-2, 8), TEXT_WEST = list(2, 8)))
 	D.set_vehicle_dir_layer(SOUTH, ABOVE_MOB_LAYER)
 	D.set_vehicle_dir_layer(NORTH, OBJ_LAYER)
@@ -257,7 +247,7 @@
 	density = FALSE
 	speak_chance = 2
 	turns_per_move = 3
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/meat/slab = 1)
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat = 1)
 	var/egg_type = /obj/item/reagent_containers/food/snacks/egg
 	food_type = list(/obj/item/reagent_containers/food/snacks/grown/wheat, /obj/item/reagent_containers/food/snacks/grown/oat)
 	response_help_continuous = "pets"
@@ -369,8 +359,10 @@
 
 /obj/item/udder/proc/beingmilked()
 	in_use = TRUE
-	sleep(20)
-	in_use = FALSE
+	//Caustic Edit
+	spawn(20)
+		in_use = FALSE
+	//Caustic Edit End
 
 //grenchensnacker
 

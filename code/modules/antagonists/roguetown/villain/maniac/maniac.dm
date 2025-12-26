@@ -13,14 +13,14 @@
 		"They deserve to be put at my blade.",
 		"Do what thou wilt shall be the whole of the law.",
 	)
-	rogue_enabled = TRUE
+	rogue_enabled = FALSE
 	/// Traits we apply to the owner
 	var/static/list/applied_traits = list(
 		TRAIT_CRITICAL_RESISTANCE,
 		TRAIT_DECEIVING_MEEKNESS,
 		TRAIT_NOSTINK,
 		TRAIT_EMPATH,
-		TRAIT_NOROGSTAM,
+		TRAIT_INFINITE_STAMINA,
 		TRAIT_NOPAIN,
 		TRAIT_NOPAINSTUN,
 		TRAIT_STEELHEARTED,
@@ -31,7 +31,7 @@
 		TRAIT_STABLEHEART,
 		TRAIT_STABLELIVER,
 		TRAIT_ANTIMAGIC,
-		TRAIT_SCHIZO_AMBIENCE,
+		TRAIT_PSYCHOSIS,
 		TRAIT_BLOODLOSS_IMMUNE,
 	)
 	/// Traits that only get applied in the final sequence
@@ -42,14 +42,14 @@
 	/// Cached old stats in case we get removed
 	var/STASTR
 	var/STACON
-	var/STAEND
+	var/STAWIL
 	/// Weapons we can give to the dreamer
 	var/static/list/possible_weapons = list(
 		/obj/item/rogueweapon/huntingknife/cleaver,
-		/obj/item/rogueweapon/huntingknife/cleaver/combat,
+		/obj/item/rogueweapon/huntingknife/combat,
 		/obj/item/rogueweapon/huntingknife/idagger/steel/special,
 	)
-	/// Wonder recipes
+		/// Wonder recipes
 	var/static/list/recipe_progression = list(
 		/datum/crafting_recipe/roguetown/structure/wonder/first,
 		/datum/crafting_recipe/roguetown/structure/wonder/second,
@@ -72,9 +72,6 @@
 	var/triumphed = FALSE
 	/// Wonders we have made
 	var/list/wonders_made = list()
-	/// Hallucinations screen object
-	var/atom/movable/screen/fullscreen/maniac/hallucinations
-
 
 /datum/antagonist/maniac/New()
 	set_keys()
@@ -94,24 +91,21 @@
 		if(ishuman(owner.current))
 			var/mob/living/carbon/human/dreamer = owner.current
 			dreamer.cmode_music = 'sound/music/combat_maniac2.ogg'
-			owner.adjust_skillrank(/datum/skill/combat/knives, 6, TRUE)
-			owner.adjust_skillrank(/datum/skill/combat/wrestling, 5, TRUE)
-			owner.adjust_skillrank(/datum/skill/combat/unarmed, 4, TRUE)
-			var/medicine_skill = dreamer.mind.get_skill_level(/datum/skill/misc/medicine)
+			dreamer.adjust_skillrank(/datum/skill/combat/knives, 6, TRUE)
+			dreamer.adjust_skillrank(/datum/skill/combat/wrestling, 5, TRUE)
+			dreamer.adjust_skillrank(/datum/skill/combat/unarmed, 4, TRUE)
+			var/medicine_skill = dreamer.get_skill_level(/datum/skill/misc/medicine)
 			if(medicine_skill < 3)// Bumps his skill up to 3 for surgery, not higher
-				owner.adjust_skillrank(/datum/skill/misc/medicine, 3 - medicine_skill, TRUE)
+				dreamer.adjust_skillrank(/datum/skill/misc/medicine, 3 - medicine_skill, TRUE)
 			STASTR = dreamer.STASTR
 			STACON = dreamer.STACON
-			STAEND = dreamer.STAEND
+			STAWIL = dreamer.STAWIL
 			dreamer.STASTR = 20
 			dreamer.STACON = 20
-			dreamer.STAEND = 20
+			dreamer.STAWIL = 20
 		for(var/trait in applied_traits)
 			ADD_TRAIT(owner.current, trait, "[type]")
-		hallucinations = owner.current.overlay_fullscreen("maniac", /atom/movable/screen/fullscreen/maniac)
 	LAZYINITLIST(owner.learned_recipes)
-	owner.learned_recipes |= recipe_progression[1]
-	forge_villain_objectives()
 	if(length(objectives))
 		SEND_SOUND(owner.current, 'sound/villain/dreamer_warning.ogg')
 		to_chat(owner.current, span_danger("[antag_memory]"))
@@ -127,7 +121,7 @@
 			var/mob/living/carbon/human/dreamer = owner.current
 			dreamer.STASTR = STASTR
 			dreamer.STACON = STACON
-			dreamer.STAEND = STAEND
+			dreamer.STAWIL = STAWIL
 		for(var/trait in applied_traits)
 			REMOVE_TRAIT(owner.current, trait, "[type]")
 		for(var/trait in final_traits)
@@ -135,9 +129,7 @@
 		owner.current.clear_fullscreen("maniac")
 	QDEL_LIST(wonders_made)
 	wonders_made = null
-	owner.learned_recipes -= recipe_progression
 	owner.special_role = null
-	hallucinations = null
 	return ..()
 
 /datum/antagonist/maniac/proc/set_keys()
@@ -163,39 +155,6 @@
 		sum_keys += text2num(i)
 
 /datum/antagonist/maniac/proc/forge_villain_objectives()
-	var/datum/objective/maniac/wakeup = new()
-	objectives += wakeup
-
-/datum/antagonist/maniac/proc/agony(mob/living/carbon/dreamer)
-	var/sound/im_sick = sound('sound/villain/imsick.ogg', TRUE, FALSE, CHANNEL_IMSICK, 100)
-	SEND_SOUND(dreamer, im_sick)
-	dreamer.overlay_fullscreen("dream", /atom/movable/screen/fullscreen/dreaming)
-	dreamer.overlay_fullscreen("wakeup", /atom/movable/screen/fullscreen/dreaming/waking_up)
-	for(var/trait in final_traits)
-		ADD_TRAIT(dreamer, trait, "[type]")
-	waking_up = TRUE
-
-/datum/antagonist/maniac/proc/spawn_trey_liam()
-	var/turf/spawnturf
-	var/obj/effect/landmark/treyliam/trey = locate(/obj/effect/landmark/treyliam) in GLOB.landmarks_list
-	if(trey)
-		spawnturf = get_turf(trey)
-	if(spawnturf)
-		var/mob/living/carbon/human/trey_liam = new /mob/living/carbon/human/species/human/northern(spawnturf)
-		trey_liam.fully_replace_character_name(trey_liam.name, "Trey Liam")
-		trey_liam.gender = MALE
-		trey_liam.skin_tone = "ffe0d1"
-		trey_liam.hair_color = "999999"
-		trey_liam.hairstyle = "Plain Long"
-		trey_liam.facial_hair_color = "999999"
-		trey_liam.facial_hairstyle = "Knowledge"
-		trey_liam.age = AGE_OLD
-		trey_liam.equipOutfit(/datum/outfit/treyliam)
-		trey_liam.regenerate_icons()
-		for(var/obj/structure/chair/chair in spawnturf)
-			chair.buckle_mob(trey_liam)
-			break
-		return trey_liam
 	return
 
 /datum/antagonist/maniac/proc/wake_up()
@@ -244,12 +203,42 @@
 		)
 		for(var/slop in slop_lore)
 			to_chat(trey_liam, slop)
-			sleep(3 SECONDS)
+			sleep(5 SECONDS)
 	else
 		INVOKE_ASYNC(src, PROC_REF(cant_wake_up), dreamer)
 	sleep(15 SECONDS)
 	to_chat(world, span_deadsay("<span class='reallybig'>The Maniac has TRIUMPHED!</span>"))
 	SSticker.declare_completion()
+
+/datum/antagonist/maniac/proc/agony(mob/living/carbon/dreamer)
+	dreamer.overlay_fullscreen("dream", /atom/movable/screen/fullscreen/dreaming)
+	dreamer.overlay_fullscreen("wakeup", /atom/movable/screen/fullscreen/dreaming/waking_up)
+	for(var/trait in final_traits)
+		ADD_TRAIT(dreamer, trait, "[type]")
+	waking_up = TRUE
+
+/datum/antagonist/maniac/proc/spawn_trey_liam()
+	var/turf/spawnturf
+	var/obj/effect/landmark/treyliam/trey = locate(/obj/effect/landmark/treyliam) in GLOB.landmarks_list
+	if(trey)
+		spawnturf = get_turf(trey)
+	if(spawnturf)
+		var/mob/living/carbon/human/trey_liam = new /mob/living/carbon/human/species/human/northern(spawnturf)
+		trey_liam.fully_replace_character_name(trey_liam.name, "Trey Liam")
+		trey_liam.gender = MALE
+		trey_liam.skin_tone = "ffe0d1"
+		trey_liam.hair_color = "999999"
+		trey_liam.hairstyle = "Plain Long"
+		trey_liam.facial_hair_color = "999999"
+		trey_liam.facial_hairstyle = "Knowledge"
+		trey_liam.age = AGE_OLD
+		trey_liam.equipOutfit(/datum/outfit/treyliam)
+		trey_liam.regenerate_icons()
+		for(var/obj/structure/chair/chair in spawnturf)
+			chair.buckle_mob(trey_liam)
+			break
+		return trey_liam
+	return
 
 /datum/antagonist/maniac/proc/cant_wake_up(mob/living/dreamer)
 	if(!iscarbon(dreamer))
@@ -279,13 +268,14 @@
 		for(var/datum/objective/objective in objectives)
 			objective.update_explanation_text()
 			if(objective.check_completion())
-				to_chat(world, "<B>[objective.flavor] #[count]</B>: [objective.explanation_text] <span class='greentext'>TRIUMPH!</span>")
+				to_chat(world, "<B>Goal #[count]</B>: [objective.explanation_text] <span class='greentext'>TRIUMPH!</span>")
 			else
-				to_chat(world, "<B>[objective.flavor] #[count]</B>: [objective.explanation_text] <span class='redtext'>Failure.</span>")
+				to_chat(world, "<B>Goal #[count]</B>: [objective.explanation_text] <span class='redtext'>Failure.</span>")
 				traitorwin = FALSE
 			count += objective.triumph_count
 
 	var/special_role_text = lowertext(name)
+
 	if(!considered_alive(owner))
 		traitorwin = FALSE
 

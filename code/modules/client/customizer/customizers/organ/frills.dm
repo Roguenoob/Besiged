@@ -1,7 +1,6 @@
 /datum/customizer/organ/frills
 	abstract_type = /datum/customizer/organ/frills
 	name = "Frills"
-	allows_disabling = TRUE
 
 /datum/customizer_choice/organ/frills
 	abstract_type = /datum/customizer_choice/organ/frills
@@ -11,6 +10,7 @@
 
 /datum/customizer/organ/frills/lizard
 	customizer_choices = list(/datum/customizer_choice/organ/frills/lizard)
+	allows_disabling = TRUE
 
 /datum/customizer_choice/organ/frills/lizard
 	name = "Frills"
@@ -18,8 +18,11 @@
 	generic_random_pick = TRUE
 	sprite_accessories = list(
 		/datum/sprite_accessory/frills/simple,
+		/datum/sprite_accessory/frills/simpledualcolor,
 		/datum/sprite_accessory/frills/short,
+		/datum/sprite_accessory/frills/shortdualcolor,
 		/datum/sprite_accessory/frills/aquatic,
+		/datum/sprite_accessory/frills/aquaticdualcolor,
 		/datum/sprite_accessory/frills/divinity,
 		/datum/sprite_accessory/frills/horns,
 		/datum/sprite_accessory/frills/horns_double,

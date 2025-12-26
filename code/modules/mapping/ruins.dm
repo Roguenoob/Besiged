@@ -18,16 +18,12 @@
 		if(!valid)
 			continue
 
-		testing("Ruin \"[name]\" placed at ([central_turf.x], [central_turf.y], [central_turf.z])")
-
 		for(var/i in get_affected_turfs(central_turf, 1))
 			var/turf/T = i
 			for(var/obj/structure/spawner/nest in T)
 				qdel(nest)
 			for(var/mob/living/simple_animal/monster in T)
 				qdel(monster)
-			for(var/obj/structure/flora/plant in T)
-				qdel(plant)
 
 		load(central_turf,centered = TRUE)
 		loaded++
@@ -96,7 +92,7 @@
 				break
 		else //Otherwise just pick random one
 			current_pick = pickweight(ruins_availible)
-
+		
 		var/placement_tries = forced_turf ? 1 : PLACEMENT_TRIES //Only try once if we target specific turf
 		var/failed_to_place = TRUE
 		var/target_z = 0
@@ -169,5 +165,5 @@
 		for(var/datum/map_template/ruin/R in ruins_availible)
 			if(R.cost > budget)
 				ruins_availible -= R
-
+	
 	log_world("Ruin loader finished with [budget] left to spend.")

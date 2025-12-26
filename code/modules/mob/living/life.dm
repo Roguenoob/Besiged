@@ -2,15 +2,17 @@
 	set waitfor = FALSE
 	set invisibility = 0
 
+	if(!client && ai_controller && ai_controller.ai_status == AI_STATUS_OFF)
+		return
+
+	SEND_SIGNAL(src, COMSIG_LIVING_LIFE, seconds, times_fired)
+
 	if((movement_type & FLYING) && !(movement_type & FLOATING))	//TODO: Better floating
 		float(on = TRUE)
 
 	if (client)
 		var/turf/T = get_turf(src)
 		if(!T)
-			for(var/obj/effect/landmark/error/E in GLOB.landmarks_list)
-				forceMove(E.loc)
-				break
 			var/msg = "[ADMIN_LOOKUPFLW(src)] was found to have no .loc with an attached client, if the cause is unknown it would be wise to ask how this was accomplished."
 			message_admins(msg)
 			send2irc_adminless_only("Mob", msg, R_ADMIN)
@@ -32,84 +34,93 @@
 	if(!loc)
 		return
 
-	if(!IS_IN_STASIS(src))
-		//Mutations and radiation
-		handle_mutations_and_radiation()
-		//Breathing, if applicable
-		handle_breathing(times_fired)
-		if(HAS_TRAIT(src, TRAIT_SIMPLE_WOUNDS))
-			handle_wounds()
-			handle_embedded_objects()
-			handle_blood()
-			//passively heal even wounds with no passive healing
+	//Breathing, if applicable - CURRENTLY NOT IMPLEMENTED
+	//handle_breathing(times_fired)
+
+	if(HAS_TRAIT(src, TRAIT_SIMPLE_WOUNDS))
+		handle_wounds()
+		handle_embedded_objects()
+		handle_blood()
+		//passively heal even wounds with no passive healing
+		heal_wounds(1)
+
+	/// ENDVRE AS HE DOES.
+	if(!stat && HAS_TRAIT(src, TRAIT_PSYDONITE) && !HAS_TRAIT(src, TRAIT_PARALYSIS))
+		handle_wounds()
+		//passively heal wounds, when you're in trouble..
+		if(blood_volume > BLOOD_VOLUME_SURVIVE)
 			for(var/datum/wound/wound as anything in get_wounds())
-				wound.heal_wound(1)
+				if(wound.severity <= WOUND_SEVERITY_MODERATE)
+					wound.heal_wound(0.4)
 
-		handle_diseases()// DEAD check is in the proc itself; we want it to spread even if the mob is dead, but to handle its disease-y properties only if you're not.
-
-		if (QDELETED(src)) // diseases can qdel the mob via transformations
+	if(!stat && HAS_TRAIT(src, TRAIT_LYCANRESILENCE) && !HAS_TRAIT(src, TRAIT_PARALYSIS))
+		if(src.has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder) || src.has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder/blessed))
 			return
+		handle_wounds()
+		if(blood_volume > BLOOD_VOLUME_SURVIVE)
+			for(var/datum/wound/wound as anything in get_wounds())
+				wound.heal_wound(3)		
 
-		//Random events (vomiting etc)
-		handle_random_events()
-		//Handle temperature/pressure differences between body and environment
-		var/datum/gas_mixture/environment = loc?.return_air()
-		if(environment)
-			handle_environment(environment)
+	if (QDELETED(src)) // diseases can qdel the mob via transformations
+		return
 
-		handle_gravity()
+	handle_environment()
+	
+	//Random events (vomiting etc)
+	handle_random_events()
 
-		handle_traits() // eye, ear, brain damages
-		handle_status_effects() //all special effects, stun, knockdown, jitteryness, hallucination, sleeping, etc
+	handle_traits() // eye, ear, brain damages
+	handle_status_effects() //all special effects, stun, knockdown, jitteryness, hallucination, sleeping, etc
 
 	update_sneak_invis()
-	handle_fire()
 
 	if(machine)
 		machine.check_eye(src)
 
-	handle_typing_indicator()
-
-	if(istype(loc, /turf/open/water))
-		handle_inwater()
+	check_drowning()
 
 	if(stat != DEAD)
 		return 1
 
+/mob/living/proc/check_drowning()
+	if(istype(loc, /turf/open/water))
+		handle_inwater(loc)
+
+/mob/living/carbon/human/check_drowning()
+	if(isdullahan(src))
+		var/mob/living/carbon/human = src
+		var/datum/species/dullahan/dullahan = human.dna.species
+		if(dullahan.headless)
+			var/obj/item/bodypart/head/dullahan/drownrelay = dullahan.my_head
+			if(!drownrelay)
+				return
+			if(istype(drownrelay.loc, /turf/open/water))
+				handle_inwater(drownrelay.loc, extinguish = FALSE, force_drown = TRUE)
+			if(istype(loc, /turf/open/water)) // Extinguish ourselves if our body is in water.	
+				extinguish_mob()
+			return
+	. =..()
+
 /mob/living/proc/DeadLife()
 	set invisibility = 0
-	set waitfor = FALSE
 	if (notransform)
 		return
 	if(!loc)
 		return
-	if(!IS_IN_STASIS(src))
-		if(HAS_TRAIT(src, TRAIT_SIMPLE_WOUNDS))
-			handle_wounds()
-			handle_embedded_objects()
-			handle_blood()
+	if(HAS_TRAIT(src, TRAIT_SIMPLE_WOUNDS))
+		handle_wounds()
+		handle_embedded_objects()
+		handle_blood()
 	update_sneak_invis()
-	handle_fire()
-	handle_typing_indicator()
 	if(istype(loc, /turf/open/water))
-		handle_inwater()
-
-/mob/living/proc/handle_breathing(times_fired)
-	return
-
-/mob/living/proc/handle_mutations_and_radiation()
-	radiation = 0 //so radiation don't accumulate in simple animals
-	return
-
-/mob/living/proc/handle_diseases()
-	return
+		handle_inwater(loc)
 
 /mob/living/proc/handle_random_events()
 	//random painstun
 	if(!stat && !HAS_TRAIT(src, TRAIT_NOPAINSTUN))
 		if(world.time > mob_timers["painstun"] + 600)
-			if(getBruteLoss() + getFireLoss() >= (STAEND * 10))
-				var/probby = 53 - (STAEND * 2)
+			if(getBruteLoss() + getFireLoss() >= (STAWIL * 10))
+				var/probby = 53 - (STAWIL * 2)
 				if(!(mobility_flags & MOBILITY_STAND))
 					probby = probby - 20
 				if(prob(probby))
@@ -122,36 +133,17 @@
 					Stun(110)
 					Knockdown(110)
 
-/mob/living/proc/handle_environment(datum/gas_mixture/environment)
+/mob/living/proc/handle_environment()
 	return
 
-/mob/living/proc/handle_fire()
-	if(fire_stacks < 0) //If we've doused ourselves in water to avoid fire, dry off slowly
-		fire_stacks = min(0, fire_stacks + 1)//So we dry ourselves back to default, nonflammable.
-	if(!on_fire)
-//		testing("handlefyre0 [src]")
-		return TRUE //the mob is no longer on fire, no need to do the rest.
-//	testing("handlefyre1 [src]")
-	if(fire_stacks > 0)
-		adjust_fire_stacks(-0.05) //the fire is slowly consumed
-	else
-		ExtinguishMob()
-		return TRUE //mob was put out, on_fire = FALSE via ExtinguishMob(), no need to update everything down the chain.
-//	var/datum/gas_mixture/G = loc.return_air() // Check if we're standing in an oxygenless environment
-//	if(!G.gases[/datum/gas/oxygen] || G.gases[/datum/gas/oxygen][MOLES] < 1)
-//		ExtinguishMob() //If there's no oxygen in the tile we're on, put out the fire
-//		return TRUE
-	update_fire()
-	var/turf/location = get_turf(src)
-	location.hotspot_expose(700, 50, 1)
-
 /mob/living/proc/handle_wounds()
-	if(stat >= DEAD)
-		for(var/datum/wound/wound as anything in get_wounds())
-			wound.on_death()
-		return
 	for(var/datum/wound/wound as anything in get_wounds())
-		wound.on_life()
+		if(istype(wound, /datum/wound))
+			if (stat != DEAD)
+				wound.on_life()
+			else
+				wound.on_death()
+
 
 /obj/item/proc/on_embed_life(mob/living/user, obj/item/bodypart/bodypart)
 	return
@@ -162,11 +154,12 @@
 			continue
 
 		if(prob(embedded.embedding.embedded_pain_chance))
-//			BP.receive_damage(I.w_class*I.embedding.embedded_pain_multiplier)
+			if(embedded.is_silver && HAS_TRAIT(src, TRAIT_SILVER_WEAK) && !has_status_effect(STATUS_EFFECT_ANTIMAGIC))
+				var/datum/component/silverbless/psyblessed = embedded.GetComponent(/datum/component/silverbless)
+				adjust_fire_stacks(1, psyblessed?.is_blessed ? /datum/status_effect/fire_handler/fire_stacks/sunder/blessed : /datum/status_effect/fire_handler/fire_stacks/sunder)
 			to_chat(src, span_danger("[embedded] in me hurts!"))
 
 		if(prob(embedded.embedding.embedded_fall_chance))
-//			BP.receive_damage(I.w_class*I.embedding.embedded_fall_pain_multiplier)
 			simple_remove_embedded_object(embedded)
 			to_chat(src,span_danger("[embedded] falls out of me!"))
 
@@ -191,26 +184,3 @@
 
 /mob/living/proc/update_damage_hud()
 	return
-
-/mob/living/proc/handle_gravity()
-	var/gravity = mob_has_gravity()
-	update_gravity(gravity)
-
-	if(gravity > STANDARD_GRAVITY)
-		gravity_animate()
-		handle_high_gravity(gravity)
-
-/mob/living/proc/gravity_animate()
-	if(!get_filter("gravity"))
-		add_filter("gravity",1,list("type"="motion_blur", "x"=0, "y"=0))
-	INVOKE_ASYNC(src, PROC_REF(gravity_pulse_animation))
-
-/mob/living/proc/gravity_pulse_animation()
-	animate(get_filter("gravity"), y = 1, time = 10)
-	sleep(10)
-	animate(get_filter("gravity"), y = 0, time = 10)
-
-/mob/living/proc/handle_high_gravity(gravity)
-	if(gravity >= GRAVITY_DAMAGE_TRESHOLD) //Aka gravity values of 3 or more
-		var/grav_stregth = gravity - GRAVITY_DAMAGE_TRESHOLD
-		adjustBruteLoss(min(grav_stregth,3))

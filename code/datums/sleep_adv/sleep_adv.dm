@@ -7,6 +7,8 @@
 	var/retained_dust = 0
 	var/list/sleep_exp = list()
 	var/datum/mind/mind = null
+	COOLDOWN_DECLARE(xp_show)
+	COOLDOWN_DECLARE(level_up)
 
 /datum/sleep_adv/New(datum/mind/passed_mind)
 	. = ..()
@@ -29,7 +31,7 @@
 
 /datum/sleep_adv/proc/adjust_sleep_xp(skill, adjust)
 	var/current_xp = get_sleep_xp(skill)
-	var/target_xp = current_xp + adjust
+	var/target_xp = current_xp + ((adjust > 0 && HAS_TRAIT(mind?.current, TRAIT_JACKOFALLTRADES)) ? (adjust * 1.5) : adjust)
 	var/cap_exp = get_requried_sleep_xp_for_skill(skill, 2)
 	target_xp = clamp(target_xp, 0, cap_exp)
 	sleep_exp[skill] = target_xp
@@ -50,7 +52,7 @@
 			return SLEEP_EXP_LEGENDARY
 
 /datum/sleep_adv/proc/enough_sleep_xp_to_advance(skill_type, level_amount)
-	var/skill_level = mind.get_skill_level(skill_type)
+	var/skill_level = mind.current.get_skill_level(skill_type)
 	if(skill_level == SKILL_LEVEL_LEGENDARY)
 		return FALSE
 	var/needed_xp = get_requried_sleep_xp_for_skill(skill_type, level_amount)
@@ -59,7 +61,7 @@
 	return TRUE
 
 /datum/sleep_adv/proc/get_requried_sleep_xp_for_skill(skill_type, level_amount)
-	var/skill_level = mind.get_skill_level(skill_type)
+	var/skill_level = mind.current.get_skill_level(skill_type)
 	var/next_skill_level = skill_level
 	var/needed_xp = 0
 	for(var/i in 1 to level_amount)
@@ -68,29 +70,78 @@
 	return needed_xp
 
 /datum/sleep_adv/proc/add_sleep_experience(skill, amt, silent = FALSE)
-	if((mind.get_skill_level(skill) < SKILL_LEVEL_APPRENTICE) && !is_considered_sleeping())
-		mind.adjust_experience(skill, amt)
+	var/mob/living/L = mind.current
+	var/show_xp = TRUE
+	if(!(L.client?.prefs.floating_text_toggles & XP_TEXT))
+		show_xp = FALSE
+	if((L.get_skill_level(skill) < SKILL_LEVEL_APPRENTICE) && !is_considered_sleeping())
+		var/org_lvl = L.get_skill_level(skill)
+		L.adjust_experience(skill, amt)
+		var/new_lvl = L.get_skill_level(skill)
+		var/capped_post_check = enough_sleep_xp_to_advance(skill, 2)
+		if(COOLDOWN_FINISHED(src, xp_show))
+			if(org_lvl == new_lvl && !capped_post_check && show_xp)
+				L.balloon_alert(L, "[amt] XP")
+				COOLDOWN_START(src, xp_show, XP_SHOW_COOLDOWN)
 		return
+	var/datum/skill/skillref = GetSkillRef(skill)
+	var/trait_capped_level = skillref.max_untraited_level
+
+	#ifdef USES_TRAIT_SKILL_GATING
+	for(var/trait in skillref.trait_uncap)
+		if(HAS_TRAIT(mind.current, trait) && (skillref.trait_uncap[trait] > trait_capped_level))
+			trait_capped_level = skillref.trait_uncap[trait]
+	#endif
+	#ifndef USES_TRAIT_SKILL_GATING
+	trait_capped_level = SKILL_LEVEL_LEGENDARY
+	#endif
+
+	// Using this prevent a bug where you can bank xp to go one beyond cap
+	if(trait_capped_level && enough_sleep_xp_to_advance(skill, trait_capped_level - mind.current.get_skill_level(skill)))
+		amt = 0
+
 	var/capped_pre = enough_sleep_xp_to_advance(skill, 2)
 	var/can_advance_pre = enough_sleep_xp_to_advance(skill, 1)
+
 	adjust_sleep_xp(skill, amt)
 	var/can_advance_post = enough_sleep_xp_to_advance(skill, 1)
 	var/capped_post = enough_sleep_xp_to_advance(skill, 2)
-	var/datum/skill/skillref = GetSkillRef(skill)
+
+	if(capped_post || capped_pre || L.get_skill_level(skill) == SKILL_LEVEL_LEGENDARY)
+		show_xp = FALSE
 	if(!can_advance_pre && can_advance_post && !silent)
 		to_chat(mind.current, span_nicegreen(pick(list(
 			"I'm getting a better grasp at [lowertext(skillref.name)]...",
 			"With some rest, I feel like I can get better at [lowertext(skillref.name)]...",
 			"[skillref.name] starts making more sense to me...",
 		))))
+		if(!COOLDOWN_FINISHED(src, level_up))
+			if((L.client?.prefs.floating_text_toggles & XP_TEXT))
+				L.balloon_alert(L, "<font color = '#9BCCD0'>Level up...</font>")
+			L.playsound_local(L, pick(LEVEL_UP_SOUNDS), 100, TRUE)
+			COOLDOWN_START(src, level_up, XP_SHOW_COOLDOWN)
+		show_xp = FALSE
 	if(!capped_pre && capped_post && !silent)
 		to_chat(mind.current, span_nicegreen(pick(list(
-			"My [lowertext(skillref.name)] is not gonna get any better without some rest...",
+			"My [lowertext(skillref.name)] can no longer improve without some rest and meditation...",
 		))))
+		if(!COOLDOWN_FINISHED(src, level_up))
+			if((L.client?.prefs.floating_text_toggles & XP_TEXT))
+				L.balloon_alert(L, "<font color = '#9BCCD0'>Level up...</font>")
+			L.playsound_local(L, pick(LEVEL_UP_SOUNDS), 100, TRUE)
+			COOLDOWN_START(src, level_up, XP_SHOW_COOLDOWN)
+		show_xp = FALSE
+	if(COOLDOWN_FINISHED(src, xp_show))
+		if(amt && show_xp && (L.client?.prefs.floating_text_toggles & XP_TEXT))
+			L.balloon_alert(L, "[amt] XP")
+			COOLDOWN_START(src, xp_show, XP_SHOW_COOLDOWN)
 
 /datum/sleep_adv/proc/advance_cycle()
 	// Stuff
 	if(!mind.current)
+		return
+	if(HAS_TRAIT(mind.current, TRAIT_CURSE_ABYSSOR))
+		to_chat(mind.current, span_notice("His domain is forbidden to the likes of me."))
 		return
 	if(prob(0)) //TODO SLEEP ADV SPECIALS
 		rolled_specials++
@@ -187,13 +238,13 @@
 /datum/sleep_adv/proc/get_next_level_for_skill(skill_type)
 	if(!mind.current)
 		return 0
-	var/next_level = mind.get_skill_level(skill_type) + 1
+	var/next_level = mind.current.get_skill_level(skill_type) + 1
 	return next_level
 
 /datum/sleep_adv/proc/get_skill_cost(skill_type)
 	var/datum/skill/skill = GetSkillRef(skill_type)
 	var/next_level = get_next_level_for_skill(skill_type)
-	return skill.get_dream_cost_for_level(next_level)
+	return skill.get_dream_cost_for_level(next_level, mind.current)
 
 /datum/sleep_adv/proc/get_special_cost()
 	return 3
@@ -203,13 +254,22 @@
 		return
 	if(!enough_sleep_xp_to_advance(skill_type, 1))
 		return
+	if(HAS_TRAIT(mind.current, TRAIT_CURSE_MALUM))
+		to_chat(mind.current, span_warning("My dreams turn to nitemares."))
+		return
 	var/datum/skill/skill = GetSkillRef(skill_type)
 	var/dream_text = skill.get_random_dream()
 	if(dream_text)
 		to_chat(mind.current, span_notice(dream_text))
+
+	// Notify player if they're benefiting from Malum's blessing for craft skills or sewing
+	if(HAS_TRAIT(mind.current, TRAIT_FORGEBLESSED) && (istype(skill, /datum/skill/craft) || istype(skill, /datum/skill/craft/sewing)))
+		to_chat(mind.current, span_notice("Malum's blessing reduces the dream point cost of your crafting training."))
+
 	sleep_adv_points -= get_skill_cost(skill_type)
 	adjust_sleep_xp(skill_type, -get_requried_sleep_xp_for_skill(skill_type, 1))
-	mind.adjust_skillrank(skill_type, 1, FALSE)
+	mind.current.adjust_skillrank(skill_type, 1, FALSE)
+	record_round_statistic(STATS_SKILLS_DREAMED)
 
 /datum/sleep_adv/proc/grant_inspiration_xp(skill_amt)
 	var/list/viable_skills = list()
@@ -220,7 +280,7 @@
 			continue
 		if(enough_sleep_xp_to_advance(skill_type, 1))
 			continue
-		var/current_skill_level = mind.get_skill_level(skill_type)
+		var/current_skill_level = mind.current.get_skill_level(skill_type)
 		if(current_skill_level >= INSPIRATION_MAX_SKILL_LEVEL)
 			continue
 		var/required_level_to_cap = INSPIRATION_MAX_SKILL_LEVEL - current_skill_level
@@ -258,9 +318,9 @@
 /datum/sleep_adv/proc/finish()
 	if(!mind.current)
 		return
-	if(mind.has_studied)
-		mind.has_studied = FALSE
-		to_chat(mind.current, span_smallnotice("I feel like I can study my tome again...")) // AZURE PEAK ADDITION
+	if(mind.has_changed_spell)
+		mind.has_changed_spell = FALSE
+		to_chat(mind.current, span_smallnotice("I feel like I can change my spells again."))
 	if(mind.has_rituos)
 		mind.has_rituos = FALSE
 		to_chat(mind.current, span_smallnotice("The toil of invoking Her Lesser Work has fled my feeble form. I can continue my transfiguration..."))
@@ -268,7 +328,10 @@
 		to_chat(mind.current, span_warning("My glimpse of [mind.rituos_spell.name] flees my slumbering mind..."))
 		mind.RemoveSpell(mind.rituos_spell)
 		mind.rituos_spell = null
-	to_chat(mind.current, span_notice("..and that's all I dreamt of"))
+	to_chat(mind.current, span_notice("...and that's all I dreamt of."))
+	if(HAS_TRAIT(mind.current, TRAIT_STUDENT))
+		REMOVE_TRAIT(mind.current, TRAIT_STUDENT, TRAIT_GENERIC)
+		to_chat(mind.current, span_smallnotice("I feel that I can be educated in a skill once more."))
 	close_ui()
 
 /datum/sleep_adv/Topic(href, list/href_list)
@@ -295,7 +358,7 @@
 /proc/can_train_combat_skill(mob/living/user, skill_type, target_skill_level)
 	if(!user.mind)
 		return FALSE
-	var/user_skill_level = user.mind.get_skill_level(skill_type)
+	var/user_skill_level = user.get_skill_level(skill_type)
 	var/level_diff = target_skill_level - user_skill_level
 	if(level_diff <= 0)
 		return FALSE

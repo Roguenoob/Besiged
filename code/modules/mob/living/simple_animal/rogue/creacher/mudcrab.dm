@@ -1,7 +1,7 @@
 //Look Sir, free crabs!
 /mob/living/simple_animal/hostile/retaliate/rogue/mudcrab
 	name = "mudcrab"
-	desc = ""
+	desc = "A mudcrab."
 	icon_state = "mudcrab"
 	icon_living = "mudcrab"
 	icon_dead = "mudcrab_dead"
@@ -10,7 +10,13 @@
 	emote_see = list("clacks.")
 	speak_chance = 1
 	turns_per_move = 5
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/crab = 2)
+	base_intents = list(/datum/intent/use)
+	maxHealth = MUDCRAB_HEALTH
+	health = MUDCRAB_HEALTH
+	botched_butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/crab = 1, /obj/item/alch/viscera = 1)
+	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/crab = 2, /obj/item/alch/viscera = 2)
+	perfect_butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/crab = 3, /obj/item/alch/viscera = 2)
+	food_type = list(/obj/item/reagent_containers/food/snacks)
 	faction = list("crabs")
 	response_help_continuous = "pets"
 	response_help_simple = "pet"
@@ -25,17 +31,23 @@
 	var/obj/item/inventory_head
 	var/obj/item/inventory_mask
 	gold_core_spawnable = FRIENDLY_SPAWN
+	
 
+	can_have_ai = FALSE //disable native ai
+	AIStatus = AI_OFF
+	ai_controller = /datum/ai_controller/mudcrab
+	
+/mob/living/simple_animal/hostile/retaliate/rogue/mudcrab/Initialize()
+	..()
+	AddElement(/datum/element/ai_retaliate)
+	ai_controller.set_blackboard_key(BB_BASIC_FOODS, food_type)
+	
 /mob/living/simple_animal/mudcrabcrab/Life()
 	..()
 	//CRAB movement
 	if(!ckey && !stat)
 		if(isturf(loc) && !resting && !buckled)		//This is so it only moves if it's not inside a closet, gentics machine, etc.
 			turns_since_move++
-			if(turns_since_move >= turns_per_move)
-				var/east_vs_west = pick(4,8)
-				if(Process_Spacemove(east_vs_west))
-					Move(get_step(src,east_vs_west), east_vs_west)
 
 /mob/living/simple_animal/hostile/retaliate/rogue/mudcrab/get_sound(input)
 	switch(input)

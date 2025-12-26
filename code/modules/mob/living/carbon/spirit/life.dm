@@ -9,11 +9,10 @@
 	if (notransform)
 		return
 
-/mob/living/carbon/spirit/handle_environment(datum/gas_mixture/environment)
-	if(!environment)
-		return
-
-	var/loc_temp = get_temperature(environment)
+/mob/living/carbon/spirit/handle_environment()
+//ATMO/TURF/TEMPERATURE
+	var/turf/cur_turf = get_turf(src)
+	var/loc_temp = cur_turf.temperature
 
 	if(stat != DEAD)
 		adjust_bodytemperature(natural_bodytemperature_stabilization())
@@ -41,40 +40,19 @@
 					apply_damage(HEAT_DAMAGE_LEVEL_2, BURN)
 
 	else if(bodytemperature < BODYTEMP_COLD_DAMAGE_LIMIT && !HAS_TRAIT(src, TRAIT_RESISTCOLD))
-		if(!istype(loc, /obj/machinery/atmospherics/components/unary/cryo_cell))
-			switch(bodytemperature)
-				if(200 to 260)
-					throw_alert("temp", /atom/movable/screen/alert/cold, 1)
-					apply_damage(COLD_DAMAGE_LEVEL_1, BURN)
-				if(120 to 200)
-					throw_alert("temp", /atom/movable/screen/alert/cold, 2)
-					apply_damage(COLD_DAMAGE_LEVEL_2, BURN)
-				if(-INFINITY to 120)
-					throw_alert("temp", /atom/movable/screen/alert/cold, 3)
-					apply_damage(COLD_DAMAGE_LEVEL_3, BURN)
-		else
-			clear_alert("temp")
+		switch(bodytemperature)
+			if(200 to 260)
+				throw_alert("temp", /atom/movable/screen/alert/cold, 1)
+				apply_damage(COLD_DAMAGE_LEVEL_1, BURN)
+			if(120 to 200)
+				throw_alert("temp", /atom/movable/screen/alert/cold, 2)
+				apply_damage(COLD_DAMAGE_LEVEL_2, BURN)
+			if(-INFINITY to 120)
+				throw_alert("temp", /atom/movable/screen/alert/cold, 3)
+				apply_damage(COLD_DAMAGE_LEVEL_3, BURN)
 
 	else
 		clear_alert("temp")
-
-	//Account for massive pressure differences
-
-	var/pressure = environment.return_pressure()
-	var/adjusted_pressure = calculate_affecting_pressure(pressure) //Returns how much pressure actually affects the mob.
-	switch(adjusted_pressure)
-		if(HAZARD_HIGH_PRESSURE to INFINITY)
-			adjustBruteLoss( min( ( (adjusted_pressure / HAZARD_HIGH_PRESSURE) -1 )*PRESSURE_DAMAGE_COEFFICIENT , MAX_HIGH_PRESSURE_DAMAGE) )
-			throw_alert("pressure", /atom/movable/screen/alert/highpressure, 2)
-		if(WARNING_HIGH_PRESSURE to HAZARD_HIGH_PRESSURE)
-			throw_alert("pressure", /atom/movable/screen/alert/highpressure, 1)
-		if(WARNING_LOW_PRESSURE to WARNING_HIGH_PRESSURE)
-			clear_alert("pressure")
-		if(HAZARD_LOW_PRESSURE to WARNING_LOW_PRESSURE)
-			throw_alert("pressure", /atom/movable/screen/alert/lowpressure, 1)
-		else
-			adjustBruteLoss( LOW_PRESSURE_DAMAGE )
-			throw_alert("pressure", /atom/movable/screen/alert/lowpressure, 2)
 
 	return
 
@@ -87,32 +65,3 @@
 	if(wear_mask)
 		if(wear_mask.clothing_flags & BLOCK_GAS_SMOKE_EFFECT)
 			return 1
-
-/mob/living/carbon/spirit/handle_fire()
-	return
-/*
-	. = ..()
-	if(.) //if the mob isn't on fire anymore
-		return
-
-	//the fire tries to damage the exposed clothes and items
-	var/list/burning_items = list()
-	//HEAD//
-	var/list/obscured = check_obscured_slots(TRUE)
-	if(wear_mask && !(SLOT_WEAR_MASK in obscured))
-		burning_items += wear_mask
-	if(wear_neck && !(SLOT_NECK in obscured))
-		burning_items += wear_neck
-	if(head)
-		burning_items += head
-
-	if(back)
-		burning_items += back
-
-	for(var/X in burning_items)
-		var/obj/item/I = X
-		I.fire_act((fire_stacks * 50)) //damage taken is reduced to 2% of this value by fire_act()
-
-	adjust_bodytemperature(BODYTEMP_HEATING_MAX)
-	SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "on_fire", /datum/mood_event/on_fire)
-*/

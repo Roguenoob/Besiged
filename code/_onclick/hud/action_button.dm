@@ -1,9 +1,10 @@
-#define ACTION_BUTTON_DEFAULT_BACKGROUND "default"
+#define AB_MAX_COLUMNS 12
 
 /atom/movable/screen/movable/action_button
 	var/datum/action/linked_action
 	var/actiontooltipstyle = ""
 	screen_loc = null
+	var/mutable_appearance/blank_icon
 
 	var/button_icon_state
 	var/appearance_cache
@@ -11,6 +12,12 @@
 	var/id
 	var/ordered = TRUE //If the button gets placed into the default bar
 	nomouseover = FALSE
+
+	var/atom/movable/screen/maptext_holder/maptext_holder
+
+/atom/movable/screen/movable/action_button/Destroy()
+	QDEL_NULL(maptext_holder)
+	return ..()
 
 /atom/movable/screen/movable/action_button/proc/can_use(mob/user)
 	if (linked_action)
@@ -26,7 +33,7 @@
 		return
 	if((istype(over_object, /atom/movable/screen/movable/action_button) && !istype(over_object, /atom/movable/screen/movable/action_button/hide_toggle)))
 		if(locked)
-//			to_chat(usr, span_warning("Action button \"[name]\" is locked, unlock it first."))
+			to_chat(usr, span_warning("Action button \"[name]\" is locked, unlock it first."))
 			return
 		var/atom/movable/screen/movable/action_button/B = over_object
 		var/list/actions = usr.actions
@@ -42,9 +49,9 @@
 /atom/movable/screen/movable/action_button/Click(location,control,params)
 	if (!can_use(usr))
 		return
-/*
+
 	var/list/modifiers = params2list(params)
-	if(modifiers["shift"])
+	if(modifiers["alt"])
 		if(locked)
 			to_chat(usr, span_warning("Action button \"[name]\" is locked, unlock it first."))
 			return TRUE
@@ -56,7 +63,10 @@
 		to_chat(usr, span_notice("Action button \"[name]\" [locked ? "" : "un"]locked."))
 		if(id && usr.client) //try to (un)remember position
 			usr.client.prefs.action_buttons_screen_locs["[name]_[id]"] = locked ? moved : null
-		return TRUE*/
+		return TRUE
+	if(modifiers["shift"])
+		examine_ui(usr)
+		return TRUE
 	if(usr.next_click > world.time)
 		return
 	usr.next_click = world.time + 1
@@ -165,13 +175,7 @@
 	else
 		. += hide_appearance
 
-/atom/movable/screen/movable/action_button/MouseEntered(location,control,params)
-	if(!QDELETED(src))
-		openToolTip(usr,src,params,title = name,content = desc,theme = actiontooltipstyle)
-	..()
-
 /atom/movable/screen/movable/action_button/MouseExited()
-	closeToolTip(usr)
 	..()
 
 /datum/hud/proc/get_action_buttons_icons()
@@ -219,21 +223,6 @@
 			if(reload_screen)
 				client.screen += B
 
-//		if(!button_number)
-//			hud_used.hide_actions_toggle.screen_loc = null
-//			return
-
-//	if(!hud_used.hide_actions_toggle.moved)
-//		hud_used.hide_actions_toggle.screen_loc = hud_used.ButtonNumberToScreenCoords(button_number+1)
-//	else
-//		hud_used.hide_actions_toggle.screen_loc = hud_used.hide_actions_toggle.moved
-//	if(reload_screen)
-//		client.screen += hud_used.hide_actions_toggle
-
-
-
-#define AB_MAX_COLUMNS 12
-
 /datum/hud/proc/ButtonNumberToScreenCoords(number) // TODO : Make this zero-indexed for readabilty
 	var/row = round((number - 1)/AB_MAX_COLUMNS)
 	var/col = ((number - 1)%(AB_MAX_COLUMNS)) + 1
@@ -241,7 +230,7 @@
 	var/coord_col = "+[col-1]"
 	var/coord_col_offset = 4 + 2 * col
 
-	var/coord_row = "[row ? -row : "+0"]"
+	var/coord_row = "[row ? "+[row]" : "+0"]"
 
 	return "WEST[coord_col]:[coord_col_offset],SOUTH[coord_row]:3"
 
@@ -254,3 +243,34 @@
 	var/matrix/M = matrix()
 	M.Translate(x_offset,y_offset)
 	button.transform = M
+
+/atom/movable/screen/movable/action_button/proc/update_maptext(cd_time_deciseconds, color_cd = "#800000", color_neutral = "#ffffff")
+	if(!istype(maptext_holder))
+		maptext_holder = new(src)
+		vis_contents.Add(maptext_holder)
+
+	maptext_holder.update_maptext(cd_time_deciseconds, color_cd, color_neutral)
+
+/atom/movable/screen/maptext_holder
+	layer = ABOVE_HUD_LAYER
+	maptext_x = 8
+	maptext_y = 4
+
+/atom/movable/screen/maptext_holder/proc/update_maptext(cd_time_deciseconds, color_cd = "#800000", color_neutral = "#ffffff")
+	animate(src, flags = ANIMATION_END_NOW)
+
+	// queue an animate for each decisecond remaining in click cooldown + 1
+	for(var/i in 1 to cd_time_deciseconds + 1)
+		var/decisceonds_left_this_iter = cd_time_deciseconds - i
+		var/displaytext = null
+		if(decisceonds_left_this_iter > 0)
+			displaytext = MAPTEXT("[round(decisceonds_left_this_iter / (1 SECONDS), 0.1)]s")
+
+		if(i == 1)
+			animate(src, maptext = displaytext, color = color_cd, 1)
+		else if(i == cd_time_deciseconds + 1)
+			animate(maptext = displaytext, color = color_neutral, 1)
+		else
+			animate(maptext = displaytext, 1)
+
+#undef AB_MAX_COLUMNS

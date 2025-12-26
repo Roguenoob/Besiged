@@ -35,6 +35,9 @@
 	/// Type path of item to go in shoes slot
 	var/shoes = null
 
+	/// Type path of item that goes in the shoes slot if the mob is a saiga taur
+	var/saiga_shoes = null
+
 	/// Type path of item to go in head slot
 	var/head = null
 
@@ -187,6 +190,10 @@
 		H.equip_to_slot_or_del(new belt(H),SLOT_BELT, TRUE)
 	if(gloves)
 		H.equip_to_slot_or_del(new gloves(H),SLOT_GLOVES, TRUE)
+	if(saiga_shoes)
+		var/obj/item/bodypart/taur/taur = H.get_taur_tail()
+		if(istype(taur, /obj/item/bodypart/taur/horse))
+			H.equip_to_slot_or_del(new saiga_shoes(H), SLOT_SHOES, TRUE)
 	if(shoes)
 		H.equip_to_slot_or_del(new shoes(H),SLOT_SHOES, TRUE)
 	if(head)
@@ -232,12 +239,10 @@
 
 	if(!visualsOnly)
 		if(l_hand)
-	//		H.put_in_hands(new l_hand(get_turf(H)),TRUE)
-			H.equip_to_slot_or_del(new l_hand(H),SLOT_HANDS, TRUE)
+			H.put_in_hands(new l_hand(get_turf(H)), FALSE, forced = TRUE)
 		if(r_hand)
-			testing("PIH")
-		//	H.put_in_hands(new r_hand(get_turf(H)),TRUE)
-			H.equip_to_slot_or_del(new r_hand(H),SLOT_HANDS, TRUE)
+
+			H.put_in_hands(new r_hand(get_turf(H)), FALSE, forced = TRUE)
 
 	if(!visualsOnly) // Items in pockets or backpack don't show up on mob's icon.
 		if(l_pocket)
@@ -251,33 +256,44 @@
 //			backpack_contents.Insert(1, box)
 //			backpack_contents[box] = 1
 
-		if(backpack_contents)
+		if(backpack_contents && !visualsOnly)
 			for(var/path in backpack_contents)
 				var/number = backpack_contents[path]
 				if(!isnum(number))//Default to 1
 					number = 1
 				for(var/i in 1 to number)
-					H.equip_to_slot_or_del(new path(H),SLOT_IN_BACKPACK, TRUE)
-
-	if(!H.head && toggle_helmet && istype(H.wear_armor, /obj/item/clothing/suit/space/hardsuit))
-		var/obj/item/clothing/suit/space/hardsuit/HS = H.wear_armor
-		HS.ToggleHelmet()
+					var/obj/item/new_item = new path(H)
+					var/obj/item/item = H.get_item_by_slot(SLOT_BACK_L)
+					if(!item)
+						item = H.get_item_by_slot(SLOT_BACK_R)
+					if(!item || !SEND_SIGNAL(item, COMSIG_TRY_STORAGE_INSERT, new_item, null, TRUE, TRUE))
+						item = H.get_item_by_slot(SLOT_BACK_R)
+						if(!item || !SEND_SIGNAL(item, COMSIG_TRY_STORAGE_INSERT, new_item, null, TRUE, TRUE))
+							item = H.get_item_by_slot(SLOT_BELT)
+							if(!item || !SEND_SIGNAL(item, COMSIG_TRY_STORAGE_INSERT, new_item, null, TRUE, TRUE))
+								addtimer(CALLBACK(PROC_REF(move_storage), new_item, H.loc), 3 SECONDS)
 
 	post_equip(H, visualsOnly)
 
+	if(istype(H.patron))
+		H.patron.post_equip(H)
+
 	if(!visualsOnly)
 		apply_fingerprints(H)
-		if(internals_slot)
-			H.internal = H.get_item_by_slot(internals_slot)
-			H.update_action_buttons_icon()
-		if(implants)
-			for(var/implant_type in implants)
-				var/obj/item/implant/I = new implant_type(H)
-				I.implant(H, null, TRUE)
 
 	H.update_body()
 	return TRUE
 
+/datum/outfit/proc/move_storage(obj/item/new_item, turf/T)
+	if(new_item.forceMove(T))
+		return TRUE
+	return FALSE
+
+/client/proc/test_spawn_outfits()
+	for(var/path in subtypesof(/datum/outfit/job/roguetown))
+		var/mob/living/carbon/human/new_human = new(mob.loc)
+		var/datum/outfit/new_outfit = new path()
+		new_outfit.equip(new_human)
 /**
   * Apply a fingerprint from the passed in human to all items in the outfit
   *

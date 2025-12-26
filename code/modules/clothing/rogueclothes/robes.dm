@@ -8,10 +8,12 @@
 	mob_overlay_icon = 'icons/roguetown/clothing/onmob/armor.dmi'
 	sleeved = 'icons/roguetown/clothing/onmob/helpers/sleeves_armor.dmi'
 	boobed = TRUE
-	flags_inv = HIDECROTCH|HIDEBOOB|HIDEBUTT
+	flags_inv = HIDEBOOB|HIDECROTCH
 	color = "#7c6d5c"
 	r_sleeve_status = SLEEVE_NORMAL
 	l_sleeve_status = SLEEVE_NORMAL
+	experimental_inhand = FALSE
+	sellprice = 10
 
 /obj/item/clothing/suit/roguetown/shirt/robe/astrata
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_SHIRT|ITEM_SLOT_CLOAK
@@ -24,8 +26,25 @@
 	sleeved = null
 	boobed = TRUE
 	color = null
+	resistance_flags = FIRE_PROOF
 	r_sleeve_status = SLEEVE_NORMAL
 	l_sleeve_status = SLEEVE_NORMAL
+	sellprice = 15
+
+/obj/item/clothing/suit/roguetown/shirt/robe/abyssor //thanks to cre for abyssor clothing sprites
+	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_SHIRT|ITEM_SLOT_CLOAK
+	name = "depths robe"
+	desc = ""
+	body_parts_covered = CHEST|GROIN|ARMS|LEGS|VITALS
+	icon_state = "abyssorrobe"
+	icon = 'icons/roguetown/clothing/armor.dmi'
+	mob_overlay_icon = 'icons/roguetown/clothing/onmob/armor.dmi'
+	sleeved = 'icons/roguetown/clothing/onmob/helpers/sleeves_armor.dmi'
+	boobed = TRUE
+	color = null
+	r_sleeve_status = SLEEVE_NORMAL
+	l_sleeve_status = SLEEVE_NORMAL
+	sellprice = 15
 
 /obj/item/clothing/suit/roguetown/shirt/robe/noc
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_SHIRT|ITEM_SLOT_CLOAK
@@ -40,6 +59,7 @@
 	color = null
 	r_sleeve_status = SLEEVE_NORMAL
 	l_sleeve_status = SLEEVE_NORMAL
+	sellprice = 15
 
 /obj/item/clothing/suit/roguetown/shirt/robe/necromancer
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_SHIRT|ITEM_SLOT_CLOAK
@@ -54,6 +74,7 @@
 	color = null
 	r_sleeve_status = SLEEVE_NORMAL
 	l_sleeve_status = SLEEVE_NORMAL
+	sellprice = 15
 
 /obj/item/clothing/suit/roguetown/shirt/robe/dendor
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_SHIRT|ITEM_SLOT_CLOAK
@@ -68,6 +89,7 @@
 	color = null
 	r_sleeve_status = SLEEVE_NORMAL
 	l_sleeve_status = SLEEVE_NORMAL
+	sellprice = 15
 
 /obj/item/clothing/suit/roguetown/shirt/robe/necra
 	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_SHIRT|ITEM_SLOT_CLOAK
@@ -82,6 +104,7 @@
 	color = null
 	r_sleeve_status = SLEEVE_NORMAL
 	l_sleeve_status = SLEEVE_NORMAL
+	sellprice = 15
 
 /obj/item/clothing/suit/roguetown/shirt/robe/black
 	color = CLOTHING_BLACK
@@ -93,16 +116,69 @@
 	name = "solar vestments"
 	desc = "Holy vestments sanctified by divine hands. Caution is advised if not a faithful."
 	icon_state = "priestrobe"
+	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_SHIRT
+	armor = ARMOR_PADDED	//Equal to gamby
 	color = null
+	sellprice = 25
 
-/obj/item/clothing/suit/roguetown/shirt/robe/priest/pickup(mob/living/user)
-	if(!HAS_TRAIT(user, TRAIT_CHOSEN))
-		to_chat(user, "<font color='yellow'>UNWORTHY HANDS TOUCH THE VESTMENTS, CEASE OR BE PUNISHED</font>")
-		spawn(30)
-			if(loc == user)
-				user.adjust_fire_stacks(5)
-				user.IgniteMob()
+/obj/item/clothing/suit/roguetown/shirt/robe/priest/Initialize()
+	. = ..()
+	AddComponent(/datum/component/cursed_item, TRAIT_CHOSEN, "VESTMENTS")
+
+/obj/item/clothing/suit/roguetown/shirt/robe/priest/equipped(mob/living/user, slot)
 	..()
+	if(slot != SLOT_ARMOR|SLOT_SHIRT)
+		return
+	if(!HAS_TRAIT(user, TRAIT_CHOSEN))	//Requires this cus it's a priest-only thing.
+		return
+	ADD_TRAIT(user, TRAIT_MONK_ROBE, TRAIT_GENERIC)
+	to_chat(user, span_notice("With my vows to poverty and my vestments, I feel vigorous - empowered by my God!"))
+
+/obj/item/clothing/suit/roguetown/shirt/robe/priest/dropped(mob/living/user)
+	..()
+	REMOVE_TRAIT(user, TRAIT_MONK_ROBE, TRAIT_GENERIC)
+	to_chat(user, span_notice("I must lay down my robes and rest; even God's chosen must rest.."))
+
+//This for adventurers. Base type, same armor. No holy-bonus.
+/obj/item/clothing/suit/roguetown/shirt/robe/monk
+	name = "nomadic monk vestments"
+	desc = "Nomadic vestments, worn by those who pursue faith above all else. The burlap is thickly-woven and padded, in order to ward off whatever threats may arise during one's pilgrimage: be it a biting chill or a volley of arrows."
+	icon_state = "priestunder"
+	item_state = "priestunder"
+	color = null
+	icon = 'icons/roguetown/clothing/shirts.dmi'
+	mob_overlay_icon = 'icons/roguetown/clothing/onmob/shirts.dmi'
+	sleeved = 'icons/roguetown/clothing/onmob/helpers/sleeves_shirts.dmi'
+	armor = ARMOR_PADDED_GOOD	//Equal to a padded gambeson, like before.
+	max_integrity = ARMOR_INT_CHEST_LIGHT_MASTER
+	prevent_crits = list(BCLASS_CUT, BCLASS_BLUNT, BCLASS_CHOP)	 //Ensures that this inherits the padded gambeson's resistances, too.
+	slot_flags = ITEM_SLOT_ARMOR|ITEM_SLOT_SHIRT
+	sellprice = 15
+
+//This is for templars/psydonites. Gives a boon for wearing it to counter-act giving up plate and such.
+/obj/item/clothing/suit/roguetown/shirt/robe/monk/holy
+	name = "holy monk vestments"
+	desc = "Holy vestments, worn by those who pursue faith above all else. Hundreds of heavy leather strips have been meticulously sheared-and-stitched onto the cloth, resulting in unparalleled comfort and protection. It's said that those who 'don the cloth' will never tire; a boon of unbreakable faith."
+	icon_state = "monkvestments"
+	item_state = "monkvestments"
+	icon = 'icons/roguetown/clothing/armor.dmi'
+	mob_overlay_icon = 'icons/roguetown/clothing/onmob/armor.dmi'
+	sleeved = 'icons/roguetown/clothing/onmob/helpers/sleeves_armor.dmi'
+	salvage_result = /obj/item/natural/hide/cured
+	salvage_amount = 1
+	sellprice = 15
+
+/obj/item/clothing/suit/roguetown/shirt/robe/monk/holy/equipped(mob/living/user, slot)
+	..()
+	if(!HAS_TRAIT(user, TRAIT_CIVILIZEDBARBARIAN))	//Requires this cus it's a monk-only thing.
+		return
+	ADD_TRAIT(user, TRAIT_MONK_ROBE, TRAIT_GENERIC)
+	to_chat(user, span_notice("With my vows to poverty and my vestments, I feel vigorous - empowered by my God!"))
+
+/obj/item/clothing/suit/roguetown/shirt/robe/monk/holy/dropped(mob/living/user)
+	..()
+	REMOVE_TRAIT(user, TRAIT_MONK_ROBE, TRAIT_GENERIC)
+	to_chat(user, span_notice("I must lay down my robes and rest; even God's chosen must rest.."))
 
 /obj/item/clothing/suit/roguetown/shirt/robe/courtmage
 	color = "#6c6c6c"
@@ -141,6 +217,7 @@
 
 /obj/item/clothing/suit/roguetown/shirt/robe/wizard
 	name = "wizard's robe"
+	desc = "Billowy, oversized robes with golden star designs. Perfect for the practicing magos."
 	icon_state = "wizardrobes"
 	icon = 'icons/roguetown/clothing/shirts.dmi'
 	mob_overlay_icon = 'icons/roguetown/clothing/onmob/shirts.dmi'
@@ -163,7 +240,7 @@
 	sleeved = 'icons/roguetown/clothing/onmob/helpers/sleeves_armor.dmi'
 	boobed = TRUE
 	color = null
-	flags_inv = HIDEBOOB|HIDETAIL|HIDECROTCH|HIDEBUTT
+	flags_inv = HIDEBOOB|HIDETAIL
 	r_sleeve_status = SLEEVE_NORMAL
 	l_sleeve_status = SLEEVE_NORMAL
 	resistance_flags = FIRE_PROOF
@@ -185,6 +262,7 @@
 	r_sleeve_status = SLEEVE_NORMAL
 	l_sleeve_status = SLEEVE_NORMAL
 	var/fanatic_wear = FALSE
+	sellprice = 15
 
 /obj/item/clothing/suit/roguetown/shirt/robe/eora/alt
 	name = "open eoran robe"
@@ -219,16 +297,50 @@
 
 /obj/item/clothing/suit/roguetown/shirt/robe/hierophant
 	name = "hierophant's kandys"
-	desc = "A thin piece of fabric worn under a robe to stop chafing and keep ones dignity if a harsh blow of wind comes through."
+	desc = "A thin piece of fabric worn under a robe to stop chafing and keep ones dignity if a harsh blow of wind comes through. Despite the light fabric, it offers decent protection."
+	prevent_crits = list(BCLASS_CUT, BCLASS_BLUNT, BCLASS_CHOP)
+	armor = ARMOR_PADDED_GOOD
 	icon_state = "desertgown"
 	item_state = "desertgown"
 	color = null
+	sellprice = 15
 
 /obj/item/clothing/suit/roguetown/shirt/robe/pointfex
 	name = "pointfex's qaba"
-	desc = "A slimmed down, tighter fitting robe made of fine silks and fabrics. Somehow you feel more mobile in it than in the nude."
+	desc = "A slimmed down, tighter fitting robe made of fine silks and fabrics. Somehow you feel more mobile in it than in the nude. Despite the light fabric, it offers decent protection."
+	prevent_crits = list(BCLASS_CUT, BCLASS_BLUNT, BCLASS_CHOP)
+	armor = ARMOR_PADDED_GOOD
 	icon_state = "monkcloth"
 	item_state = "monkcloth"
 	color = null
 	r_sleeve_status = SLEEVE_NOMOD
 	l_sleeve_status = SLEEVE_NOMOD
+	sellprice = 15
+
+/obj/item/clothing/suit/roguetown/shirt/robe/feld
+	name = "feldsher's robe"
+	desc = "Red to hide the blood."
+	icon_state = "feldrobe"
+	item_state = "feldrobe"
+
+/obj/item/clothing/suit/roguetown/shirt/robe/phys
+	name = "physicker's robe"
+	desc = "Part robe, part butcher's apron."
+	icon_state = "surgrobe"
+	item_state = "surgrobe"
+
+// Agnostic versions of the unused robes, for use in the Loadout.
+
+/obj/item/clothing/suit/roguetown/shirt/robe/tabardscarlet
+	name = "scarlet tabard"
+	desc = "Sleeveless robes, hued like rosas."
+	color = null
+	icon_state = "feldrobe"
+	item_state = "feldrobe"
+
+/obj/item/clothing/suit/roguetown/shirt/robe/tabardblack
+	name = "black tabard"
+	desc = "Sleeveless robes, tinged like charcoal."
+	color = null
+	icon_state = "surgrobe"
+	item_state = "surgrobe"

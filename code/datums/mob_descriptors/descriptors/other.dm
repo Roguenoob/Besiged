@@ -1,7 +1,7 @@
 /datum/mob_descriptor/age
 	name = "Age"
 	slot = MOB_DESCRIPTOR_SLOT_AGE
-	verbage = "looks"
+	verbage = "%LOOK%"
 
 /datum/mob_descriptor/age/can_describe(mob/living/described)
 	if(!ishuman(described))
@@ -39,7 +39,9 @@
 /datum/mob_descriptor/penis/get_description(mob/living/described)
 	var/mob/living/carbon/human/H = described
 	var/obj/item/organ/penis/penis = H.getorganslot(ORGAN_SLOT_PENIS)
-	var/adjective
+	//Caustic Edit - Pull from Global rather than use a switch
+	var/adjective = find_key_by_value(GLOB.named_penis_sizes, penis.penis_size)
+	//Caustic End
 	var/arousal_modifier
 	switch(penis.penis_size)
 		if(1)
@@ -48,11 +50,9 @@
 			adjective = "an average"
 		if(3)
 			adjective = "a large"
-		if(4)
-			adjective = "a massive"
-		if(5)
-			adjective = "a colossal"
-	switch(H.sexcon.arousal)
+	var/list/arousal_data = list()
+	SEND_SIGNAL(H, COMSIG_SEX_GET_AROUSAL, arousal_data)
+	switch(arousal_data["arousal"])
 		if(80 to INFINITY)
 			arousal_modifier = ", throbbing violently"
 		if(50 to 80)
@@ -62,13 +62,15 @@
 		else
 			arousal_modifier = ", soft and flaccid"
 	var/used_name
-	if(penis.erect_state != ERECT_STATE_HARD && penis.sheath_type != SHEATH_TYPE_NONE)
+	if(penis.erect_state == ERECT_STATE_NONE && penis.sheath_type != SHEATH_TYPE_NONE)
 		switch(penis.sheath_type)
+			//Caustic Edit - Just account for bigger sizes
 			if(SHEATH_TYPE_NORMAL)
 				if(penis.penis_size >= 3)
 					used_name = "a fat sheath"
 				else
 					used_name = "a sheath"
+			//Caustic End
 			if(SHEATH_TYPE_SLIT)
 				used_name = "a genital slit"
 	else
@@ -100,19 +102,10 @@
 /datum/mob_descriptor/testicles/get_description(mob/living/described)
 	var/mob/living/carbon/human/H = described
 	var/obj/item/organ/testicles/testes = H.getorganslot(ORGAN_SLOT_TESTICLES)
-	var/adjective
-	switch(testes.ball_size)
-		if(1)
-			adjective = "a small"
-		if(2)
-			adjective = "an average"
-		if(3)
-			adjective = "a large"
-		if(4)
-			adjective = "a massive"
-		if(5)
-			adjective = "a gigantic"
+	//Caustic Edit - Pull from Global rather than use a switch
+	var/adjective = find_key_by_value(GLOB.named_ball_sizes, testes.ball_size)
 	return "[adjective] pair of balls"
+	//Caustic End
 
 /datum/mob_descriptor/vagina
 	name = "vagina"
@@ -143,8 +136,6 @@
 			vagina_type = "plain vagina"
 		if(/datum/sprite_accessory/vagina/hairy)
 			vagina_type = "hairy vagina"
-		if(/datum/sprite_accessory/vagina/extrahairy)
-			vagina_type = "very hairy vagina"
 		if(/datum/sprite_accessory/vagina/spade)
 			vagina_type = "spade vagina"
 		if(/datum/sprite_accessory/vagina/furred)
@@ -153,7 +144,9 @@
 			vagina_type = "gaping vagina"
 		if(/datum/sprite_accessory/vagina/cloaca)
 			vagina_type = "cloaca"
-	switch(H.sexcon.arousal)
+	var/list/arousal_data = list()
+	SEND_SIGNAL(H, COMSIG_SEX_GET_AROUSAL, arousal_data)
+	switch(arousal_data["arousal"])
 		if(80 to INFINITY)
 			arousal_modifier = ", gushing with arousal"
 		if(50 to 80)
@@ -184,76 +177,7 @@
 /datum/mob_descriptor/breasts/get_description(mob/living/described)
 	var/mob/living/carbon/human/H = described
 	var/obj/item/organ/breasts/breasts = H.getorganslot(ORGAN_SLOT_BREASTS)
-	var/adjective
-	switch(breasts.breast_size)
-		if(0)
-			adjective = "a flat"
-		if(1)
-			adjective = "a very small"
-		if(2)
-			adjective = "a small"
-		if(3)
-			adjective = "an average"
-		if(4)
-			adjective = "a large"
-		if(5)
-			adjective = "an extra large"
-		if(6)
-			adjective = "a massive"
-		if(7)
-			adjective = "an enormous"
-		if(8)
-			adjective = "a magnificent"
-		if(9)
-			adjective = "a towering"
-		if(10)
-			adjective = "a gigantic"
-		if(11)
-			adjective = "a titanic"
-		if(12)
-			adjective = "a gargantuan"
-		if(13)
-			adjective = "a colossal"
-		if(14)
-			adjective = "a unbelieveably big"
-		if(15)
-			adjective = "a godly gib"
-		if(16)
-			adjective = "a ungodly big"
-	return "[adjective] pair of breasts"
-
-/datum/mob_descriptor/butt
-	name = "butt"
-	slot = MOB_DESCRIPTOR_SLOT_BUTT
-	verbage = "has"
-	show_obscured = TRUE
-
-/datum/mob_descriptor/butt/can_describe(mob/living/described)
-	if(!ishuman(described))
-		return FALSE
-	var/mob/living/carbon/human/H = described
-	var/obj/item/organ/butt/buttie = H.getorganslot(ORGAN_SLOT_BUTT)
-	if(!buttie)
-		return FALSE
-	if(H.underwear)
-		return FALSE
-	if(!get_location_accessible(H, BODY_ZONE_PRECISE_GROIN))
-		return FALSE
-	return TRUE
-
-/datum/mob_descriptor/butt/get_description(mob/living/described)
-	var/mob/living/carbon/human/H = described
-	var/obj/item/organ/butt/buttie = H.getorganslot(ORGAN_SLOT_BUTT)
-	var/adjective
-	switch(buttie.organ_size)
-		if(1)
-			adjective = "a small"
-		if(2)
-			adjective = "an average"
-		if(3)
-			adjective = "a large"
-		if(4)
-			adjective = "a massive"
-		if(5)
-			adjective = "a colossal"
-	return "[adjective] ass"
+	//Caustic Edit - Pull from Global rather than use a switch
+	var/adjective = find_key_by_value(GLOB.named_breast_sizes, breasts.breast_size)
+	return "[adjective] sized breasts"
+	//Caustic End

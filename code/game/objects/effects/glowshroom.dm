@@ -2,13 +2,14 @@
 
 /obj/structure/glowshroom
 	name = "kneestingers"
-	desc = ""
+	desc = "Deceptively-delicate stalks sprout from the ground in luminous-green repose. Some scholars claim they're not really a fungus, even if the Dendorites insist otherwise. Either way they hurt like hell."
 	anchored = TRUE
 	opacity = 0
 	density = FALSE
 	icon = 'icons/roguetown/misc/foliage.dmi'
 	icon_state = "glowshroom1" //replaced in New
 	layer = ABOVE_NORMAL_TURF_LAYER
+	plane = GAME_PLANE
 	max_integrity = 30
 	blade_dulling = DULLING_CUT
 	resistance_flags = FLAMMABLE
@@ -19,6 +20,9 @@
 	qdel(src)
 	new /obj/effect/hotspot(T)
 
+/obj/structure/glowshroom/CanAStarPass(ID, to_dir, caller)
+	return !can_zap(caller)
+
 /obj/structure/glowshroom/CanPass(atom/movable/mover, turf/target)
 	if(isliving(mover) && mover.z == z)
 //		var/throwdir = get_dir(src, mover)
@@ -28,8 +32,7 @@
 			return TRUE
 
 		if(L.electrocute_act(30, src))
-			L.update_sneak_invis(TRUE)
-			L.consider_ambush()
+			src.take_damage(15)
 			if(L.throwing)
 				L.throwing.finalize(FALSE)
 //			if(mover.loc != loc && L.stat == CONSCIOUS)
@@ -37,15 +40,40 @@
 			return FALSE
 	. = ..()
 
-/obj/structure/glowshroom/Crossed(AM as mob|obj)
-	if(isliving(AM))
-		var/mob/living/L = AM
-		if(L.z == z)
-			if(!HAS_TRAIT(L, TRAIT_KNEESTINGER_IMMUNITY))
-				if(L.electrocute_act(30, src))
-					L.emote("painscream")
-					L.consider_ambush()
+/obj/structure/glowshroom/proc/can_zap(atom/movable/movable_victim)
+	if(!isliving(movable_victim))
+		return FALSE
+	var/mob/living/victim = movable_victim
+	if(HAS_TRAIT(victim, TRAIT_KNEESTINGER_IMMUNITY)) //Dendor kneestinger immunity
+		return FALSE
+	if(victim.throwing)	//Exemption from floor hazard, you're thrown over it.
+		victim.throwing.finalize(FALSE)
+	//if(victim.is_floor_hazard_immune)	//Floating, flying, etc
+		//return FALSE
+	return TRUE
+
+/obj/structure/glowshroom/proc/do_zap(atom/movable/movable_victim)
+	if(!isliving(movable_victim))
+		return FALSE
+	var/mob/living/victim = movable_victim
+	if(victim.electrocute_act(30, src))
+		victim.emote("painscream")
+		victim.update_sneak_invis(TRUE)
+		if(victim.throwing)
+			victim.throwing.finalize(FALSE)
+		return TRUE
+	return FALSE
+
+/obj/structure/glowshroom/Bumped(atom/movable/bumper)
 	. = ..()
+	if(can_zap(bumper))
+		do_zap(bumper)
+
+/obj/structure/glowshroom/Crossed(atom/movable/crosser)
+	if(can_zap(crosser))
+		do_zap(crosser)
+	. = ..()
+
 
 /obj/structure/glowshroom/attackby(obj/item/W, mob/user, params)
 	if(isliving(user) && W && user.z == z)
@@ -53,7 +81,6 @@
 			var/mob/living/L = user
 			if(L.electrocute_act(30, src)) // The kneestingers will let you pass if you worship dendor, but they won't take your stupid ass hitting them.
 				L.emote("painscream")
-				L.consider_ambush()
 				if(L.throwing)
 					L.throwing.finalize(FALSE)
 				return FALSE
@@ -62,7 +89,7 @@
 
 /obj/structure/glowshroom/New(loc, obj/item/seeds/newseed, mutate_stats)
 	..()
-	set_light(1.5, 1.5, "#d4fcac")
+	set_light(1.5, 1.5, 1.5, l_color ="#d4fcac")
 
 	icon_state = "glowshroom[rand(1,3)]"
 
@@ -74,7 +101,7 @@
 	if(damage_type == BURN && damage_amount)
 		playsound(src.loc, 'sound/blank.ogg', 100, TRUE)
 
-/obj/structure/glowshroom/temperature_expose(datum/gas_mixture/air, exposed_temperature, exposed_volume)
+/obj/structure/glowshroom/temperature_expose(exposed_temperature, exposed_volume)
 	if(exposed_temperature > 300)
 		take_damage(5, BURN, 0, 0)
 

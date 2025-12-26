@@ -1,7 +1,15 @@
 /*ALL MOB-RELATED DEFINES THAT DON'T BELONG IN ANOTHER FILE GO HERE*/
 
+#define STATKEY_STR "strength"
+#define STATKEY_PER "perception"
+#define STATKEY_INT "intelligence"
+#define STATKEY_CON "constitution"
+#define STATKEY_WIL "willpower"
+#define STATKEY_SPD "speed"
+#define STATKEY_LCK "fortune"
+
 //This was previously in vampirelord.dm and mob/living/stats.dm, the person defined it twice because vampirelord came in below that stats file, so now both of them can get it here.
-#define MOBSTATS list("strength", "perception", "intelligence", "constitution", "endurance", "speed", "fortune")
+#define MOBSTATS list(STATKEY_STR, STATKEY_PER, STATKEY_INT, STATKEY_CON, STATKEY_WIL, STATKEY_SPD, STATKEY_LCK)
 
 //Misc mob defines
 
@@ -33,6 +41,9 @@
 #define BLOOD_VOLUME_OKAY 336
 #define BLOOD_VOLUME_BAD 224
 #define BLOOD_VOLUME_SURVIVE 122
+
+/// Blood pool regeneration in non-vampiric living mobs per SSmobs tick. 
+#define BLOODPOL_REGEN 2
 
 //Sizes of mobs, used by mob/living/var/mob_size
 #define MOB_SIZE_TINY 0
@@ -79,8 +90,6 @@
 #define DEFAULT_BODYPART_ICON_ROBOTIC 'icons/mob/augmentation/augments.dmi'
 
 #define MONKEY_BODYPART "monkey"
-#define ALIEN_BODYPART "alien"
-#define LARVA_BODYPART "larva"
 #define DEVIL_BODYPART "devil"
 /*see __DEFINES/inventory.dm for bodypart bitflag defines*/
 
@@ -180,6 +189,7 @@
 #define NUTRITION_LEVEL_STARVING 100
 
 #define HYDRATION_LEVEL_FULL 1000
+#define HYDRATION_LEVEL_HYDRATED 999
 #define HYDRATION_LEVEL_SMALLTHIRST 600
 #define HYDRATION_LEVEL_THIRSTY 350
 #define HYDRATION_LEVEL_DEHYDRATED 100
@@ -238,10 +248,14 @@
 #define AI_OFF		3
 #define AI_Z_OFF	4
 
-#define AI_COMBAT	5
-#define AI_RETREAT	6
-#define AI_HUNT		7
-#define AI_FLEE		8
+// these are exclusively for hostile humantype mobs
+#define NPC_AI_OFF		0
+#define NPC_AI_IDLE		1
+#define NPC_AI_COMBAT	2
+#define NPC_AI_RETREAT	3
+#define NPC_AI_HUNT		4
+#define NPC_AI_FLEE		5
+#define NPC_AI_SLEEP    6
 
 //determines if a mob can smash through it
 #define ENVIRONMENT_SMASH_NONE			0
@@ -308,7 +322,6 @@
 #define OFFSET_ARMOR "wear_armor"
 #define OFFSET_HANDS "hands"
 #define OFFSET_UNDIES "underwear"
-#define OFFSET_BUTT "butt"
 
 #define OFFSET_ID_F "wear_ringf"
 #define OFFSET_GLOVES_F "glovesf"
@@ -326,8 +339,11 @@
 #define OFFSET_ARMOR_F "wear_armorf"
 #define OFFSET_HANDS_F "handsf"
 #define OFFSET_UNDIES_F "underwearf"
+//Caustic Edit - Not sure why it only behaves if is in here, but here it is
+#define OFFSET_BUTT "butt"
 #define OFFSET_TAUR "taur"
 #define OFFSET_TAUR_F "taurf"
+//Caustic End
 
 //MINOR TWEAKS/MISC
 #define AGE_MIN				18	//youngest a character can be
@@ -381,8 +397,6 @@
 #define MIRROR_PRIDE  (1<<2)
 //Race swap wizard event
 #define RACE_SWAP     (1<<3)
-//ERT spawn template (avoid races that don't function without correct gear)
-#define ERT_SPAWN     (1<<4)
 //xenobio black crossbreed
 #define SLIME_EXTRACT (1<<5)
 //Wabbacjack staff projectiles
@@ -406,23 +420,39 @@
 #define SKIN_COLOR_OBSIDIAN "3b2e27"
 #define SKIN_COLOR_BRIMSTONE "271f1a"
 #define SKIN_COLOR_JADE "d6bea9"
+#define SKIN_COLOR_CERAGYRITE "4c4a4f"
 
 //DARK ELF SKIN TONES
 #define SKIN_COLOR_COMMORAH "9796a9"
 #define SKIN_COLOR_GLOOMHAVEN "897489"
 #define SKIN_COLOR_DARKPILA "938f9c"
-#define SKIN_COLOR_SSHANNTYNLAN "737373"
+#define SKIN_COLOR_SSHANNTYNLAN "746e6e"
 #define SKIN_COLOR_LLURTH_DREIR "6a616d"
 #define SKIN_COLOR_TAFRAVMA "5f5f70"
 #define SKIN_COLOR_YUETHINDRYNN "2f2f38"
+#define SKIN_COLOR_KOREDYNN "32356b"
+#define SKIN_COLOR_AISEEDRYNN "a3c1c9"
+#define SKIN_COLOR_GRENDUSKRA "8b8585"
+#define SKIN_COLOR_HUNSEK "6c6799"
+
+//GNOME UNIQUE SKIN TONES
+#define SKIN_COLOR_ASHEN "A79E96"
+#define SKIN_COLOR_UNDERDARK "7C8A97"
+#define SKIN_COLOR_BEACH "BE9D7B"
+#define SKIN_COLOR_PALM "795138"
 
 //WOOD ELF SKIN TONES
+#define SKIN_COLOR_GRENZEL_WOODS "fff0e9"
 #define SKIN_COLOR_DANDELION_CREEK "ffe0d1"
 #define SKIN_COLOR_ROSEVEIL "fcccb3"
 #define SKIN_COLOR_AZUREGROVE "edc6b3"
 #define SKIN_COLOR_ARBORSHOME "e2b9a3"
+#define SKIN_COLOR_ETRUSCAN_SWAMPS "d9a284"
 #define SKIN_COLOR_ALMONDVALLE "c9a893"
 #define SKIN_COLOR_WALNUT_WOODS "ba9882"
+#define SKIN_COLOR_SHALVINE_FORESTS "ac8369"
+#define SKIN_COLOR_LALVE_STEPPES "9c6f52"
+#define SKIN_COLOR_NALEDI_COAST "4e3729"
 #define SKIN_COLOR_TIMBERBORN "5d4c41"
 #define SKIN_COLOR_LOTUS_COAST "eae1C8"
 
@@ -439,6 +469,13 @@
 #define SKIN_COLOR_LALVESTINE "9c6f52"
 #define SKIN_COLOR_NALEDI "4e3729"
 #define SKIN_COLOR_KAZENGUN "dbcca9"
+#define SKIN_COLOR_NALEDI_LIGHT "5d4c41"
+
+//DULLAHAN SKIN TONES
+#define SKIN_COLOR_PALE_GRENZELHOFT "ebdad2"
+#define SKIN_COLOR_PALE_HAMMERHOLD "ffe0d1"
+#define SKIN_COLOR_PALE_EBON "54463d"
+#define SKIN_COLOR_PALE_KAZENGUN "c9a893"
 
 //AASIMAR SKIN TONES
 #define SKIN_COLOR_CULTOR "b5a4a4"
@@ -452,14 +489,28 @@
 #define SKIN_COLOR_OLYMPIA "c7f9cc"
 #define SKIN_COLOR_NECRAL "23130c"
 #define SKIN_COLOR_ABYSSAL "22577a"
+//Caustic edit
+#define SKIN_COLOR_RUINOUS "969b95"
+#define SKIN_COLOR_GODSHADOWED "18111f"
+#define SKIN_COLOR_REMEMBERANCE "a29282"
+#define SKIN_COLOR_CONTEMPLATIVE "686a83"
+//Caustic edit end
 
 //HALF ELF SKIN TONES
+#define SKIN_COLOR_GRENZEL_AVAR "fff0e9"
 #define SKIN_COLOR_TIMBER_GRONN "ffe0d1"
 #define SKIN_COLOR_GIZA_AZURE "fcccb3"
 #define SKIN_COLOR_WALNUT_STINE "edc6b3"
 #define SKIN_COLOR_ETRUSTCAN_DANDELION "e2b9a3"
 #define SKIN_COLOR_NALEDI_BORN "5a4a41"
 #define SKIN_COLOR_KAZE_LOTUS "E0D5B8"
+#define SKIN_COLOR_ETRUSCA_LIRVAS "d9a284"
+#define SKIN_COLOR_FREE_FOLK "c9a893"
+#define SKIN_COLOR_AVAR_BORNE "ba9882"
+#define SKIN_COLOR_SHALVINE_AZURE "ac8369"
+#define SKIN_COLOR_LALVE_NALEDI "9c6f52"
+#define SKIN_COLOR_NALEDI_OTAVA "4e3729"
+#define SKIN_COLOR_HAMMER_GRONN "5d4c41"
 
 //HALF ORK SKIN TONES
 #define SKIN_COLOR_BLOOD_AXE "A84C4F"
@@ -471,17 +522,45 @@
 #define SKIN_COLOR_MURKWALKER "716646"
 #define SKIN_COLOR_SHATTERHORN "D6D5E2"
 #define SKIN_COLOR_SPIRITCRUSHER "9D4D62"
+//Caustic edit 
+#define SKIN_COLOR_AVALANCHE "9fb0aa"
+#define SKIN_COLUR_GROVE_WARD "586442"
+//Caustic edit end
 
 //TIEFLING SKIN TONES
+#define SKIN_COLOR_NESSYSS "C62D4C"
+#define SKIN_COLOR_VHESLYN "991F1D"
+#define SKIN_COLOR_SARVYRA "80284a"
 #define SKIN_COLOR_JEHOEL "DBA960"
 #define SKIN_COLOR_URVIX "5B5F96"
-#define SKIN_COLOR_SARVYRA "8F3F50"
-#define SKIN_COLOR_VHESLYN "991F1D"
 #define SKIN_COLOR_ARLENNETH "9197C5"
-#define SKIN_COLOR_NESSYSS "C62D4C"
 #define SKIN_COLOR_HELIXIA "B289C6"
 #define SKIN_COLOR_NYMSEA "A8619E"
 #define SKIN_COLOR_CALVUS "E0CED8"
+#define SKIN_COLOR_VOIBION "53392f"
+#define SKIN_COLOR_CHYERNO "252e41"
+#define SKIN_COLOR_DREMA "D16A51"
+#define SKIN_COLOR_CHIR "549ab6"
+//Caustic edit
+#define SKIN_COLOR_SEEKER "6e5d50"
+#define SKIN_COLOR_SPLENDOROUS "59785d"
+#define SKIN_COLOR_WITNESS "2c2421"
+#define SKIN_COLOR_BLESSED "0e0f17"
+//Caustic edit end
+
+//GOBLIN SKIN TONES
+#define SKIN_COLOR_OCHRE "968127"
+#define SKIN_COLOR_MEADOW "909630"
+#define SKIN_COLOR_OLIVE "6b8a08"
+#define SKIN_COLOR_GREEN "4c6835"
+#define SKIN_COLOR_MOSS "43533e"
+#define SKIN_COLOR_TAIGA "373f29"
+#define SKIN_COLOR_BRONZE "725237"
+#define SKIN_COLOR_RED "87312a"
+#define SKIN_COLOR_TEAL "008080"
+#define SKIN_COLOR_FROST "6486b0"
+#define SKIN_COLOR_ABYSS "2a6986"
+#define SKIN_COLOR_HADAL "24353d"
 
 //ARGONIAN SKIN TONES
 #define SKIN_COLOR_AQUARELA "ffff88"
@@ -514,3 +593,16 @@
 #define WHITEBROWN_FUR "c69b83"
 #define DARKBROWN_FUR "3b2e27"
 #define BLACK_FUR	 "271f1a"
+
+// Pixel shifting
+#define PIXEL_SHIFT_MAXIMUM 16
+#define PIXEL_SHIFT_PASSABLE_THRESHOLD 8
+
+#define TYPING_INDICATOR_TIMEOUT 20 MINUTES
+
+// NPC Debugging
+#ifdef NPC_THINK_DEBUG
+#define NPC_THINK(message) visible_message(message, runechat_message = message)
+#else
+#define NPC_THINK(message)
+#endif

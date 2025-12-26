@@ -1,5 +1,5 @@
 /client/proc/edit_admin_permissions()
-	set category = "Admin"
+	set category = "-Admin-"
 	set name = "Permissions Panel"
 	set desc = "Edit admin permissions"
 	if(!check_rights(R_PERMISSIONS))
@@ -137,8 +137,6 @@
 	if(IsAdminAdvancedProcCall())
 		to_chat(usr, span_adminprefix("Admin Edit blocked: Advanced ProcCall detected."))
 		return
-	var/datum/asset/permissions_assets = get_asset_datum(/datum/asset/simple/permissions)
-	permissions_assets.send(src)
 	var/admin_key = href_list["key"]
 	var/admin_ckey = ckey(admin_key)
 	var/datum/admins/D = GLOB.admin_datums[admin_ckey]

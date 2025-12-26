@@ -66,22 +66,17 @@
 	switch(H.disgust)
 		if(0 to DISGUST_LEVEL_GROSS)
 			H.clear_alert("disgust")
-			SEND_SIGNAL(H, COMSIG_CLEAR_MOOD_EVENT, "disgust")
 		if(DISGUST_LEVEL_GROSS to DISGUST_LEVEL_VERYGROSS)
 			H.throw_alert("disgust", /atom/movable/screen/alert/gross)
-			SEND_SIGNAL(H, COMSIG_ADD_MOOD_EVENT, "disgust", /datum/mood_event/gross)
 		if(DISGUST_LEVEL_VERYGROSS to DISGUST_LEVEL_DISGUSTED)
 			H.throw_alert("disgust", /atom/movable/screen/alert/verygross)
-			SEND_SIGNAL(H, COMSIG_ADD_MOOD_EVENT, "disgust", /datum/mood_event/verygross)
 		if(DISGUST_LEVEL_DISGUSTED to INFINITY)
 			H.throw_alert("disgust", /atom/movable/screen/alert/disgusted)
-			SEND_SIGNAL(H, COMSIG_ADD_MOOD_EVENT, "disgust", /datum/mood_event/disgusted)
 
 /obj/item/organ/stomach/Remove(mob/living/carbon/M, special = 0)
 	var/mob/living/carbon/human/H = owner
 	if(istype(H))
 		H.clear_alert("disgust")
-		SEND_SIGNAL(H, COMSIG_CLEAR_MOOD_EVENT, "disgust")
 	..()
 
 /obj/item/organ/stomach/fly
@@ -93,6 +88,11 @@
 	name = "digestive crystal"
 	icon_state = "stomach-p"
 	desc = ""
+
+/obj/item/organ/stomach/construct
+	name = "construct soulseed"
+	icon_state = "stomach-con"
+	desc = "The seat of a construct's soul, where a stomach would go. Wisps of lux cycle about, impossible to grab."
 
 /obj/item/organ/stomach/ethereal
 	name = "biological battery"

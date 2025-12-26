@@ -3,6 +3,8 @@
 	var/list/datum/wound/simple_wounds
 	/// Simple embedded objects with no associated bodyparts
 	var/list/obj/item/simple_embedded_objects
+	/// Cached value of simple wound bleeding
+	var/simple_bleeding = 0
 
 /// Returns every embedded object we have, simple or not
 /mob/living/proc/get_embedded_objects()
@@ -34,6 +36,7 @@
 /mob/living/proc/get_wounds()
 	var/list/all_wounds = list()
 	if(length(simple_wounds))
+		listclearnulls(simple_wounds)
 		all_wounds += simple_wounds
 	return all_wounds
 
@@ -56,13 +59,23 @@
 		return wound
 
 /// Loops through our list of wounds healing them until we run out of healing or all wounds are healed
-/mob/living/proc/heal_wounds(heal_amount)
+/mob/living/proc/heal_wounds(heal_amount, list/specific_types)
 	var/healed_any = FALSE
 	if(has_status_effect(/datum/status_effect/buff/fortify))
 		heal_amount *= 1.5
 	for(var/datum/wound/wound as anything in get_wounds())
-		if(heal_amount <= 0)
+		if(isnull(wound))
 			continue
+		if(heal_amount <= 0)
+			break
+		if(length(specific_types))
+			var/found = FALSE
+			for(var/woundtype in specific_types)
+				if(istype(wound, woundtype))
+					found = TRUE
+					break
+			if(!found)
+				continue
 		var/amount_healed = wound.heal_wound(heal_amount)
 		if(amount_healed)
 			heal_amount -= amount_healed
@@ -110,7 +123,6 @@
 			dam += 10
 		if(istype(user.rmb_intent, /datum/rmb_intent/weak))
 			do_crit = FALSE
-	testing("simple_woundcritroll() dam [dam]")
 	var/added_wound
 	switch(bclass) //do stuff but only when we are a blade that adds wounds
 		if(BCLASS_SMASH, BCLASS_BLUNT)
@@ -184,6 +196,8 @@
 	for(var/wound_type in shuffle(attempted_wounds))
 		var/datum/wound/applied = simple_add_wound(wound_type, silent, crit_message)
 		if(applied)
+			if(user?.client)
+				record_round_statistic(STATS_CRITS_MADE)
 			return applied
 	return FALSE
 
@@ -218,5 +232,4 @@
 		qdel(embedder)
 	if(!has_embedded_objects())
 		clear_alert("embeddedobject")
-		SEND_SIGNAL(src, COMSIG_CLEAR_MOOD_EVENT, "embedded")
 	return TRUE

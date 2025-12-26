@@ -27,7 +27,7 @@
 
 /obj/structure/fluff/walldeco/wantedposter
 	name = "bandit notice"
-	desc = ""
+	desc = "A place for posters displaying the faces of roving bandits. Let's see if there are any this week..."
 	icon_state = "wanted1"
 	layer = BELOW_MOB_LAYER
 	pixel_y = 32
@@ -54,40 +54,47 @@
 			. += span_bold("There doesn't seem to be any reports of bandit activity.")
 
 /obj/structure/fluff/walldeco/innsign
-	name = "sign"
-	desc = ""
+	name = "skull sign"
+	desc = "A placard sign with a skull and crossbones."
 	icon_state = "bar"
 	layer = ABOVE_MOB_LAYER
 
 /obj/structure/fluff/walldeco/steward
-	name = "sign"
-	desc = ""
+	name = "steward's sign"
+	desc = "A sign depicting the office of the local steward."
 	icon_state = "steward"
 	layer = ABOVE_MOB_LAYER
 
 /obj/structure/fluff/walldeco/bsmith
-	name = "sign"
-	desc = ""
+	name = "smith's sign"
+	desc = "A sign depicting the workplace of the local smith."
 	icon = 'icons/roguetown/misc/tallstructure.dmi'
 	icon_state = "bsmith"
 	layer = ABOVE_MOB_LAYER
 
 /obj/structure/fluff/walldeco/goblet
-	name = "sign"
-	desc = ""
+	name = "goblet sign"
+	desc = "An inviting sign; this one indicates to the weary and sober that booze is within."
 	icon = 'icons/roguetown/misc/tallstructure.dmi'
 	icon_state = "goblet"
 	layer = ABOVE_MOB_LAYER
 
+/obj/structure/fluff/walldeco/flower
+	name = "flowery sign"
+	desc = "A seductive sign with a purple flower."
+	icon = 'icons/roguetown/misc/tallstructure.dmi'
+	icon_state = "flower"
+	layer = ABOVE_MOB_LAYER
+
 /obj/structure/fluff/walldeco/barbersign
-	name = "sign"
+	name = "barberpole"
 	desc = "The iconic swirl of the barber surgeon."
 	icon = 'icons/roguetown/misc/tallstructure.dmi'
 	icon_state = "barbersign"
 	layer = ABOVE_MOB_LAYER
 
 /obj/structure/fluff/walldeco/barbersignreverse
-	name = "sign"
+	name = "barberpole"
 	desc = "The iconic swirl of the barber surgeon."
 	icon = 'icons/roguetown/misc/tallstructure.dmi'
 	icon_state = "barbersignflip"
@@ -125,6 +132,15 @@
 	desc = ""
 	icon_state = "wallshield"
 
+/obj/structure/fluff/walldeco/sign/merchantsign
+	name = "merchant shop sign"
+	icon_state = "shopsign_merchant_right"
+	plane = -1
+	pixel_y = 16
+
+/obj/structure/fluff/walldeco/sign/merchantsign/left
+	icon_state = "shopsign_merchant_left"
+
 /obj/structure/fluff/walldeco/psybanner
 	name = "banner"
 	icon_state = "Psybanner-PURPLE"
@@ -137,6 +153,9 @@
 	desc = ""
 	icon_state = "walldec1"
 	mouse_opacity = 0
+
+/obj/structure/fluff/walldeco/stone/bronze
+	color = "#ff9c1a"
 
 /obj/structure/fluff/walldeco/church/line
 	name = ""
@@ -163,16 +182,19 @@
 
 /obj/structure/fluff/walldeco/bigpainting
 	name = "painting"
+	desc = "A large painting depicting a dim, forested bog."
 	icon = 'icons/roguetown/misc/64x64.dmi'
 	icon_state = "sherwoods"
 	pixel_y = 32
 	pixel_x = -16
 
 /obj/structure/fluff/walldeco/bigpainting/lake
+	desc = "A large painting depicting a lake under moonlight."
 	icon_state = "lake"
 
 /obj/structure/fluff/walldeco/mona
 	name = "painting"
+	desc = "A painting of an enigmatic woman smiling at the viewer. Looking closer, it looks half-finished."
 	icon = 'icons/roguetown/misc/tallstructure.dmi'
 	icon_state = "mona"
 	pixel_y = 32
@@ -185,7 +207,7 @@
 	icon = 'icons/roguetown/misc/tallstructure.dmi'
 	can_buckle = 1
 	buckle_lying = 0
-	breakoutextra = 10 MINUTES
+	breakoutextra = 5 MINUTES
 	buckleverb = "tie"
 
 /obj/structure/fluff/walldeco/chains/Initialize()
@@ -194,7 +216,7 @@
 
 /obj/structure/fluff/walldeco/customflag
 	name = "Azure Peak flag"
-	desc = ""
+	desc = "A banner flutters in the breeze in the proud heraldic colors of the Duchy."
 	icon_state = "wallflag"
 
 /obj/structure/fluff/walldeco/customflag/Initialize()
@@ -224,43 +246,53 @@
 /obj/structure/fluff/walldeco/rpainting
 	name = "painting"
 	icon_state = "painting_1"
+	desc = "A thought-evoking painting of a skull dimly illuminated by a candelabra."
 
 /obj/structure/fluff/walldeco/rpainting/forest
 	icon_state = "painting_2"
+	desc = "An unsettling painting of a blue-green, soupy forest, enshrouded in fog. The trees blend into each other."
 
 /obj/structure/fluff/walldeco/rpainting/crown
 	icon_state = "painting_3"
+	desc = "An introspective painting of a golden, spiked crown resting on top of some sort of book in dim light, accompanied by a red fruit."
 
 /obj/structure/fluff/walldeco/med
 	name = "diagram"
 	icon_state = "medposter"
+	desc = "A medical diagram depicting the interior structure of a humanoid hand."
 
 /obj/structure/fluff/walldeco/med2
 	name = "diagram"
 	icon_state = "medposter2"
+	desc = "A medical diagram depicting an interior section of a humanoid body."
 
 /obj/structure/fluff/walldeco/med3
 	name = "diagram"
 	icon_state = "medposter3"
+	desc = "A medical diagram depicting an interior section of a humanoid body."
 
 /obj/structure/fluff/walldeco/med4
 	name = "diagram"
 	icon_state = "medposter4"
+	desc = "A medical diagram depicting a humanoid heart."
 
 /obj/structure/fluff/walldeco/med5
 	name = "diagram"
 	icon_state = "medposter5"
+	desc = "A medical diagram depicting a humanoid heart."
 
 /obj/structure/fluff/walldeco/med6
 	name = "diagram"
 	icon_state = "medposter6"
+	desc = "A medical diagram depicting a humanoid head."
 
 /obj/structure/fluff/walldeco/alarm
-	name = ""
+	name = "le réveil murmure"
 	icon_state = "alarm"
+	desc = "This est un wall-mounted système d'alarme, designed dans les ."
 	pixel_y = 32
-	var/stop_yapping = 0
-	var/onoff = 0
+	var/next_yap = 0
+	var/onoff = 1 //Init on
 
 /obj/structure/fluff/walldeco/alarm/attack_hand(mob/living/user)
 
@@ -268,24 +300,31 @@
 
 	if(!(HAS_TRAIT(user, TRAIT_NOBLE)))
 		playsound(src, 'sound/misc/machineno.ogg', 100, TRUE, -1)
+		say("REMOVE THINE HAND FROM THE ALARM, CREATURE!")
 		return
 
-	else
-
-		playsound(src, 'sound/misc/bug.ogg', 100, FALSE, -1)
-		if(onoff == 0)
-			onoff = 1
-			icon_state = "face"
-		if(onoff == 1)
-			onoff = 0
-			icon_state = "alarm"
-		else
-			onoff = 0
-			icon_state = "alarm"
+	playsound(src, 'sound/misc/bug.ogg', 100, FALSE, -1)
+	if(onoff == 0)
+		onoff = 1
+		icon_state = "alarm"
+		say("Bonjour, le sentinelle est active.")
+		next_yap = 0 //They won't believe us unless we yap again
+		return
+	if(onoff == 1)
+		onoff = 0
+		icon_state = "face"
+		say("A moment's rest, merci! Bonne nuit.")
+		return
+	else //failsafe
+		onoff = 1
+		icon_state = "alarm"
 
 /obj/structure/fluff/walldeco/alarm/Crossed(mob/living/user)
 
-	if(stop_yapping == 1)
+	if(onoff == 0)
+		return
+
+	if(next_yap > world.time) //Yap cooldown
 		return
 
 	if(ishuman(user)) //are we a person?
@@ -297,37 +336,118 @@
 		if(!(HU in SStreasury.bank_accounts)) //first off- do we not have an account? we'll ALWAYS scream if that's the case
 			playsound(loc, 'sound/misc/gold_license.ogg', 100, TRUE, -1)
 			say("UNKNOWN PERSON IN SECURE AREA- ARRETZ-VOUZ!!")
-			stop_yapping = 1
-			sleep(60)
-			stop_yapping = 0
+			next_yap = world.time + 6 SECONDS
 			return
 
 		if(HAS_TRAIT(user, TRAIT_NOBLE))
-			stop_yapping = 1
-			icon_state = "face"
-			sleep(200)
-			stop_yapping = 0
-			icon_state = "alarm"
+			say("Salut, [user.real_name] de Sommet. Thirty-breths silence period active por votre grace.")
+			playsound(loc, 'sound/misc/gold_menu.ogg', 100, TRUE, -1)
+			next_yap = world.time + 30 SECONDS
 			return
 
 		if((HU in SStreasury.bank_accounts)) //do we not have an account?
 			playsound(loc, 'sound/misc/gold_menu.ogg', 100, TRUE, -1)
-			say("Layman [user.real_name] logged entering secure area.")
-			stop_yapping = 1
-			sleep(60)
-			stop_yapping = 0
+			say("Yeoman [user.real_name] logged entering zone securisee.")
 			return
 
 		else //?????
 			playsound(loc, 'sound/misc/gold_license.ogg', 100, TRUE, -1)
 			say("UNAUTHORIZED PERSON IN SECURE AREA- ARRETZ-VOUZ!!")
-			stop_yapping = 1
-			sleep(60)
-			stop_yapping = 0
+			next_yap = world.time + 6 SECONDS
 
 	else
 		playsound(loc, 'sound/misc/gold_license.ogg', 100, TRUE, -1)
 		say("UNKNOWN CREATURE IN SECURE AREA- ARRETZ-VOUS!!")
-		stop_yapping = 1
-		sleep(60)
-		stop_yapping = 0
+		next_yap = world.time + 6 SECONDS
+
+/obj/structure/fluff/walldeco/vinez // overlay vines for more flexibile mapping
+	icon_state = "vinez"
+
+/obj/structure/fluff/walldeco/vinez/l
+	pixel_x = -32
+
+/obj/structure/fluff/walldeco/vinez/r
+	pixel_x = 32
+
+/obj/structure/fluff/walldeco/vinez/offset
+	icon_state = "vinez"
+	pixel_y = 32
+
+/obj/structure/fluff/walldeco/vinez/blue
+	icon_state = "vinez_blue"
+
+/obj/structure/fluff/walldeco/vinez/red
+	icon_state = "vinez_red"
+
+/obj/structure/fluff/walldeco/bath // suggestive stonework
+	icon_state = "bath1"
+	pixel_x = -32
+	alpha = 210
+
+/obj/structure/fluff/walldeco/bath/two
+	icon_state = "bath2"
+	pixel_x = -29
+
+/obj/structure/fluff/walldeco/bath/three
+	icon_state = "bath3"
+	pixel_x = -29
+
+/obj/structure/fluff/walldeco/bath/four
+	icon_state = "bath4"
+	pixel_y = 32
+	pixel_x = 0
+
+/obj/structure/fluff/walldeco/bath/five
+	icon_state = "bath5"
+	pixel_x = -29
+
+/obj/structure/fluff/walldeco/bath/six
+	icon_state = "bath6"
+	pixel_x = -29
+
+/obj/structure/fluff/walldeco/bath/seven
+	icon_state = "bath7"
+	pixel_x = 32
+
+/obj/structure/fluff/walldeco/bath/gents
+	icon_state = "gents"
+	pixel_x = 0
+	pixel_y = 32
+
+/obj/structure/fluff/walldeco/bath/ladies
+	icon_state = "ladies"
+	pixel_x = 0
+	pixel_y = 32
+
+/obj/structure/fluff/walldeco/bath/wallrope
+	icon_state = "wallrope"
+	layer = WALL_OBJ_LAYER+0.1
+	pixel_x = 0
+	pixel_y = 0
+	color = "#d66262"
+
+/obj/structure/fluff/walldeco/sign/saiga
+	name = "The Drunken Saiga"
+	icon_state = "shopsign_inn_saiga_right"
+	plane = -1
+	pixel_x = 3
+	pixel_y = 16
+
+/obj/structure/fluff/walldeco/sign/saiga/left
+	icon_state = "shopsign_inn_saiga_left"
+
+/obj/structure/fluff/walldeco/sign/trophy
+	name = "saiga trophy"
+	icon_state = "saiga_trophy"
+	pixel_y = 32
+
+/obj/effect/decal/shadow_floor
+	name = ""
+	desc = ""
+	icon = 'icons/roguetown/misc/decoration.dmi'
+	icon_state = "shadow_floor"
+	mouse_opacity = 0
+
+/obj/effect/decal/shadow_floor/corner
+	icon_state = "shad_floorcorn"
+

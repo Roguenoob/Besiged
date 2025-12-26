@@ -47,7 +47,7 @@
 							// Store the current time for the player
 							GLOB.job_respawn_delays[G.ckey] = world.time + target_job.same_job_respawn_delay
 
-				G.returntolobby()
+				G.returntolobby(0)
 
 /atom/movable/screen/ghost/reenter_corpse
 	name = "Reenter corpse"
@@ -55,7 +55,7 @@
 
 /atom/movable/screen/ghost/reenter_corpse/Click()
 	var/mob/dead/observer/G = usr
-	G.client?.admin_ghost()
+	G.reenter_corpse()
 
 /atom/movable/screen/ghost/teleport
 	name = "Teleport"
@@ -67,7 +67,7 @@
 
 /atom/movable/screen/ghost/moveup
 	name = "move up"
-	icon_state = "pai"
+	icon_state = "up"
 
 /atom/movable/screen/ghost/moveup/Click()
 	var/mob/dead/observer/G = usr
@@ -75,7 +75,7 @@
 
 /atom/movable/screen/ghost/movedown
 	name = "move down"
-	icon_state = "pai"
+	icon_state = "down"
 
 /atom/movable/screen/ghost/bigassuselessbutton
 	name = "AFTER LIFE"
@@ -96,9 +96,19 @@
 	using.hud = src
 	static_inventory += using
 
-	using = new /atom/movable/screen/grain
-	using.hud = src
+	using = new /atom/movable/screen/ghost/moveup(null, src)
+	using.screen_loc = ui_ghost_moveup
 	static_inventory += using
+
+	using = new /atom/movable/screen/ghost/movedown(null, src)
+	using.screen_loc = ui_ghost_movedown
+	static_inventory += using
+
+	grain = new /atom/movable/screen/grain
+	grain.hud = src
+	static_inventory += grain
+	if(owner.client?.prefs?.grain == TRUE)
+		grain.alpha = 55
 
 	scannies = new /atom/movable/screen/scannies
 	scannies.hud = src
@@ -161,9 +171,11 @@
 	using.hud = src
 	static_inventory += using
 
-	using = new /atom/movable/screen/grain
-	using.hud = src
-	static_inventory += using
+	grain = new /atom/movable/screen/grain
+	grain.hud = src
+	static_inventory += grain
+	if(owner.client?.prefs?.grain == TRUE)
+		grain.alpha = 55
 
 	scannies = new /atom/movable/screen/scannies
 	scannies.hud = src
@@ -195,9 +207,11 @@
 	using.hud = src
 	static_inventory += using
 
-	using = new /atom/movable/screen/grain
-	using.hud = src
-	static_inventory += using
+	grain = new /atom/movable/screen/grain
+	grain.hud = src
+	static_inventory += grain
+	if(owner.client?.prefs?.grain == TRUE)
+		grain.alpha = 55
 
 	scannies = new /atom/movable/screen/scannies
 	scannies.hud = src

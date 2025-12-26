@@ -26,7 +26,10 @@
 	attack_same = 0
 	environment_smash = ENVIRONMENT_SMASH_NONE
 	blood_volume = BLOOD_VOLUME_NORMAL
-	food_type = list(/obj/item/reagent_containers/food/snacks/grown)
+	food_type = list(
+		/obj/item/reagent_containers/food/snacks/grown
+		)
+	var/food_max = 50
 	var/obj/item/udder/udder = null
 	footstep_type = FOOTSTEP_MOB_SHOE
 	var/milkies = FALSE
@@ -36,10 +39,23 @@
 	minimum_distance = 10
 	dodge_sound = 'sound/combat/dodge.ogg'
 	dodge_prob = 0
+
 	var/deaggroprob = 10
 	var/eat_forever
+	
 	candodge = TRUE
 
+	var/summon_tier = 0 // Tier of summoning
+	var/summon_primer = null // The message they get when summoned
+
+	//If the creature is doing something they should STOP MOVING.
+	var/can_act = TRUE
+
+/mob/living/simple_animal/hostile/retaliate/rogue/Move()
+	//If you cant act and dont have a player stop moving.
+	if(!can_act && !client)
+		return FALSE
+	..()
 
 /mob/living/simple_animal/hostile/retaliate/rogue/apply_damage(damage = 0,damagetype = BRUTE, def_zone = null, blocked = FALSE, forced = FALSE)
 	..()
@@ -103,7 +119,13 @@
 			return TRUE
 	return FALSE
 
-/mob/living/simple_animal/hostile/retaliate/rogue/proc/rend_bodies()
+/mob/living/simple_animal/hostile/retaliate/rogue/AttackingTarget()
+	//If you can't act and dont have a player stop moving.
+	if(!can_act && !client)
+		return FALSE
+	return ..()
+
+/mob/living/simple_animal/hostile/retaliate/rogue/proc/eat_bodies()
 	var/mob/living/L
 //	var/list/around = view(aggro_vision_range, src)
 	var/list/around = hearers(1, src)
@@ -111,7 +133,7 @@
 	if(stat)
 		return
 	for(var/mob/living/eattarg in around)
-		if(eattarg.stat == CONSCIOUS)
+		if(eattarg.stat != CONSCIOUS)
 			foundfood += eattarg
 			L = eattarg
 			if(src.Adjacent(L))
@@ -121,7 +143,7 @@
 						playsound(src, pick(attack_sound), 100, TRUE, -1)
 					face_atom(C)
 					src.visible_message(span_danger("[src] starts to rip apart [C]!"))
-					if(do_mob(src,100, target = L))
+					if(do_after(src,100, target = L))
 						var/obj/item/bodypart/limb
 						var/list/limb_list = list(BODY_ZONE_L_ARM, BODY_ZONE_R_ARM, BODY_ZONE_L_LEG, BODY_ZONE_R_LEG)
 						for(var/zone in limb_list)
@@ -136,14 +158,14 @@
 						limb = C.get_bodypart(BODY_ZONE_CHEST)
 						if(limb)
 							if(!limb.dismember())
-								C.death()
+								C.gib()
 							return TRUE
 				else
 					if(attack_sound)
 						playsound(src, pick(attack_sound), 100, TRUE, -1)
 					src.visible_message(span_danger("[src] starts to rip apart [L]!"))
 					if(do_after(src,100, target = L))
-						L.death()
+						L.gib()
 						return TRUE
 	for(var/mob/living/eattarg in foundfood)
 		var/turf/T = get_turf(eattarg)
@@ -184,7 +206,7 @@
 	. = ..()
 	if(.)
 		if(enemies.len)
-			if(prob(5))
+			if(prob(4))
 				emote("cidle")
 			if(prob(deaggroprob))
 				if(mob_timers["aggro_time"])
@@ -195,14 +217,9 @@
 				else
 					mob_timers["aggro_time"] = world.time
 		else
-			if(prob(8))
+			if(prob(2)) //Plays an idle sound
 				emote("idle")
-//			for(var/direction in shuffle(list(1,2,4,8,5,6,9,10)))
-//				var/step = get_step(src, direction)
-//				if(step)
-//					var/obj/item/reagent_containers/food/I = locate(/obj/item/reagent_containers/food) in step
-//					if(is_type_in_list(I, food_type))
-//						Move(step, get_dir(src, step))
+
 			if(adult_growth)
 				growth_prog += 0.5
 				if(growth_prog >= 100)
@@ -257,9 +274,9 @@
 		addtimer(CALLBACK(src, PROC_REF(return_action)), 3 SECONDS)
 
 /mob/living/simple_animal/hostile/retaliate/rogue/food_tempted(obj/item/O, mob/user)
-	testing("tempted")
+
 	if(is_type_in_list(O, food_type) && !stop_automated_movement)
-		testing("infoodtype")
+
 		stop_automated_movement = TRUE
 		Goto(user,move_to_delay)
 		addtimer(CALLBACK(src, PROC_REF(return_action)), 3 SECONDS)

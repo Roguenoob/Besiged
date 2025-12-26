@@ -32,6 +32,34 @@
 
 /atom/proc/handle_mouseover(location, control, params)
 	var/mob/p = usr
+	if(QDELETED(src))
+		return FALSE
+	if(!p)
+		return FALSE
+	if(p.client)
+		var/atom/AT = get_turf(p.client.eye)
+		if(!p.client.mouseovertext)
+			p.client.genmouseobj()
+			return FALSE
+		if(!p.x || !p.y)
+			return FALSE
+		var/offset_x = 8 - (AT.x - x) - (p.client.pixel_x / world.icon_size)
+		var/offset_y = 8 - (AT.y - y) - (p.client.pixel_y / world.icon_size)
+		var/list/PM = list("screen-loc" = "[offset_x]:0,[offset_y]:0")
+		if(!isturf(loc))
+			PM = params2list(params)
+			p.client.mouseovertext.movethis(PM, TRUE)
+		else
+			p.client.mouseovertext.movethis(PM)
+		p.client.mouseovertext.maptext = {"<span style='font-size:8pt;font-family:"Pterra";color:#ddd7df;text-shadow:0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;' class='center maptext '>[name]"}
+		p.client.screen |= p.client.mouseovertext
+	return TRUE
+
+/obj/structure/soul/handle_mouseover(location, control, params)
+	return TRUE
+
+/obj/structure/handle_mouseover(location, control, params)
+	var/mob/p = usr
 	if(p.client)
 		if(!p.client.mouseovertext)
 			p.client.genmouseobj()
@@ -48,9 +76,19 @@
 			p.client.mouseovertext.movethis(PM, TRUE)
 		else
 			p.client.mouseovertext.movethis(PM)
-		p.client.mouseovertext.maptext = {"<span style='font-size:8pt;font-family:"Pterra";color:#ddd7df;text-shadow:0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;' class='center maptext '>[name]"}
-		p.client.screen |= p.client.mouseovertext
-	return TRUE
+		//if((((rotation_structure && rotation_network) || istype(src, /obj/structure/water_pipe)) || accepts_water_input) && HAS_TRAIT(p, TRAIT_ENGINEERING_GOGGLES))	
+		if(((rotation_structure && rotation_network)) && (HAS_TRAIT(p, TRAIT_ENGINEERING_GOGGLES))) //changing this to just look at rotations and removing the trait, users just need over 3 engineering.
+			var/rotation_chat = return_rotation_chat(p.client.mouseovertext)
+			p.client.mouseovertext.maptext_width = 96
+			p.client.mouseovertext.maptext = {"[rotation_chat]
+			<span style='font-size:8pt;font-family:"Pterra";color:#ddd7df;text-shadow:0 0 1px #fff, 0 0 2px #fff, 0 0 30px #e60073, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;' class='center maptext '>[name]"}
+		else
+			p.client.mouseovertext.maptext_height = 32
+			p.client.mouseovertext.maptext_width = 96
+			p.client.mouseovertext.maptext = {"<span style='font-size:8pt;font-family:"Pterra";color:#ddd7df;text-shadow:0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;' class='center maptext '>[name]"}
+
+/atom/proc/return_rotation_chat(atom/movable/screen/movable/mouseover/mouseover)
+	return
 
 /atom/proc/handle_mouseexit(params)
 	var/mob/p = usr
@@ -84,16 +122,17 @@
 
 /turf/handle_mouseover(location,control,params)
 	var/mob/p = usr
+	if(QDELETED(src))
+		return FALSE
 	if(p.client)
+		var/atom/AT = get_turf(p.client.eye)
 		if(!p.client.mouseovertext)
 			p.client.genmouseobj()
 			return FALSE
-		if(p.client.pixel_x || p.client.pixel_y)
-			return FALSE
 		if(!p.x || !p.y)
 			return FALSE
-		var/offset_x = 8 - (p.x - x)
-		var/offset_y = 8 - (p.y - y)
+		var/offset_x = 8 - (AT.x - x) - (p.client.pixel_x / world.icon_size)
+		var/offset_y = 8 - (AT.y - y) - (p.client.pixel_y / world.icon_size)
 		if(offset_x < 1 || offset_x > 15 || offset_y < 1 || offset_x > 15)
 			return FALSE
 		var/list/PM = list("screen-loc" = "[offset_x]:0,[offset_y]:0")
@@ -107,16 +146,17 @@
 
 /turf/open/handle_mouseover(location, control, params)
 	var/mob/p = usr
+	if(QDELETED(src))
+		return FALSE
 	if(p.client)
+		var/atom/AT = get_turf(p.client.eye)
 		if(!p.client.mouseovertext)
 			p.client.genmouseobj()
 			return FALSE
-		if(p.client.pixel_x || p.client.pixel_y)
-			return FALSE
 		if(!p.x || !p.y)
 			return FALSE
-		var/offset_x = 8 - (p.x - x)
-		var/offset_y = 8 - (p.y - y)
+		var/offset_x = 8 - (AT.x - x) - (p.client.pixel_x / world.icon_size)
+		var/offset_y = 8 - (AT.y - y) - (p.client.pixel_y / world.icon_size)
 		var/list/PM = list("screen-loc" = "[offset_x]:0,[offset_y]:0")
 		p.client.mouseovertext.maptext = {"<span style='font-size:8pt;font-family:"Pterra";color:#6b3f3f;text-shadow:0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;' class='center maptext '>[name]"}
 		p.client.mouseovertext.movethis(PM)
@@ -125,7 +165,10 @@
 
 /mob/handle_mouseover(location,control,params)
 	var/mob/p = usr
+	if(QDELETED(src))
+		return FALSE
 	if(p.client)
+		var/atom/AT = get_turf(p.client.eye)
 		if(!p.client.mouseovertext)
 			p.client.genmouseobj()
 			return FALSE
@@ -133,20 +176,18 @@
 			var/mob/living/L = p
 			if(!L.can_see_cone(src))
 				return FALSE
-		if(p.client.pixel_x || p.client.pixel_y)
-			return FALSE
 		if(alpha == 0)
 			return FALSE
 		if(!p.x || !p.y)
 			return FALSE
-		var/offset_x = 8 - (p.x - x)
-		var/offset_y = 8 - (p.y - y)
+		var/offset_x = 8 - (AT.x - x) - (p.client.pixel_x / world.icon_size)
+		var/offset_y = 8 - (AT.y - y) - (p.client.pixel_y / world.icon_size)
 		var/list/PM = list("screen-loc" = "[offset_x]:0,[offset_y]:0")
 		var/mousecolor = "#c1aaaa"
 		if(ishuman(src))
 			var/mob/living/carbon/human/H = src
 			if(H.voice_color)
-				if(H.name != "Unknown")
+				if(H.name == H.real_name)
 					mousecolor = "#[H.voice_color]"
 		p.client.mouseovertext.maptext = {"<span style='font-size:8pt;font-family:"Pterra";color:[mousecolor];text-shadow:0 0 10px #fff, 0 0 20px #fff, 0 0 30px #e60073, 0 0 40px #e60073, 0 0 50px #e60073, 0 0 60px #e60073, 0 0 70px #e60073;' class='center maptext '>[name]"}
 		p.client.mouseovertext.movethis(PM)
@@ -161,7 +202,8 @@
 	icon = 'icons/mouseover.dmi'
 	icon_state = "mouseover"
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	layer = ABOVE_HUD_LAYER+1
+	layer = ABOVE_HUD_LAYER+3
+	plane = HUD_PLANE + 1
 
 /atom/movable/screen/movable/mouseover/maptext
 	name = ""
@@ -177,7 +219,6 @@
 
 	//No screen-loc information? abort.
 	if(!PM || !PM["screen-loc"])
-//		testing("Can't find parameters for that mouseover.")
 		return
 
 	//Split screen-loc up into X+Pixel_X and Y+Pixel_Y
@@ -201,6 +242,11 @@
 		maptext_y = 28
 		maptext_x = -32
 
+	if(text2num(screen_loc_X[1]) <= -3)
+		screen_loc_X[1] = -3
+	if(text2num(screen_loc_Y[1]) <= 0)
+		screen_loc_Y[1] = 1
+
 	screen_loc = "[screen_loc_X[1]]:[pix_X],[screen_loc_Y[1]]:[pix_Y]"
 
 	moved = screen_loc
@@ -208,5 +254,5 @@
 /client/proc/genmouseobj()
 	mouseovertext = new /atom/movable/screen/movable/mouseover/maptext
 	mouseoverbox = new /atom/movable/screen/movable/mouseover
-	var/datum/asset/stuff = get_asset_datum(/datum/asset/simple/roguefonts)
-	stuff.send(src)
+	//var/datum/asset/stuff = get_asset_datum(/datum/asset/simple/roguefonts)
+	//stuff.send(src)

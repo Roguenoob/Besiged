@@ -1,4 +1,3 @@
-
 /mob/living/carbon/human/proc/choose_name_popup(input)
 	if(QDELETED(src))
 		return
@@ -11,7 +10,7 @@
 		mob_timers["mirrortime"] = world.time
 		var/begin_time = world.time
 		var/new_name = input(src, "What should your [input] name be?", "MASK")
-		if(world.time > begin_time + 60 SECONDS)
+		if(world.time > begin_time + 180 SECONDS)
 			to_chat(src, "<font color='red'>You waited too long.</font>")
 			return
 		new_name = reject_bad_name(new_name)
@@ -26,11 +25,14 @@
 			return
 	GLOB.chosen_names -= old_name
 	GLOB.chosen_names += real_name
-	if(mind.special_role == "Vampire Lord")
+	if(mind.special_role == "Methuselah")
 		if(gender == FEMALE)
 			real_name = "Lady [real_name]"
 		if(gender == MALE)
 			real_name = "Lord [real_name]"
+	if(mind.special_role == "Lich")
+		mind.current.faction += "[real_name]_faction"
+
 	mind.name = real_name
 	var/fakekey = ckey
 	if(ckey in GLOB.anonymize)

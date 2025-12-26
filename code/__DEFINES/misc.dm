@@ -11,8 +11,13 @@
 #define TEXT_EAST			"[EAST]"
 #define TEXT_WEST			"[WEST]"
 
+///Returns true if the dir is diagonal, false otherwise
+#define ISDIAGONALDIR(d) (d&(d-1))
 
 //Human Overlays Indexes/////////
+#define JOYBRINGER_LAYER		55
+#define BLACK_ROT_LAYER			54
+#define POTENCE_LAYER			53
 #define MUTATIONS_LAYER			52		//mutations. Tk headglows, cold resistance glow, etc
 #define CLOAK_BEHIND_LAYER		51
 #define HANDS_BEHIND_LAYER		50
@@ -25,47 +30,47 @@
 #define BODY_LAYER				43		//underwear, undershirts, socks, eyes, lips(makeup)
 #define FRONT_MUTATIONS_LAYER	42		//mutations that should appear above body, body_adj and bodyparts layer (e.g. laser eyes)
 #define DAMAGE_LAYER			41		//damage indicators (cuts and burns)
-#define PANTS_LAYER				40
-#define SHOES_LAYER				39
-#define LEG_PART_LAYER			38
-#define LEG_DAMAGE_LAYER		37
-#define LEGSLEEVE_LAYER			36
-#define SHOESLEEVE_LAYER		35
-#define SHIRT_LAYER				34
-#define WRISTS_LAYER			33
-#define ARMOR_LAYER				32
-#define TABARD_LAYER			31
-#define BELT_LAYER				30		//only when looking south
-#define UNDER_CLOAK_LAYER		29
-#define HANDS_PART_LAYER		28
-#define GLOVES_LAYER			27
-#define ARM_DAMAGE_LAYER		26
-#define SHIRTSLEEVE_LAYER		25
-#define GLOVESLEEVE_LAYER		24
+#define LEG_PART_LAYER			40
+#define LEGWEAR_LAYER			39
+#define PANTS_LAYER				38
+#define SHOES_LAYER				37
+#define LEG_DAMAGE_LAYER		36
+#define LEGSLEEVE_LAYER			35
+#define SHOESLEEVE_LAYER		34
+#define SHIRT_LAYER				33
+#define WRISTS_LAYER			32
+#define ARMOR_LAYER				31
+#define TABARD_LAYER			30
+#define BELT_LAYER				29		//only when looking south
+#define UNDER_CLOAK_LAYER		28
+#define HANDS_PART_LAYER		27
+#define GLOVES_LAYER			26
+#define ARM_DAMAGE_LAYER		25
+#define SHIRTSLEEVE_LAYER		24
 #define WRISTSLEEVE_LAYER		23
 #define ARMORSLEEVE_LAYER		22
-#define RING_LAYER				21
-#define GLASSES_LAYER			20
-#define NECK_LAYER				19
-#define CLOAK_LAYER				18		//only when looking north or west/east
-#define HAIR_LAYER				17		//TODO: make part of head layer?
-#define MASK_LAYER				16
-#define HAIREXTRA_LAYER			15
-#define MOUTH_LAYER				14
-#define HEAD_LAYER				13
-#define BACK_LAYER				12		//only when looking north
-#define HANDS_LAYER				11
-#define HANDCUFF_LAYER			10
-#define LEGCUFF_LAYER			9
-#define BODY_FRONT_LAYER		8		//I hate genital code and .dmi bullshittery. 5 layers to accomodate for such.
-#define BODY_FRONT_SECOND_LAYER	7
-#define BODY_FRONT_THIRD_LAYER	6
-#define BODY_FRONT_FOURTH_LAYER	5
-#define BODY_FRONT_FIFTH_LAYER	4
-#define HALO_LAYER				3		//blood cult ascended halo, because there's currently no better solution for adding/removing
+#define GLOVESLEEVE_LAYER		21
+#define RING_LAYER				20
+#define GLASSES_LAYER			19
+#define NECK_LAYER				18
+#define CLOAK_LAYER				17		//only when looking north or west/east
+#define HOOD_LAYER				16
+#define HAIR_LAYER				15		//TODO: make part of head layer?
+#define MASK_LAYER				14
+#define HAIREXTRA_LAYER			13
+#define MOUTH_LAYER				12
+#define HEAD_LAYER				11
+#define BACK_LAYER				10		//only when looking north
+#define HANDS_LAYER				9
+#define HANDCUFF_LAYER			8
+#define LEGCUFF_LAYER			7
+#define BODY_FRONT_LAYER		6
+#define BODY_FRONT_FRONT_LAYER	5
+#define HALO_LAYER				4		//blood cult ascended halo, because there's currently no better solution for adding/removing
+#define SUNDER_LAYER			3
 #define FIRE_LAYER				2		//If you're on fire
 #define TURF_LAYER				1		//If you're on fire
-#define TOTAL_LAYERS			51		//KEEP THIS UP-TO-DATE OR SHIT WILL BREAK ;_;
+#define TOTAL_LAYERS			55		//KEEP THIS UP-TO-DATE OR SHIT WILL BREAK ;_;
 
 #define BACK_CLOAK_SOUTH_LAYER		(BODY_BEHIND_LAYER+1)
 
@@ -77,7 +82,12 @@
 
 //AND -1 MEANS "ABOVE", OK?, OK!?!
 #define ABOVE_SHOES_LAYER			(SHOES_LAYER-1)
-#define ABOVE_BODY_FRONT_LAYER		(BODY_FRONT_LAYER-1)
+//Caustic Cove edit, just puts this on top of all the other new layers. Also defining in seperate file doesn't work, likely because it doesn't see the above in a seperate file.
+#define BODY_FRONTER_LAYER			(BODY_FRONT_LAYER-1) // Makes mini-layers on your layers without having to add any more actual layers! Used for proper organ layers
+#define BODY_FRONTEST_LAYER			(BODY_FRONT_LAYER-2)
+#define ABOVE_BODY_FRONT_LAYER		(BODY_FRONT_LAYER-3)
+
+//Caustic Cove end
 
 //Security levels
 #define SEC_LEVEL_GREEN	0
@@ -308,12 +318,6 @@ GLOBAL_LIST_INIT(pda_styles, sortList(list(MONO, VT, ORBITRON, SHARE)))
 #define SHELTER_DEPLOY_BAD_AREA "bad area"
 #define SHELTER_DEPLOY_ANCHORED_OBJECTS "anchored objects"
 
-//debug printing macros
-#define debug_world(msg) if (GLOB.Debug2) to_chat(world, "DEBUG: [msg]")
-#define debug_usr(msg) if (GLOB.Debug2&&usr) to_chat(usr, "DEBUG: [msg]")
-#define debug_admins(msg) if (GLOB.Debug2) to_chat(GLOB.admins, "DEBUG: [msg]")
-#define debug_world_log(msg) if (GLOB.Debug2) log_world("DEBUG: [msg]")
-
 #define INCREMENT_TALLY(L, stat) if(L[stat]){L[stat]++}else{L[stat] = 1}
 
 //TODO Move to a pref
@@ -438,11 +442,9 @@ GLOBAL_LIST_INIT(pda_styles, sortList(list(MONO, VT, ORBITRON, SHARE)))
 #define TELEPORT_CHANNEL_CULT "cult"			//Cult teleportation, does whatever it wants (unless there's holiness)
 #define TELEPORT_CHANNEL_FREE "free"			//Anything else
 
-//Run the world with this parameter to enable a single run though of the game setup and tear down process with unit tests in between
-#define TEST_RUN_PARAMETER "test-run"
 //Force the log directory to be something specific in the data/logs folder
 #define OVERRIDE_LOG_DIRECTORY_PARAMETER "log-directory"
-//Prevent the master controller from starting automatically, overrides TEST_RUN_PARAMETER
+//Prevent the master controller from starting automatically
 #define NO_INIT_PARAMETER "no-init"
 //Force the config directory to be something other than "config"
 #define OVERRIDE_CONFIG_DIRECTORY_PARAMETER "config-directory"
@@ -453,11 +455,9 @@ GLOBAL_LIST_INIT(pda_styles, sortList(list(MONO, VT, ORBITRON, SHARE)))
 #define PDAIMG(what) {"<span class="pda16x16 [#what]"></span>"}
 
 //Filters
-#define AMBIENT_OCCLUSION filter(type="drop_shadow", x=0, y=-0, size=1, offset = 0, color="#04080FAA")
+#define AMBIENT_OCCLUSION filter(type="drop_shadow", x=0, y=-2, size=3, offset=1, color="#04080f96")
+#define AMBIENT_OCCLUSION_WALLS filter(type="drop_shadow", x=0, y=-2, size=8, offset=4, color="#000000ff")
 #define GAUSSIAN_BLUR(filter_size) filter(type="blur", size=filter_size)
-
-#define STANDARD_GRAVITY 1 //Anything above this is high gravity, anything below no grav
-#define GRAVITY_DAMAGE_TRESHOLD 3 //Starting with this value gravity will start to damage mobs
 
 #define CAMERA_NO_GHOSTS 0
 #define CAMERA_SEE_GHOSTS_BASIC 1
@@ -497,3 +497,16 @@ GLOBAL_LIST_INIT(pda_styles, sortList(list(MONO, VT, ORBITRON, SHARE)))
 #define FALL_INTERCEPTED		(1<<0) //Stops the movable from falling further and crashing on the ground
 #define FALL_NO_MESSAGE			(1<<1) //Used to suppress the "[A] falls through [old_turf]" messages where it'd make little sense at all, like going downstairs.
 #define FALL_STOP_INTERCEPTING	(1<<2) //Used in situations where halting the whole "intercept" loop would be better, like supermatter dusting (and thus deleting) the atom.
+
+// A verb that does nothing for clearing keybinds
+#define NONSENSICAL_VERB "NONSENSICAL_VERB_THAT_DOES_NOTHING"
+
+// Emote visibility / audibility flag
+#define EMOTE_VISIBLE 1
+#define EMOTE_AUDIBLE 2
+
+#define GARRISON_SCOM_COLOR "#FF4242"
+
+// Zombie infection defines
+#define ZOMBIE_INFECTION_PROBABILITY 20 	/// Zombie infection probability for bites on a wound
+#define ZOMBIE_INFECTION_TIME 2 MINUTES	/// Time taken until zombie infection kicks in (unit wakes up as a zombie)

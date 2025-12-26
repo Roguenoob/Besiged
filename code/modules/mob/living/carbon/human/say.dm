@@ -6,20 +6,6 @@
 		. = ..()
 
 /mob/living/carbon/human/GetVoice()
-	if(istype(wear_mask, /obj/item/clothing/mask/chameleon))
-		var/obj/item/clothing/mask/chameleon/V = wear_mask
-		if(V.vchange && wear_ring)
-			var/obj/item/card/id/idcard = wear_ring.GetID()
-			if(istype(idcard))
-				return idcard.registered_name
-			else
-				return real_name
-		else
-			return real_name
-	if(mind)
-		var/datum/antagonist/changeling/changeling = mind.has_antag_datum(/datum/antagonist/changeling)
-		if(changeling && changeling.mimicing )
-			return changeling.mimicing
 	if(GetSpecialVoice())
 		return GetSpecialVoice()
 	return real_name
@@ -44,14 +30,6 @@
 /mob/living/carbon/human/proc/GetSpecialVoice()
 	return special_voice
 
-/mob/living/carbon/human/binarycheck()
-	if(ears)
-		var/obj/item/radio/headset/dongle = ears
-		if(!istype(dongle))
-			return FALSE
-		if(dongle.translate_binary)
-			return TRUE
-
 /mob/living/carbon/human/radio(message, message_mode, list/spans, language)
 	. = ..()
 	if(. != 0)
@@ -75,15 +53,22 @@
 
 	return 0
 
-/mob/living/carbon/human/get_alt_name()
-	if(name != GetVoice())
+/mob/living/carbon/human/get_alt_name(var/force = FALSE)
+	if(force || name != GetVoice())
+		var/datum/mob_descriptor/voice/voice_descriptor = get_descriptor_type(/datum/mob_descriptor/voice)
+		if(!voice_descriptor)
+			return "Unknown Person"
+
+		var/voice_gender = "Person"
 		switch(voice_type)
 			if(VOICE_TYPE_FEM)
-				return "Unknown Woman"
+				voice_gender = "Woman"
 			if(VOICE_TYPE_MASC)
-				return "Unknown Man"
+				voice_gender = "Man"
 			if(VOICE_TYPE_ANDR)
-				return "Unknown Person"
+				voice_gender = "Person"
+
+		return voice_descriptor.get_speaking_name(voice_gender)
 
 /mob/living/carbon/human/proc/forcesay(list/append) //this proc is at the bottom of the file because quote fuckery makes notepad++ cri
 	if(stat == CONSCIOUS)

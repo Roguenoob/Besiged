@@ -62,54 +62,60 @@ GLOBAL_LIST_INIT(nonhuman_positions, list(
 GLOBAL_LIST_INIT(noble_positions, list(
 	"Grand Duke",
 	"Consort",
+	"Suitor",
 	"Prince",
 	"Hand",
-	"Guard Captain",
+	"Knight Captain",
 	"Marshal",
 	"Councillor",
 	"Steward",
-	"Royal Guard",
+	"Knight",
 ))
 
 GLOBAL_LIST_INIT(courtier_positions, list(
 	"Court Magician",
-	"Court Physician",
+	"Head Physician",
 	"Jester",
-	"Head Butler",
+	"Seneschal",
 ))
 
 GLOBAL_LIST_INIT(garrison_positions, list(
 	"Watchman",
 	"Warden",
-	"Bog Master",
+	"Sergeant",
 	"Man at Arms",
+	"Squire",
 	"Dungeoneer",
-	"Gatemaster",
 ))
 
 GLOBAL_LIST_INIT(church_positions, list(
-	"Priest",
-	"Inquisitor",
+	"Bishop",
 	"Confessor",
 	"Acolyte",
 	"Mortician",
+	"Keeper",
 	"Templar",
 	"Druid",
+	"Martyr",
 ))
+
+GLOBAL_LIST_INIT(inquisition_positions, list(
+	"Inquisitor",
+	"Orthodoxist",
+	"Absolver",
+))
+
 
 GLOBAL_LIST_INIT(yeoman_positions, list(
 	"Merchant",
 	"Innkeeper",
 	"Archivist",
-	"Blacksmith",
-	"Armorer",
-	"Weaponsmith",
-	"Tailor",
-	"Alchemist",
-	"Artificer",
 	"Scribe",
-	"Town Elder",
+	"Town Crier",
 	"Bathmaster",
+	"Guildmaster",
+	"Guildsman",
+	"Tailor"
 ))
 
 GLOBAL_LIST_INIT(peasant_positions, list(
@@ -121,40 +127,43 @@ GLOBAL_LIST_INIT(peasant_positions, list(
 	"Fisher",
 	"Lumberjack",
 	"Towner",
-	"Grabber",
 	"Nightmaster",
-	"Tavern Knave",
-	"Bath Swain",
-	"Docker",
+	"Tapster",
+	"Bathhouse Attendant",
 	"Prisoner",
 	"Beggar",
-	"Adventurer",
+	"Trader",
 	"Pilgrim",
 	"Bandit",
+	"Court Agent",
+	"Wretch",
 ))
 
 GLOBAL_LIST_INIT(mercenary_positions, list(
-	"Mercenary",
 	"Grenzelhoft Mercenary",
 	"Desert Rider Mercenary",
-	"Veteran",
 ))
 
 GLOBAL_LIST_INIT(youngfolk_positions, list(
-	"Squire",
 	"Clerk",
 	"Apothecary",
 	"Smithy Apprentice",
-	"Magicians Apprentice",
+	"Magicians Associate",
 	"Churchling",
 	"Servant",
 	"Shophand",
 	"Vagabond",
 ))
 
-GLOBAL_LIST_INIT(allmig_positions, list(
+GLOBAL_LIST_INIT(wanderer_positions, list(
+	"Veteran",
 	"Adventurer",
-	"Pilgrim",
+	"Mercenary",
+	"Bandit",
+	"Assassin",
+	"Court Agent",
+	"Wretch",
+	"Wild Soul", //caustic edit
 ))
 
 GLOBAL_LIST_INIT(roguewar_positions, list(
@@ -172,6 +181,18 @@ GLOBAL_LIST_INIT(roguefight_positions, list(
 	"Green Fighter",
 ))
 
+//This list is used to prevent the duke from stripping nobility from certain jobs that aren't intrinsically a part of the town.
+GLOBAL_LIST_INIT(foreign_positions, list(
+	"Adventurer", 
+	"Mercenary", 
+	"Bandit", 
+	"Wretch",
+	"Inquisitor",
+	"Suitor",
+	"Orthodoxist",
+	"Migrant",
+))
+
 GLOBAL_LIST_INIT(test_positions, list(
 	"Tester",
 ))
@@ -184,6 +205,7 @@ GLOBAL_LIST_INIT(job_assignment_order, get_job_assignment_order())
 	sorting_order += GLOB.courtier_positions
 	sorting_order += GLOB.garrison_positions
 	sorting_order += GLOB.church_positions
+	sorting_order += GLOB.inquisition_positions
 	sorting_order += GLOB.yeoman_positions
 	sorting_order += GLOB.peasant_positions
 	sorting_order += GLOB.youngfolk_positions

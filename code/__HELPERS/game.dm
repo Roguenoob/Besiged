@@ -14,68 +14,6 @@
 		return null
 	return format_text ? format_text(A.name) : A.name
 
-/proc/get_areas_in_range(dist=0, atom/center=usr)
-	if(!dist)
-		var/turf/T = get_turf(center)
-		return T ? list(T.loc) : list()
-	if(!center)
-		return list()
-
-	var/list/turfs = RANGE_TURFS(dist, center)
-	var/list/areas = list()
-	for(var/V in turfs)
-		var/turf/T = V
-		areas |= T.loc
-	return areas
-
-/proc/get_adjacent_areas(atom/center)
-	. = list(get_area(get_ranged_target_turf(center, NORTH, 1)),
-			get_area(get_ranged_target_turf(center, SOUTH, 1)),
-			get_area(get_ranged_target_turf(center, EAST, 1)),
-			get_area(get_ranged_target_turf(center, WEST, 1)))
-	listclearnulls(.)
-
-/proc/get_open_turf_in_dir(atom/center, dir)
-	var/turf/open/T = get_ranged_target_turf(center, dir, 1)
-	if(istype(T))
-		return T
-
-/proc/get_adjacent_open_turfs(atom/center)
-	. = list(get_open_turf_in_dir(center, NORTH),
-			get_open_turf_in_dir(center, SOUTH),
-			get_open_turf_in_dir(center, EAST),
-			get_open_turf_in_dir(center, WEST))
-	listclearnulls(.)
-
-/proc/get_adjacent_open_areas(atom/center)
-	. = list()
-	var/list/adjacent_turfs = get_adjacent_open_turfs(center)
-	for(var/I in adjacent_turfs)
-		. |= get_area(I)
-
-// Like view but bypasses luminosity check
-
-/proc/get_hear(range, atom/source)
-
-	var/lum = source.luminosity
-	source.luminosity = 6
-
-	var/list/heard = view(range, source)
-	source.luminosity = lum
-
-	return heard
-
-/proc/alone_in_area(area/the_area, mob/must_be_alone, check_type = /mob/living/carbon)
-	var/area/our_area = get_area(the_area)
-	for(var/C in GLOB.alive_mob_list)
-		if(!istype(C, check_type))
-			continue
-		if(C == must_be_alone)
-			continue
-		if(our_area == get_area(C))
-			return 0
-	return 1
-
 //We used to use linear regression to approximate the answer, but Mloc realized this was actually faster.
 //And lo and behold, it is, and it's more accurate to boot.
 /proc/cheap_hypotenuse(Ax,Ay,Bx,By)
@@ -119,6 +57,10 @@
 
 	return dist
 
+/// Returns the squared Euclidean distance, which is cheaper because it doesn't require sqrt.
+/proc/get_dist_euclidean_squared(atom/Loc1, atom/Loc2)
+	return (Loc1.x - Loc2.x)**2 + (Loc1.y - Loc2.y)**2
+
 /proc/circlerangeturfs(center=usr,radius=3)
 
 	var/turf/centerturf = get_turf(center)
@@ -145,6 +87,48 @@
 			turfs += T
 	return turfs
 
+//qdel.dm doesn't compile before this file so uh yeah
+#define QDEL_IN_CLIENT_TIME(item, time) addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(qdel), item), time, TIMER_STOPPABLE | TIMER_CLIENT_TIME)
+/**
+ * Helper atom that copies an appearance and exists for a period
+*/
+/atom/movable/flick_visual
+	var/atom/movable/container = null
+
+/atom/movable/flick_visual/Destroy()
+	. = ..()
+	if(container)
+		container.vis_contents -= src
+
+/// Takes the passed in MA/icon_state, mirrors it onto ourselves, and displays that in world for duration seconds
+/// Returns the displayed object, you can animate it and all, but you don't own it, we'll delete it after the duration
+/atom/proc/flick_overlay_view(mutable_appearance/display, duration)
+	if(!display)
+		return null
+
+	var/mutable_appearance/passed_appearance = \
+		istext(display) \
+			? mutable_appearance(icon, display, layer) \
+			: display
+
+	// If you don't give it a layer, we assume you want it to layer on top of this atom
+	// Because this is vis_contents, we need to set the layer manually (you can just set it as you want on return if this is a problem)
+	if(passed_appearance.layer == FLOAT_LAYER)
+		passed_appearance.layer = layer + 0.1
+	// This is faster then pooling. I promise
+	var/atom/movable/flick_visual/visual = new()
+	visual.appearance = passed_appearance
+	visual.mouse_opacity = MOUSE_OPACITY_TRANSPARENT
+	// I hate /area
+	var/atom/movable/lies_to_children = src
+	lies_to_children.vis_contents += visual
+	visual.container = lies_to_children
+	QDEL_IN_CLIENT_TIME(visual, duration)
+	return visual
+
+/area/flick_overlay_view(mutable_appearance/display, duration)
+	return
+
 
 //This is the new version of recursive_mob_check, used for say().
 //The other proc was left intact because morgue trays use it.
@@ -154,8 +138,19 @@
 	. = list()
 	while(processing_list.len)
 		var/atom/A = processing_list[1]
-		if(A.flags_1 & HEAR_1)
+		var/add = TRUE
+		if(isdullahan(A))
+			var/mob/living/carbon/human = A
+			// It's a headless Dullahan, they can't hear. Might have a relay in their inventory.
+			var/datum/species/dullahan/user_species = human.dna.species
+			if(user_species.headless)
+				add = FALSE
+
+		if((A.flags_1 & HEAR_1) && add)
 			. += A
+		else if(istype(A, /obj/item/bodypart/head/dullahan))
+			var/obj/item/bodypart/head/dullahan/head = A
+			. += head.original_owner
 		processing_list.Cut(1, 2)
 		processing_list += A.contents
 
@@ -188,7 +183,7 @@
 				found_organ.organ_flags ^= ORGAN_FROZEN
 
 		for(var/atom/B in A)	//objects held within other objects are added to the processing list, unless that object is something that can hold organs safely
-			if(!processed_list[B] && !istype(B, /obj/structure/closet/crate/freezer) && !istype(B, /obj/structure/closet/secure_closet/freezer))
+			if(!processed_list[B])
 				processing_list+= B
 
 		index++
@@ -219,11 +214,6 @@
 			if(sight_check && !isInSight(A_tmp, O))
 				passed=0
 
-		else if(include_radio && istype(A, /obj/item/radio))
-			passed=1
-
-			if(sight_check && !isInSight(A, O))
-				passed=0
 
 		if(passed)
 			found_mobs |= A
@@ -237,60 +227,32 @@
 
 	return found_mobs
 
-
-/proc/get_hearers_in_view(R, atom/source)
-	// Returns a list of hearers in view(R) from source (ignoring luminosity). Used in saycode.
-	var/turf/T = get_turf(source)
-	. = list()
-
-	if(!T)
-		return
-
-	var/list/processing_list = list()
-	if (R == 0) // if the range is zero, we know exactly where to look for, we can skip view
-		processing_list += T.contents // We can shave off one iteration by assuming turfs cannot hear
-	else  // A variation of get_hear inlined here to take advantage of the compiler's fastpath for obj/mob in view
-		var/lum = T.luminosity
-		T.luminosity = 6 // This is the maximum luminosity
-		for(var/mob/M in view(R, T))
-			processing_list += M
-		for(var/obj/O in view(R, T))
-			processing_list += O
-		T.luminosity = lum
-
-	var/i = 0
-	while(i < length(processing_list)) // recursive_hear_check inlined here
-		var/atom/A = processing_list[++i]
-		if(A.flags_1 & HEAR_1)
-			. += A
-		processing_list += A.contents
-
-/proc/get_mobs_in_radio_ranges(list/obj/item/radio/radios)
-	. = list()
-	// Returns a list of mobs who can hear any of the radios given in @radios
-	for(var/obj/item/radio/R in radios)
-		if(R)
-			. |= get_hearers_in_view(R.canhear_range, R)
-
-
-#define SIGNV(X) ((X<0)?-1:1)
-
-/proc/inLineOfSight(X1,Y1,X2,Y2,Z=1,PX1=16.5,PY1=16.5,PX2=16.5,PY2=16.5)
-	var/turf/T
+/// Like inLineOfSight, but it checks density instead of opacity.
+/proc/inLineOfTravel(mob/traveler, atom/target)
+	var/turf/our_turf = get_turf(traveler)
+	var/turf/their_turf = get_turf(target)
+	var/X1 = our_turf.x
+	var/Y1 = our_turf.y
+	var/X2 = their_turf.x
+	var/Y2 = their_turf.y
+	var/Z = our_turf.z
+	var/turf/current_turf = our_turf
+	var/turf/last_turf
 	if(X1==X2)
 		if(Y1==Y2)
-			return 1 //Light cannot be blocked on same tile
+			return TRUE //you're already on the tile
 		else
 			var/s = SIGN(Y2-Y1)
 			Y1+=s
 			while(Y1!=Y2)
-				T=locate(X1,Y1,Z)
-				if(T.opacity)
-					return 0
+				last_turf = current_turf
+				current_turf = locate(X1,Y1,Z)
+				if(current_turf.density || last_turf.LinkBlockedWithAccess(current_turf, traveler))
+					return FALSE
 				Y1+=s
 	else
-		var/m=(32*(Y2-Y1)+(PY2-PY1))/(32*(X2-X1)+(PX2-PX1))
-		var/b=(Y1+PY1/32-0.015625)-m*(X1+PX1/32-0.015625) //In tiles
+		var/m=(Y2-Y1)/(X2-X1) // slope
+		var/b=(Y1+0.5)-m*(X1+0.5) // y axis offset in tiles
 		var/signX = SIGN(X2-X1)
 		var/signY = SIGN(Y2-Y1)
 		if(X1<X2)
@@ -300,12 +262,11 @@
 				Y1+=signY //Line exits tile vertically
 			else
 				X1+=signX //Line exits tile horizontally
-			T=locate(X1,Y1,Z)
-			if(T.opacity)
-				return 0
-	return 1
-#undef SIGNV
-
+			last_turf = current_turf
+			current_turf = locate(X1,Y1,Z)
+			if(current_turf.density || last_turf.LinkBlockedWithAccess(current_turf, traveler))
+				return FALSE
+	return TRUE
 
 /proc/isInSight(atom/A, atom/B)
 	var/turf/Aturf = get_turf(A)
@@ -341,23 +302,10 @@
 			var/mob/living/carbon/human/H
 			if(ishuman(M.current))
 				H = M.current
-			return M.current.stat != DEAD && !issilicon(M.current) && !isbrain(M.current) && (!H || H.dna.species.id != "memezombies")
+			return M.current.stat != DEAD && !isbrain(M.current) && (!H || H.dna.species.id != "memezombies")
 		else if(isliving(M.current))
 			return M.current.stat != DEAD
 	return FALSE
-
-/**
-  * Exiled check
-  *
-  * Checks if the current body of the mind has an exile implant and is currently in
-  * an away mission. Returns FALSE if any of those conditions aren't met.
-  */
-/proc/considered_exiled(datum/mind/M)
-	if(!ishuman(M?.current))
-		return FALSE
-	for(var/obj/item/implant/I in M.current.implants)
-		if(istype(I, /obj/item/implant/exile && M.current.onAwayMission()))
-			return TRUE
 
 /proc/considered_afk(datum/mind/M)
 	return !M || !M.current || !M.current.client || M.current.client.is_afk()
@@ -382,7 +330,7 @@
 
 /proc/flick_overlay_view(image/I, atom/target, duration) //wrapper for the above, flicks to everyone who can see the target atom
 	var/list/viewing = list()
-	for(var/m in viewers(target))
+	for(var/m in get_hearers_in_view(world.view, target, RECURSIVE_CONTENTS_CLIENT_MOBS))
 		var/mob/M = m
 		if(M.client)
 			viewing += M.client
@@ -437,7 +385,7 @@
 		else
 			candidates -= M
 
-/proc/pollGhostCandidates(Question, jobbanType, datum/game_mode/gametypeCheck, be_special_flag = 0, poll_time = 300, ignore_category = null, flashwindow = TRUE)
+/proc/pollGhostCandidates(Question, jobbanType, gametypeCheck, be_special_flag = 0, poll_time = 300, ignore_category = null, flashwindow = TRUE)
 	var/list/candidates = list()
 
 	for(var/mob/dead/observer/G in GLOB.player_list)
@@ -451,7 +399,7 @@
 
 	return pollCandidates(Question, jobbanType, gametypeCheck, be_special_flag, poll_time, ignore_category, flashwindow, candidates)
 
-/proc/pollCandidates(Question, jobbanType, datum/game_mode/gametypeCheck, be_special_flag = 0, poll_time = 300, ignore_category = null, flashwindow = TRUE, list/group = null)
+/proc/pollCandidates(Question, jobbanType, gametypeCheck, be_special_flag = 0, poll_time = 300, ignore_category = null, flashwindow = TRUE, list/group = null)
 	var/time_passed = world.time
 	if (!Question)
 		Question = "Would you like to be a special role?"
@@ -463,8 +411,7 @@
 		if(be_special_flag)
 			if(!(M.client.prefs) || !(be_special_flag in M.client.prefs.be_special))
 				continue
-		if(gametypeCheck)
-			if(!gametypeCheck.age_check(M.client))
+			if(!age_check(M.client))
 				continue
 		if(jobbanType)
 			if(is_banned_from(M.ckey, list(jobbanType, ROLE_SYNDICATE)) || QDELETED(M))
@@ -482,13 +429,13 @@
 
 	return result
 
-/proc/pollCandidatesForMob(Question, jobbanType, datum/game_mode/gametypeCheck, be_special_flag = 0, poll_time = 300, mob/M, ignore_category = null)
+/proc/pollCandidatesForMob(Question, jobbanType, gametypeCheck, be_special_flag = 0, poll_time = 300, mob/M, ignore_category = null)
 	var/list/L = pollGhostCandidates(Question, jobbanType, gametypeCheck, be_special_flag, poll_time, ignore_category)
 	if(!M || QDELETED(M) || !M.loc)
 		return list()
 	return L
 
-/proc/pollCandidatesForMobs(Question, jobbanType, datum/game_mode/gametypeCheck, be_special_flag = 0, poll_time = 300, list/mobs, ignore_category = null)
+/proc/pollCandidatesForMobs(Question, jobbanType, gametypeCheck, be_special_flag = 0, poll_time = 300, list/mobs, ignore_category = null)
 	var/list/L = pollGhostCandidates(Question, jobbanType, gametypeCheck, be_special_flag, poll_time, ignore_category)
 	var/i=1
 	for(var/v in mobs)
@@ -564,25 +511,6 @@
 /proc/GetBluePart(const/hexa)
 	return hex2num(copytext(hexa, 6, 8))
 
-/proc/lavaland_equipment_pressure_check(turf/T)
-	. = FALSE
-	if(!istype(T))
-		return
-	var/datum/gas_mixture/environment = T.return_air()
-	if(!istype(environment))
-		return
-	var/pressure = environment.return_pressure()
-	if(pressure <= LAVALAND_EQUIPMENT_EFFECT_PRESSURE)
-		. = TRUE
-
-/proc/ispipewire(item)
-	var/static/list/pire_wire = list(
-		/obj/machinery/atmospherics,
-		/obj/structure/disposalpipe,
-		/obj/structure/cable
-	)
-	return (is_type_in_list(item, pire_wire))
-
 // Find a obstruction free turf that's within the range of the center. Can also condition on if it is of a certain area type.
 /proc/find_obstruction_free_location(range, atom/center, area/specific_area)
 	var/list/turfs = RANGE_TURFS(range, center)
@@ -597,9 +525,8 @@
 			if (!istype(turf_area, specific_area))
 				continue
 
-		if (!isspaceturf(found_turf))
-			if (!is_blocked_turf(found_turf))
-				possible_loc.Add(found_turf)
+		if (!is_blocked_turf(found_turf))
+			possible_loc.Add(found_turf)
 
 	// Need at least one free location.
 	if (possible_loc.len < 1)
@@ -607,12 +534,15 @@
 
 	return pick(possible_loc)
 
-/proc/power_fail(duration_min, duration_max)
-	for(var/P in GLOB.apcs_list)
-		var/obj/machinery/power/apc/C = P
-		if(C.cell && SSmapping.level_trait(C.z, ZTRAIT_STATION))
-			var/area/A = C.area
-			if(GLOB.typecache_powerfailure_safe_areas[A.type])
-				continue
+/// Removes an image from a client's `.images`. Useful as a callback.
+/proc/remove_image_from_client(image/image_to_remove, client/remove_from)
+	remove_from?.images -= image_to_remove
 
-			C.energy_fail(rand(duration_min,duration_max))
+/// Returns this user's display ckey, used in OOC contexts.
+/proc/get_display_ckey(key)
+	var/ckey = ckey(key)
+	if(ckey in GLOB.anonymize)
+		return get_fake_key(ckey)
+	if(!ckey || !istext(ckey))
+		return "some invalid"
+	return ckey

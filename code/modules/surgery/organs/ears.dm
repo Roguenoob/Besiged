@@ -153,7 +153,7 @@
 	name = "lupian ears"
 
 /obj/item/organ/ears/vulpkanin
-	name = "vulpkian ears"
+	name = "venardine ears"
 	accessory_type = /datum/sprite_accessory/ears/fox
 
 /obj/item/organ/ears/tajaran
@@ -169,7 +169,7 @@
 
 /obj/item/organ/ears/tiefling
 	name = "tiefling ears"
-	accessory_type = /datum/sprite_accessory/ears/elfw
+	accessory_type = /datum/sprite_accessory/ears
 
 /obj/item/organ/ears/akula
 	name = "axian ears"
@@ -182,3 +182,7 @@
 /obj/item/organ/ears/goblin
 	name = "goblin ears"
 	accessory_type = /datum/sprite_accessory/ears/goblin
+
+/obj/item/organ/ears/psy_vault_guard
+	name = "cobra hood"
+	accessory_type = /datum/sprite_accessory/ears/cobrahood

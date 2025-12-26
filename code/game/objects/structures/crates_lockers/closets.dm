@@ -1,13 +1,12 @@
 /obj/structure/closet
 	name = "closet"
 	desc = ""
-	icon = 'icons/obj/closet.dmi'
 	icon_state = "generic"
 	density = TRUE
 	drag_slowdown = 1.5		// Same as a prone mob
 	max_integrity = 200
 	integrity_failure = 0.25
-	armor = list("blunt" = 20, "slash" = 10, "stab" = 15, "bullet" = 10, "laser" = 10, "energy" = 0, "bomb" = 10, "bio" = 0, "rad" = 0, "fire" = 70, "acid" = 60)
+	armor = ARMOR_CLOSET
 
 	var/icon_door = null
 	var/icon_door_override = FALSE //override to have open overlay use icon different to its base's
@@ -27,7 +26,6 @@
 	var/max_mob_size = MOB_SIZE_HUMAN //Biggest mob_size accepted by the container
 	var/mob_storage_capacity = 2 // how many human sized mob/living can fit together inside a closet.
 	var/storage_capacity = 30 //This is so that someone can't pack hundreds of items in a locker/crate then open it in a populated area to crash clients.
-	var/cutting_tool = /obj/item/weldingtool
 	var/open_sound = 'sound/misc/cupboard_open.ogg'
 	var/close_sound = 'sound/misc/cupboard_close.ogg'
 	var/open_sound_volume = 100
@@ -93,7 +91,7 @@
 			add_overlay("[icon_state]_door")
 		if(welded)
 			add_overlay(icon_welded)
-		if(secure && !broken)
+		if(secure && !obj_broken)
 			if(locked)
 				add_overlay("locked")
 			else
@@ -120,6 +118,11 @@
 		var/mob/living/L = user
 		if(HAS_TRAIT(L, TRAIT_SKITTISH))
 			. += span_notice("Ctrl-Shift-click [src] to jump inside.")*/
+
+/obj/structure/closet/CanAStarPass(ID, dir, caller)
+	if(wall_mounted)
+		return TRUE
+	return ..()
 
 /obj/structure/closet/CanPass(atom/movable/mover, turf/target)
 	if(wall_mounted)
@@ -192,7 +195,7 @@
 
 /obj/structure/closet/proc/insertion_allowed(atom/movable/AM)
 	if(ismob(AM))
-		testing("begin")
+
 		if(!isliving(AM)) //let's not put ghosts or camera mobs inside closets...
 			return FALSE
 		var/mob/living/L = AM
@@ -210,7 +213,7 @@
 			for(var/obj/structure/closet/crate/C in contents)
 				if(C != src)
 					return FALSE
-		testing("enmd")
+
 		L.stop_pulling()
 
 	else if(isobj(AM))
@@ -218,7 +221,7 @@
 			return FALSE
 		else if(isitem(AM) && !HAS_TRAIT(AM, TRAIT_NODROP))
 			return TRUE
-		else if(!allow_objects && !istype(AM, /obj/effect/dummy/chameleon))
+		else if(!allow_objects)
 			return FALSE
 //		for(var/mob/living/M in contents)
 //			return FALSE
@@ -253,7 +256,7 @@
 	qdel(src)
 
 /obj/structure/closet/obj_break(damage_flag)
-	if(!broken && !(flags_1 & NODECONSTRUCT_1))
+	if(!obj_broken && !(flags_1 & NODECONSTRUCT_1))
 		bust_open()
 	..()
 
@@ -265,6 +268,9 @@
 		trykeylock(W, user)
 		return
 	if(istype(W, /obj/item/lockpick))
+		trypicklock(W, user)
+		return
+	if(istype(W, /obj/item/melee/touch_attack/lesserknock))
 		trypicklock(W, user)
 		return
 	if(istype(W,/obj/item/lockpickring))
@@ -284,8 +290,8 @@
 	if(!keylock)
 		to_chat(user, span_warning("There's no lock on this."))
 		return
-	if(broken)
-		to_chat(user, span_warning("The lock is broken."))
+	if(obj_broken)
+		to_chat(user, span_warning("The lock is obj_broken."))
 		return
 	if(istype(I,/obj/item/storage/keyring))
 		var/obj/item/storage/keyring/R = I
@@ -305,7 +311,7 @@
 		return
 	else
 		var/obj/item/roguekey/K = I
-		if(K.lockhash == lockhash)
+		if(K.lockhash == lockhash || istype(K, /obj/item/roguekey/lord))
 			togglelock(user)
 			return
 		else
@@ -318,17 +324,17 @@
 	if(!keylock)
 		to_chat(user, "<span class='warning'>There's no lock on this.</span>")
 		return
-	if(broken)
-		to_chat(user, "<span class='warning'>The lock is broken.</span>")
+	if(obj_broken)
+		to_chat(user, "<span class='warning'>The lock is obj_broken.</span>")
 		return
 	else
 		var/lockprogress = 0
-		var/locktreshold = 100
+		var/locktreshold = lock_strength
 
 		var/obj/item/lockpick/P = I
 		var/mob/living/L = user
 
-		var/pickskill = user.mind.get_skill_level(/datum/skill/misc/lockpicking)
+		var/pickskill = user.get_skill_level(/datum/skill/misc/lockpicking)
 		var/perbonus = L.STAPER/5
 		var/picktime = 70
 		var/pickchance = 35
@@ -358,6 +364,8 @@
 					add_sleep_experience(L, /datum/skill/misc/lockpicking, L.STAINT/2)
 				if(lockprogress >= locktreshold)
 					to_chat(user, "<span class='deadsay'>The locking mechanism gives.</span>")
+					record_featured_stat(FEATURED_STATS_CRIMINALS, user)
+					record_round_statistic(STATS_LOCKS_PICKED)
 					togglelock(user)
 					break
 				else
@@ -411,9 +419,6 @@
 			user.visible_message(span_notice("[user] stuffs [O] into [src]."), \
 							 	 span_notice("I stuff [O] into [src]."), \
 							 	 span_hear("I hear a loud bang."))
-			var/mob/living/L = O
-			if(!issilicon(L))
-				L.Paralyze(40)
 			O.forceMove(T)
 			close()
 	else
@@ -436,15 +441,11 @@
 		return
 	if(!(user.mobility_flags & MOBILITY_STAND) && get_dist(src, user) > 0)
 		return
-	user.changeNext_move(CLICK_CD_MELEE)
+	user.changeNext_move(CLICK_CD_INTENTCAP)
 	toggle(user)
 
 /obj/structure/closet/attack_paw(mob/user)
 	return attack_hand(user)
-
-/obj/structure/closet/attack_robot(mob/user)
-	if(user.Adjacent(src))
-		return attack_hand(user)
 
 // tk grab then use on self
 /obj/structure/closet/attack_self_tk(mob/user)
@@ -458,7 +459,7 @@
 	if(!usr.canUseTopic(src, BE_CLOSE) || !isturf(loc))
 		return
 
-	if(iscarbon(usr) || issilicon(usr) || isdrone(usr))
+	if(iscarbon(usr))
 		return toggle(usr)
 	else
 		to_chat(usr, span_warning("This mob type can't use this verb."))
@@ -493,7 +494,7 @@
 /obj/structure/closet/proc/bust_open()
 	welded = FALSE //applies to all lockers
 	locked = FALSE //applies to critter crates and secure lockers only
-	broken = TRUE //applies to secure lockers only
+	obj_broken = TRUE //applies to secure lockers only
 	open()
 /*
 /obj/structure/closet/AltClick(mob/user)
@@ -514,7 +515,7 @@
 	dive_into(user)
 
 /obj/structure/closet/proc/togglelock(mob/living/user, silent)
-	user.changeNext_move(CLICK_CD_MELEE)
+	user.changeNext_move(CLICK_CD_INTENTCAP)
 	if(locked)
 		user.visible_message(span_warning("[user] unlocks [src]."), \
 			span_notice("I unlock [src]."))
@@ -527,12 +528,12 @@
 		locked = 1
 
 /obj/structure/closet/emag_act(mob/user)
-	if(secure && !broken)
+	if(secure && !obj_broken)
 		user.visible_message(span_warning("Sparks fly from [src]!"),
 						span_warning("I scramble [src]'s lock, breaking it open!"),
 						span_hear("I hear a faint electrical spark."))
 		playsound(src, "sparks", 50, TRUE)
-		broken = TRUE
+		obj_broken = TRUE
 		locked = FALSE
 		update_icon()
 
@@ -547,7 +548,7 @@
 	if (!(. & EMP_PROTECT_CONTENTS))
 		for(var/obj/O in src)
 			O.emp_act(severity)
-	if(secure && !broken && !(. & EMP_PROTECT_SELF))
+	if(secure && !obj_broken && !(. & EMP_PROTECT_SELF))
 		if(prob(50 / severity))
 			locked = !locked
 			update_icon()
@@ -562,10 +563,6 @@
 	for(var/atom/A in contents)
 		A.ex_act(severity, target)
 		CHECK_TICK
-
-/obj/structure/closet/singularity_act()
-	dump_contents()
-	..()
 
 /obj/structure/closet/AllowDrop()
 	return TRUE

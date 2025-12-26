@@ -1,13 +1,12 @@
 /obj/item/ammo_casing
 	name = "bullet casing"
 	desc = ""
-	icon = 'icons/obj/ammo.dmi'
 	icon_state = "s-casing"
 	flags_1 = CONDUCT_1
 	slot_flags = ITEM_SLOT_BELT
 	throwforce = 0
 	w_class = WEIGHT_CLASS_TINY
-	custom_materials = list(/datum/material/iron = 500)
+
 	var/fire_sound = null						//What sound should play when this ammo is fired
 	var/caliber = null							//Which kind of guns it can be loaded into
 	var/projectile_type = null					//The bullet type to create when New() is called
@@ -17,7 +16,7 @@
 	var/randomspread = 0						//Randomspread for automatics
 	var/delay = 0								//Delay for energy weapons
 	var/click_cooldown_override = 0				//Override this to make your gun have a faster fire rate, in tenths of a second. 4 is the default gun cooldown.
-	var/firing_effect_type = /obj/effect/temp_visual/dir_setting/firing_effect	//the visual effect appearing when the ammo is fired.
+	var/firing_effect_type = null	//the visual effect appearing when the ammo is fired.
 	var/heavy_metal = TRUE
 	var/harmful = TRUE //pacifism check for boolet, set to FALSE if bullet is non-lethal
 
@@ -43,8 +42,7 @@
 
 /obj/item/ammo_casing/update_icon()
 	..()
-	icon_state = "[initial(icon_state)][BB ? "-live" : ""]"
-	desc = ""
+	icon_state = "[initial(icon_state)]"
 
 //proc to magically refill a casing with a new projectile
 /obj/item/ammo_casing/proc/newshot() //For energy weapons, syringe gun, shotgun shells and wands (!).
@@ -66,9 +64,9 @@
 					continue
 			if (boolets > 0)
 				box.update_icon()
-				to_chat(user, span_notice("I collect [boolets] shell\s. [box] now contains [box.stored_ammo.len] shell\s."))
+				to_chat(user, "<span class='notice'>I collect [boolets] shell\s. [box] now contains [box.stored_ammo.len] shell\s.</span>")
 			else
-				to_chat(user, span_warning("I fail to collect anything!"))
+				to_chat(user, "<span class='warning'>I fail to collect anything!</span>")
 	else
 		return ..()
 

@@ -1,3 +1,6 @@
+#define CHOICE_POISON_BLADE "poison & knife"
+#define CHOICE_SKILLS "skills"
+
 /datum/antagonist/aspirant
 	name = "Aspirant"
 	roundend_category = "aspirant"
@@ -9,6 +12,31 @@
 	)
 	increase_votepwr = FALSE
 	rogue_enabled = TRUE
+	antag_flags = FLAG_FAKE_ANTAG
+
+	var/static/list/equipment_selection = list(
+		"Cloak & Dagger (Poison & Knife)" = CHOICE_POISON_BLADE,
+		"Mace & Lockpicking Skill" = CHOICE_SKILLS
+	)
+
+/datum/antagonist/aspirant/proc/give_equipment_prompt()
+	var/chosen = input(owner.current, "How shall I rise to power?", "YOUR ADVANTAGE") as anything in equipment_selection
+	var/mob/aspirant_mob = owner.current
+	chosen = LAZYACCESS(equipment_selection, chosen)
+	switch(chosen)
+		if(CHOICE_POISON_BLADE)
+			owner.special_items["Poison"] = /obj/item/reagent_containers/glass/bottle/rogue/poison
+			owner.special_items["Killer's Knife"] = /obj/item/rogueweapon/huntingknife/idagger/steel/corroded
+			to_chat(owner, span_notice("I can retrieve my item from a statue, tree or clock by right clicking it."))
+			aspirant_mob.adjust_skillrank_up_to(/datum/skill/combat/knives, 4, TRUE)	//Expert knives cus you're not getting much else.
+		if(CHOICE_SKILLS)
+			owner.special_items["Mace"] = /obj/item/rogueweapon/mace/cudgel		//Go knock him out lol
+			owner.special_items["Chains"] = /obj/item/rope/chain
+			owner.special_items["Lockpicks"] = /obj/item/lockpickring/mundane
+			to_chat(owner, span_notice("I can retrieve my item from a statue, tree or clock by right clicking it."))
+			aspirant_mob.adjust_skillrank_up_to(/datum/skill/combat/maces, 5)	//Kinda huge with how maces are but - you're kinda not a frag-lord, you're to coup so. Works.
+			aspirant_mob.adjust_skillrank_up_to(/datum/skill/misc/lockpicking, 5)
+
 
 /datum/antagonist/aspirant/supporter
 	name = "Supporter"
@@ -22,6 +50,8 @@
 /datum/antagonist/aspirant/on_gain()
 	. = ..()
 	owner.special_role = ROLE_ASPIRANT
+	SSmapping.retainer.aspirants |= owner
+	addtimer(CALLBACK(src, PROC_REF(give_equipment_prompt)), 5 SECONDS)
 
 /datum/antagonist/aspirant/greet()
 	to_chat(owner, span_danger("I have grown weary of being near the throne, but never on it. I have decided that it is time I ruled Enigma."))
@@ -35,10 +65,10 @@
 
 /datum/antagonist/aspirant/ruler/greet() // No alert for the ruler to always keep them guessing.
 
-/datum/antagonist/prebel/can_be_owned(datum/mind/new_owner)
+/datum/antagonist/aspirant/can_be_owned(datum/mind/new_owner)
 	. = ..()
 	if(.)
-		if(!(new_owner.assigned_role in GLOB.noble_positions) || !(new_owner.assigned_role in GLOB.garrison_positions))
+		if(!((new_owner.assigned_role in GLOB.noble_positions) || (new_owner.assigned_role in GLOB.garrison_positions) || (new_owner.assigned_role in GLOB.courtier_positions)))
 			return FALSE
 
 /datum/antagonist/aspirant/on_gain()
@@ -63,10 +93,9 @@
 		G.initialruler = SSticker.rulermob
 		return
 	if(istype(src, /datum/antagonist/aspirant/supporter))
-		var/datum/game_mode/chaosmode/C = SSticker.mode
 		var/datum/objective/aspirant/coup/three/G = new
 		objectives += G
-		for(var/datum/mind/aspirant in C.aspirants)
+		for(var/datum/mind/aspirant in SSmapping.retainer.aspirants)
 			if(aspirant.special_role == "Aspirant")
 				G.aspirant = aspirant.current
 		return
@@ -84,18 +113,18 @@
 // OBJECTIVES
 /datum/objective/aspirant/coup/one
 	name = "Aspirant"
-	explanation_text = "I must ensure that I am crowned as the Monarch."
+	explanation_text = "I must ensure that I am crowned as the Grand Duke."
 	triumph_count = 5
 
 /datum/objective/aspirant/coup/one/check_completion()
-	if(owner.current == SSticker.rulermob)
+	if(owner?.current == SSticker.rulermob)
 		return TRUE
 	else
 		return FALSE
 
 /datum/objective/aspirant/coup/two
 	name = "Moral"
-	explanation_text = "I am no kinslayer, I must make sure that the monarch doesn't die."
+	explanation_text = "I am no kinslayer, I must make sure that the Grand Duke doesn't die."
 	triumph_count = 10
 	var/initialruler
 
@@ -118,14 +147,14 @@
 	triumph_count = 3
 
 /datum/objective/aspirant/loyal/one/check_completion()
-	if(owner.current == SSticker.rulermob)
+	if(owner?.current == SSticker.rulermob)
 		return TRUE
 	else
 		return FALSE
 
 /datum/objective/aspirant/loyal/two
 	name = "Loyalist"
-	explanation_text = "I must ensure that the monarch continues to reign."
+	explanation_text = "I must ensure that the Grand Duke continues to reign."
 	triumph_count = 3
 	var/initialruler
 
@@ -211,3 +240,6 @@
 			to_chat(owner, span_greentext("Your ruler retained the throne! SUCCESS!"))
 		else
 			to_chat(owner, span_redtext("Your ruler was deposed! FAIL!"))
+
+#undef CHOICE_POISON_BLADE
+#undef CHOICE_SKILLS

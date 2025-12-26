@@ -126,16 +126,6 @@
 		next_attack_msg.Cut()
 		return TRUE
 
-/mob/living/simple_animal/attack_hulk(mob/living/carbon/human/user)
-	. = ..()
-	if(!.)
-		return
-	playsound(loc, "punch", 25, TRUE, -1)
-	visible_message(span_danger("[user] punches [src]!"), \
-					span_danger("You're punched by [user]!"), null, COMBAT_MESSAGE_RANGE, user)
-	to_chat(user, span_danger("I punch [src]!"))
-	adjustBruteLoss(15)
-
 /mob/living/simple_animal/attack_paw(mob/living/carbon/monkey/M)
 	if(..()) //successful monkey bite.
 		if(stat != DEAD)
@@ -149,32 +139,6 @@
 			to_chat(M, span_notice("I [response_help_simple] [src]."))
 			playsound(loc, 'sound/blank.ogg', 50, TRUE, -1)
 
-
-/mob/living/simple_animal/attack_alien(mob/living/carbon/alien/humanoid/M)
-	if(..()) //if harm or disarm intent.
-		if(M.used_intent.type == INTENT_DISARM)
-			playsound(loc, 'sound/blank.ogg', 25, TRUE, -1)
-			visible_message(span_danger("[M] [response_disarm_continuous] [name]!"), \
-							span_danger("[M] [response_disarm_continuous] you!"), null, COMBAT_MESSAGE_RANGE, M)
-			to_chat(M, span_danger("I [response_disarm_simple] [name]!"))
-			log_combat(M, src, "disarmed")
-		else
-			var/damage = rand(15, 30)
-			visible_message(span_danger("[M] slashes at [src]!"), \
-							span_danger("You're slashed at by [M]!"), null, COMBAT_MESSAGE_RANGE, M)
-			to_chat(M, span_danger("I slash at [src]!"))
-			playsound(loc, 'sound/blank.ogg', 25, TRUE, -1)
-			attack_threshold_check(damage)
-			log_combat(M, src, "attacked")
-		return 1
-
-/mob/living/simple_animal/attack_larva(mob/living/carbon/alien/larva/L)
-	. = ..()
-	if(. && stat != DEAD) //successful larva bite
-		var/damage = rand(5, 10)
-		. = attack_threshold_check(damage)
-		if(.)
-			L.amount_grown = min(L.amount_grown + damage, L.max_grown)
 
 /mob/living/simple_animal/attack_animal(mob/living/simple_animal/M)
 	. = ..()
@@ -195,7 +159,7 @@
 	playsound(user.loc, "smallslash", 100, FALSE, -1)
 	user.next_attack_msg.Cut()
 	if(stat == DEAD)
-		if(user.has_status_effect(/datum/status_effect/debuff/silver_curse))
+		if(user.has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder))
 			to_chat(user, span_notice("My power is weakened, I cannot heal!"))
 			return
 		if(user.mind && istype(user, /mob/living/carbon/human/species/werewolf))
@@ -203,18 +167,17 @@
 			to_chat(src, span_warning("I feed on succulent flesh. I feel reinvigorated."))
 			user.reagents.add_reagent(/datum/reagent/medicine/healthpot, 30)
 			gib()
+		if(user.mind && istype(user, /mob/living/carbon/human/species/wildshape/volf))
+			visible_message(span_danger("The volf ravenously consumes the [src]!"))
+			to_chat(src, span_warning("I feed on succulent flesh. I feel satiated."))
+			user.reagents.add_reagent(/datum/reagent/consumable/nutriment, 15)
+			gib()
 		return
 	if(src.apply_damage(damage, BRUTE))
 		if(istype(user, /mob/living/carbon/human/species/werewolf))
 			visible_message(span_danger("The werewolf bites into [src] and thrashes!"))
 		else
 			visible_message(span_danger("[user] bites [src]! What is wrong with them?"))
-	if(HAS_TRAIT(user, TRAIT_POISONBITE))
-		if(src.reagents)
-			var/poison = user.STACON/2
-			src.reagents.add_reagent(/datum/reagent/toxin/venom, poison/2)
-			src.reagents.add_reagent(/datum/reagent/medicine/soporpot, poison)
-			to_chat(user, span_warning("Your fangs inject venom into [src]!"))
 
 /mob/living/simple_animal/onkick(mob/M)
 	var/mob/living/simple_animal/target = src
@@ -226,10 +189,11 @@
 		return FALSE
 	if(user == target)
 		return FALSE
-	if(user.check_leg_grabbed(1) || user.check_leg_grabbed(2))
-		to_chat(user, span_notice("I can't move my leg!"))
-		return
-	if(user.rogfat >= user.maxrogfat)
+	if(!HAS_TRAIT(user, TRAIT_GARROTED))	
+		if(user.check_leg_grabbed(1) || user.check_leg_grabbed(2))
+			to_chat(user, span_notice("I can't move my leg!"))
+			return
+	if(user.stamina >= user.max_stamina)
 		return FALSE
 	if(user.loc == target.loc)
 		to_chat(user, span_warning("I'm too close to get a good kick in."))
@@ -250,21 +214,10 @@
 		playsound(target, 'sound/combat/hits/kick/kick.ogg', 100, TRUE, -1)
 		target.lastattacker = user.real_name
 		target.lastattackerckey = user.ckey
+		target.lastattacker_weakref = WEAKREF(user)
 		if(target.mind)
 			target.mind.attackedme[user.real_name] = world.time
-		user.rogfat_add(15)
-
-/mob/living/simple_animal/attack_slime(mob/living/simple_animal/slime/M)
-	if(..()) //successful slime attack
-		var/damage = rand(15, 25)
-		if(M.is_adult)
-			damage = rand(20, 35)
-		return attack_threshold_check(damage)
-
-/mob/living/simple_animal/attack_drone(mob/living/simple_animal/drone/M)
-	if(M.used_intent.type == INTENT_HARM) //No kicking dogs even as a rogue drone. Use a weapon.
-		return
-	return ..()
+		user.stamina_add(15)
 
 /mob/living/simple_animal/proc/attack_threshold_check(damage, damagetype = BRUTE, armorcheck = d_type)
 	var/temp_damage = damage
@@ -280,40 +233,42 @@
 		apply_damage(damage, damagetype, null, getarmor(null, armorcheck))
 		return TRUE
 
-/mob/living/simple_animal/bullet_act(obj/projectile/Proj)
-	apply_damage(Proj.damage, Proj.damage_type)
-	Proj.on_hit(src)
-	return BULLET_ACT_HIT
-
-/mob/living/simple_animal/ex_act(severity, target, origin)
-	if(origin && istype(origin, /datum/spacevine_mutation) && isvineimmune(src))
-		return
+/mob/living/simple_animal/ex_act(severity, target, epicenter, devastation_range, heavy_impact_range, light_impact_range, flame_range)
 	..()
-	var/bomb_armor = getarmor(null, "bomb")
-	switch (severity)
-		if (EXPLODE_DEVASTATE)
-			if(prob(bomb_armor))
-				adjustBruteLoss(500)
-			else
-				gib()
-				return
-		if (EXPLODE_HEAVY)
-			var/bloss = 60
-			if(prob(bomb_armor))
-				bloss = bloss / 1.5
-			adjustBruteLoss(bloss)
+	if(!severity || !epicenter)
+		return
+	var/ddist = devastation_range || 0
+	var/hdist = heavy_impact_range || 0
+	var/ldist = light_impact_range || 0
+	var/fdist = flame_range || 0
+	var/fodist = get_dist(src, epicenter)
+	var/brute_loss = 0
+	var/burn_loss = 0
+	var/dmgmod = round(rand(0.5, 1.5), 0.1)
+
+	if(fdist)
+		var/stacks = ((fdist - fodist) * 2)
+		fire_act(stacks)
+
+	switch(severity)
+		if(EXPLODE_DEVASTATE)
+			brute_loss = ((120 * ddist) - (120 * fodist) * dmgmod)
+			burn_loss = ((60 * ddist) - (60 * fodist) * dmgmod)
+			Unconscious((50 * ddist) - (15 * fodist))
+			Knockdown((30 * ddist) - (30 * fodist))
+
+		if(EXPLODE_HEAVY)
+			brute_loss = ((40 * hdist) - (40 * fodist) * dmgmod)
+			burn_loss = ((20 * hdist) - (20 * fodist) * dmgmod)
+			Unconscious((10 * hdist) - (5 * fodist))
+			Knockdown((30 * hdist) - (30 * fodist))
 
 		if(EXPLODE_LIGHT)
-			var/bloss = 30
-			if(prob(bomb_armor))
-				bloss = bloss / 1.5
-			adjustBruteLoss(bloss)
+			brute_loss = ((10 * ldist) - (10 * fodist) * dmgmod)
 
-/mob/living/simple_animal/blob_act(obj/structure/blob/B)
-	adjustBruteLoss(20)
-	return
+	take_overall_damage(brute_loss,burn_loss)
 
-/mob/living/simple_animal/do_attack_animation(atom/A, visual_effect_icon, used_item, no_effect)
+/mob/living/simple_animal/do_attack_animation(atom/A, visual_effect_icon, used_item, no_effect, used_intent = null, simplified = TRUE)
 	if(!no_effect && !visual_effect_icon && melee_damage_upper)
 		if(melee_damage_upper < 10)
 			visual_effect_icon = ATTACK_EFFECT_PUNCH

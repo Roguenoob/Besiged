@@ -1,63 +1,3 @@
-/obj/effect/decal/cleanable/generic
-	name = "clutter"
-	desc = ""
-	icon = 'icons/obj/objects.dmi'
-	icon_state = "shards"
-	beauty = -50
-
-/obj/effect/decal/cleanable/ash
-	name = "ashes"
-	desc = ""
-	icon = 'icons/obj/objects.dmi'
-	icon_state = "ash"
-	mergeable_decal = FALSE
-	beauty = -50
-
-/obj/effect/decal/cleanable/ash/Initialize()
-	. = ..()
-	reagents.add_reagent(/datum/reagent/ash, 30)
-	pixel_x = rand(-5, 5)
-	pixel_y = rand(-5, 5)
-
-/obj/effect/decal/cleanable/ash/crematorium
-//crematoriums need their own ash cause default ash deletes itself if created in an obj
-	turf_loc_check = FALSE
-
-/obj/effect/decal/cleanable/ash/large
-	name = "large pile of ashes"
-	icon_state = "big_ash"
-	beauty = -100
-
-/obj/effect/decal/cleanable/ash/large/Initialize()
-	. = ..()
-	reagents.add_reagent(/datum/reagent/ash, 30) //double the amount of ash.
-
-/obj/effect/decal/cleanable/glass
-	name = "tiny shards"
-	desc = ""
-	icon = 'icons/obj/shards.dmi'
-	icon_state = "tiny"
-	beauty = -100
-
-/obj/effect/decal/cleanable/glass/Initialize()
-	. = ..()
-	setDir(pick(GLOB.cardinals))
-
-/obj/effect/decal/cleanable/glass/ex_act()
-	qdel(src)
-
-/obj/effect/decal/cleanable/glass/plasma
-	icon_state = "plasmatiny"
-
-/obj/effect/decal/cleanable/dirt
-	name = "dirt"
-	desc = ""
-	icon_state = "dirt"
-	canSmoothWith = list(/obj/effect/decal/cleanable/dirt, /turf/closed/wall, /obj/structure/falsewall)
-	smooth = SMOOTH_FALSE
-	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
-	beauty = -75
-
 /obj/effect/decal/cleanable/dirt/Initialize()
 	. = ..()
 	var/turf/T = get_turf(src)
@@ -81,7 +21,7 @@
 	desc = ""
 	icon_state = "greenglow"
 	light_power = 3
-	light_range = 2
+	light_outer_range =  2
 	light_color = LIGHT_COLOR_GREEN
 	beauty = -300
 
@@ -92,18 +32,19 @@
 	. = ..()
 	reagents.add_reagent(pick(/datum/reagent/uranium, /datum/reagent/uranium/radium), 5)
 
-/obj/effect/decal/cleanable/cobweb
+/obj/effect/decal/cleanable/dirt/cobweb
 	name = "cobweb"
 	desc = ""
-	gender = NEUTER
-	layer = 4.2
-	plane = -1
+	icon = 'modular/Mapping/icons/webbing.dmi'
 	icon_state = "cobweb1"
+	gender = NEUTER
+	layer = WALL_OBJ_LAYER
+	plane = -1
 	resistance_flags = FLAMMABLE
 	beauty = -100
 	alpha = 200
 
-/obj/effect/decal/cleanable/cobweb/cobweb2
+/obj/effect/decal/cleanable/dirt/cobweb/cobweb2
 	icon_state = "cobweb2"
 
 /obj/effect/decal/cleanable/molten_object
@@ -130,30 +71,11 @@
 	beauty = -150
 	alpha = 160
 
-/obj/effect/decal/cleanable/vomit/attack_hand(mob/user)
-	. = ..()
-	if(.)
-		return
-	if(ishuman(user))
-		var/mob/living/carbon/human/H = user
-		if(isflyperson(H))
-			playsound(get_turf(src), 'sound/blank.ogg', 50, TRUE) //slurp
-			H.visible_message(span_alert("[H] extends a small proboscis into the vomit pool, sucking it with a slurping sound."))
-			if(reagents)
-				for(var/datum/reagent/R in reagents.reagent_list)
-					if (istype(R, /datum/reagent/consumable))
-						var/datum/reagent/consumable/nutri_check = R
-						if(nutri_check.nutriment_factor >0)
-							H.adjust_nutrition(nutri_check.nutriment_factor * nutri_check.volume)
-							reagents.remove_reagent(nutri_check.type,nutri_check.volume)
-			reagents.trans_to(H, reagents.total_volume, transfered_by = user)
-			qdel(src)
-
 /obj/effect/decal/cleanable/vomit/old
 	name = "dried vomit"
 	desc = ""
 
-/obj/effect/decal/cleanable/vomit/old/Initialize(mapload, list/datum/disease/diseases)
+/obj/effect/decal/cleanable/vomit/old/Initialize(mapload)
 	. = ..()
 	icon_state += "-old"
 
@@ -161,7 +83,6 @@
 	name = "chemical pile"
 	desc = ""
 	gender = NEUTER
-	icon = 'icons/obj/objects.dmi'
 	icon_state = "ash"
 
 /obj/effect/decal/cleanable/shreds
@@ -222,3 +143,40 @@
 	icon = 'icons/effects/confetti_and_decor.dmi'
 	icon_state = "confetti"
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT //the confetti itself might be annoying enough
+
+//................	Debris decals (result from crafting or destroying items thats just visual)	............... //
+/obj/effect/decal/cleanable/debris
+	name = ""
+	desc = ""
+	icon = 'icons/roguetown/items/crafting.dmi'
+	icon_state = "tiny"
+	beauty = -20
+/obj/effect/decal/cleanable/debris/Initialize()
+	. = ..()
+	setDir(pick(GLOB.cardinals))
+
+/obj/effect/decal/cleanable/debris/glassy
+	name = "glass shards"
+	icon_state = "tiny"
+	beauty = -100
+/obj/effect/decal/cleanable/debris/glassy/Crossed(mob/living/L)
+	. = ..()
+	playsound(loc,'sound/foley/glass_step.ogg', 50, FALSE)
+
+/obj/effect/decal/cleanable/debris/stony
+	name = "stone chippings"
+	icon_state = "pebbly"
+
+/obj/effect/decal/cleanable/debris/woody	// sawdust gets cleared by weather
+	name = "sawdust"
+	icon_state = "woody"
+/obj/effect/decal/cleanable/debris/woody/Initialize()
+	START_PROCESSING(SSprocessing, src)
+	GLOB.weather_act_upon_list += src
+	. = ..()
+/obj/effect/decal/cleanable/debris/woody/Destroy()
+	STOP_PROCESSING(SSprocessing, src)
+	GLOB.weather_act_upon_list -= src
+	. = ..()
+/obj/effect/decal/cleanable/debris/woody/weather_act_on(weather_trait, severity)
+	qdel(src)

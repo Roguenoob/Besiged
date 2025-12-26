@@ -154,7 +154,7 @@
 			for(var/choice_type in customizer.customizer_choices)
 				var/datum/customizer_choice/iter_choice = CUSTOMIZER_CHOICE(choice_type)
 				choice_list[iter_choice.name] = choice_type
-			var/chosen_input = input(user, "Choose your [lowertext(customizer.name)]:", "Character Preference")  as null|anything in choice_list
+			var/chosen_input = tgui_input_list(user, "Choose your [lowertext(customizer.name)]:", "Character Preference", choice_list)
 			if(!chosen_input)
 				return
 			var/choice_type = choice_list[chosen_input]
@@ -218,19 +218,6 @@
 		var/marking_color = zone_list[marking_name]
 		return marking_color
 	return null
-
-/datum/preferences/proc/get_belly_color()
-	var/list/zone_list = body_markings[BODY_ZONE_CHEST]
-	if(!zone_list)
-		return null
-	for(var/marking_name in zone_list)
-		var/datum/body_marking/marking = GLOB.body_markings[marking_name]
-		if(!marking.covers_chest)
-			continue
-		var/marking_color = zone_list[marking_name]
-		return marking_color
-	return null
-
 
 /datum/preferences/proc/get_customizer_entry_of_type(entry_type)
 	for(var/datum/customizer_entry/entry as anything in customizer_entries)

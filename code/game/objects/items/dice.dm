@@ -1,10 +1,12 @@
 /*****************************Dice Bags********************************/
 
 /obj/item/storage/pill_bottle/dice
-	name = "bag of dice"
+	name = "bag of gaming dice"
 	desc = ""
 	icon = 'icons/obj/dice.dmi'
 	icon_state = "dicebag"
+	grid_height = 64
+	grid_width = 32
 	var/last_shake_time
 	var/list/special_die = list(
 				/obj/item/dice/d1,
@@ -16,6 +18,7 @@
 				/obj/item/dice/fourdd6,
 				/obj/item/dice/d100
 				)
+	component_type = /datum/component/storage/concrete/roguetown/dice_pouch
 
 /obj/item/storage/pill_bottle/dice/PopulateContents()
 	new /obj/item/dice/d4(src)
@@ -31,6 +34,21 @@
 /obj/item/storage/pill_bottle/dice/suicide_act(mob/user)
 	user.visible_message(span_suicide("[user] is gambling with death! It looks like [user.p_theyre()] trying to commit suicide!"))
 	return (OXYLOSS)
+
+/obj/item/storage/pill_bottle/dice/farkle
+	name = "bag of farkle dice"
+
+/obj/item/storage/pill_bottle/dice/farkle/PopulateContents()
+	new /obj/item/dice/d6(src)
+	new /obj/item/dice/d6(src)
+	new /obj/item/dice/d6(src)
+	new /obj/item/dice/d6(src)
+	for(var/i in 1 to 2)
+		if(prob(7))
+			new /obj/item/dice/d6/ebony(src)
+		else
+			new /obj/item/dice/d6(src)
+
 
 /obj/item/storage/pill_bottle/dice/hazard
 
@@ -51,6 +69,7 @@
 	desc = ""
 	icon = 'icons/obj/dice.dmi'
 	icon_state = "d6"
+	dropshrink = 0.75
 	w_class = WEIGHT_CLASS_TINY
 	var/sides = 6
 	var/result = null
@@ -59,16 +78,43 @@
 
 	var/rigged = DICE_NOT_RIGGED
 	var/rigged_value
+	var/dicetype
+
+/obj/item/dice/examine()
+	. = ..()
+	. += span_notice("It has landed on a [result]")
 
 /obj/item/dice/Initialize()
 	. = ..()
 	if(!result)
 		result = roll(sides)
 	update_icon()
+	dicetype = name
+	name = "[dicetype] ([result])"
 
 /obj/item/dice/suicide_act(mob/user)
 	user.visible_message(span_suicide("[user] is gambling with death! It looks like [user.p_theyre()] trying to commit suicide!"))
 	return (OXYLOSS)
+
+/obj/item/dice/attack_right(mob/user)
+	if(HAS_TRAIT(user, TRAIT_BLACKLEG))
+		var/list/possible_outcomes = list()
+		var/special = FALSE
+		if(special_faces.len == sides)
+			possible_outcomes.Add(special_faces)
+			special = TRUE
+		else
+			for(var/i in 1 to sides)
+				possible_outcomes += i
+		var/outcome = input(user, "What will you rig the next roll to?", "XYLIX") as null|anything in possible_outcomes
+		if(special)
+			outcome = special_faces.Find(outcome)
+		if(!outcome)
+			return
+		rigged = DICE_BASICALLY_RIGGED
+		rigged_value = outcome
+		return
+	. = ..()
 
 /obj/item/dice/d1
 	name = "d1"
@@ -212,13 +258,8 @@
 							 span_hear("I hear [src] rolling, it sounds like a [fake_result]."))
 	else if(!src.throwing) //Dice was thrown and is coming to rest
 		visible_message(span_notice("[src] rolls to a stop, landing on [result]. [comment]"))
+	name = "[dicetype] ([result])"
 
 /obj/item/dice/update_icon()
 	cut_overlays()
 	add_overlay("[src.icon_state]-[src.result]")
-
-/obj/item/dice/microwave_act(obj/machinery/microwave/M)
-	if(microwave_riggable)
-		rigged = DICE_BASICALLY_RIGGED
-		rigged_value = result
-	..(M)

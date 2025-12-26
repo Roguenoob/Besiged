@@ -10,17 +10,6 @@ GLOBAL_LIST_INIT(special_traits, build_special_traits())
 		.[type] = new type()
 	return .
 
-/proc/roll_random_special(client/player)
-	var/list/eligible_weight = list()
-	for(var/trait_type in GLOB.special_traits)
-		var/datum/special_trait/special = SPECIAL_TRAIT(trait_type)
-		eligible_weight[trait_type] = special.weight
-
-	if(!length(eligible_weight))
-		return null
-
-	return pickweight(eligible_weight)
-
 /proc/print_special_text(mob/user, trait_type)
 	var/datum/special_trait/special = SPECIAL_TRAIT(trait_type)
 	to_chat(user, span_notice("<b>[special.name]</b>"))
@@ -47,12 +36,105 @@ GLOBAL_LIST_INIT(special_traits, build_special_traits())
 		player = character.client
 	apply_charflaw_equipment(character, player)
 	apply_prefs_special(character, player)
+	apply_prefs_virtue(character, player)
+	apply_prefs_race_bonus(character, player)
+	if(player.prefs.dnr_pref)
+		apply_dnr_trait(character, player)
 	if(player.prefs.loadout)
-		character.mind.special_items[player.prefs.loadout.name] = player.prefs.loadout.path
+		character.mind.special_items[player.prefs.loadout::name] += player.prefs.loadout::path
+	if(player.prefs.loadout2)
+		character.mind.special_items[player.prefs.loadout2::name] += player.prefs.loadout2::path
+	if(player.prefs.loadout3)
+		character.mind.special_items[player.prefs.loadout3::name] += player.prefs.loadout3::path
+	//Cove edit start
+	apply_prefs_sizecat(character,player)
+	if(player.prefs.loadout4)
+		character.mind.special_items[player.prefs.loadout4::name] += player.prefs.loadout4::path
+	if(player.prefs.loadout5)
+		character.mind.special_items[player.prefs.loadout5::name] += player.prefs.loadout5::path
+	//Cove edit end
+	var/datum/job/assigned_job = SSjob.GetJob(character.mind?.assigned_role)
+	if(assigned_job)
+		assigned_job.clamp_stats(character)
+	check_trait_incompatibilities(character)
+
+/// Check for incompatible traits and remove one of them
+/proc/check_trait_incompatibilities(mob/living/carbon/human/H)
+	// Easy Dismemberment & Critical Resistance get both cancelled out
+	if(HAS_TRAIT(H, TRAIT_EASYDISMEMBER) && HAS_TRAIT(H, TRAIT_CRITICAL_RESISTANCE))
+		REMOVE_TRAIT(H, TRAIT_EASYDISMEMBER, null) // Doesn't care for source, they ARE getting canceled
+		REMOVE_TRAIT(H, TRAIT_CRITICAL_RESISTANCE, null)
+		to_chat(H, span_warning("My limbs are too frail and my body too tough... the contradiction leaves me unable to resist critical wounds."))
+	return TRUE
+
+/proc/apply_prefs_virtue(mob/living/carbon/human/character, client/player)
+	if (!player)
+		player = character.client
+	if (!player)
+		return
+	if (!player.prefs)
+		return
+
+	var/virtuous = FALSE
+	var/heretic = FALSE
+	if(istype(player.prefs.selected_patron, /datum/patron/inhumen))
+		heretic = TRUE
+
+	if(player.prefs.statpack.name == "Virtuous")
+		virtuous = TRUE
+
+	var/datum/virtue/virtue_type = player.prefs.virtue
+	var/datum/virtue/virtuetwo_type = player.prefs.virtuetwo
+	var/datum/virtue/extravirtue_type = player.prefs.extravirtue
+	if(virtue_type)
+		if(virtue_check(virtue_type, heretic))
+			apply_virtue(character, virtue_type)
+		else
+			to_chat(character, "Incorrect Virtue parameters! (Heretic virtue on a non-heretic) It will not be applied.")
+	if(virtuetwo_type && virtuous)
+		if(virtue_check(virtuetwo_type, heretic))
+			apply_virtue(character, virtuetwo_type)
+		else
+			to_chat(character, "Incorrect Second Virtue parameters! (Heretic virtue on a non-heretic) It will not be applied.")
+	if(extravirtue_type)
+		if(virtue_check(extravirtue_type, heretic))
+			apply_virtue(character, extravirtue_type)
+		else
+			to_chat(character, "Incorrect Second Virtue parameters! (Heretic virtue on a non-heretic) It will not be applied.")
+
+/proc/apply_prefs_race_bonus(mob/living/carbon/human/character, client/player)
+	if (!player)
+		player = character.client
+	if (!player)
+		return
+	if (!player.prefs)
+		return
+	if (!player.prefs.race_bonus || player.prefs.race_bonus == "None")
+		return
+	var/bonus = player.prefs.race_bonus
+	if(ispath(bonus))	//The bonus is a real path
+		if(ispath(bonus, /datum/virtue))
+			var/datum/virtue/v = bonus
+			apply_virtue(character, new v)
+	if(bonus in MOBSTATS)
+		character.change_stat(bonus, 1) //atm it only supports one stat getting a +1
+	if(bonus in GLOB.roguetraits)
+		ADD_TRAIT(character, bonus, TRAIT_GENERIC)
+
+/proc/virtue_check(var/datum/virtue/V, heretic = FALSE)
+	if(V)
+		if(istype(V,/datum/virtue/heretic) && !heretic)
+			return FALSE
+		return TRUE
+	return FALSE
 
 /proc/apply_charflaw_equipment(mob/living/carbon/human/character, client/player)
 	if(character.charflaw)
 		character.charflaw.apply_post_equipment(character)
+		record_featured_object_stat(FEATURED_STATS_VICES, character.charflaw.name)
+
+/proc/apply_dnr_trait(mob/living/carbon/human/character, client/player)
+	ADD_TRAIT(player.mob, TRAIT_DNR, TRAIT_GENERIC)
 
 /proc/apply_prefs_special(mob/living/carbon/human/character, client/player)
 	if(!player)
@@ -141,7 +223,7 @@ GLOBAL_LIST_INIT(special_traits, build_special_traits())
 	return pickweight(eligible_weight)
 
 /proc/apply_special_trait(mob/living/carbon/human/character, trait_type, silent)
-	character.add_special_trait(trait_type) //What am i doing?
-	var/datum/special_trait/special = GLOB.special_traits[trait_type]
+	var/datum/special_trait/special = SPECIAL_TRAIT(trait_type)
+	special.on_apply(character, silent)
 	if(!silent && special.greet_text)
 		to_chat(character, special.greet_text)

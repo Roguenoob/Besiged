@@ -30,7 +30,7 @@
 	. = ..()
 	owner.special_role = ROLE_PREBEL
 	var/mob/living/carbon/human/H = owner.current
-	H.cmode_music = 'sound/music/combat_bandit.ogg'
+	H.cmode_music = 'sound/music/cmode/antag/combat_cutpurse.ogg'
 	H.add_stress(/datum/stressevent/prebel)
 
 /datum/antagonist/prebel/greet()
@@ -116,7 +116,7 @@
 	name = "RECRUIT REBELS"
 	desc = "!"
 	antimagic_allowed = TRUE
-	charge_max = 150
+	recharge_time = 150
 
 /obj/effect/proc_holder/spell/self/rebelconvert/cast(list/targets,mob/user = usr)
 	..()
@@ -208,3 +208,5 @@
 			to_chat(world, span_redtext("The Peasant Rebellion has FAILED!"))
 		for(var/X in offers2join)
 			to_chat(world,"[X]")
+
+#undef INGAME_ROLE_HEAD_UPDATE_PERIOD

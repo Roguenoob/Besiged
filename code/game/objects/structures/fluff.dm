@@ -3,7 +3,6 @@
 /obj/structure/fluff
 	name = "fluff structure"
 	desc = ""
-	icon = 'icons/obj/stationobjs.dmi'
 	icon_state = "minibar"
 	anchored = TRUE
 	density = FALSE
@@ -12,55 +11,37 @@
 	max_integrity = 150
 	var/deconstructible = TRUE
 
-/obj/structure/fluff/attackby(obj/item/I, mob/living/user, params)
-	if(I.tool_behaviour == TOOL_WRENCH && deconstructible)
-		user.visible_message(span_notice("[user] starts disassembling [src]..."), span_notice("I start disassembling [src]..."))
-		I.play_tool_sound(src)
-		if(I.use_tool(src, user, 50))
-			user.visible_message(span_notice("[user] disassembles [src]!"), span_notice("I break down [src] into scrap metal."))
-			playsound(user, 'sound/blank.ogg', 50, TRUE)
-			new/obj/item/stack/sheet/metal(drop_location())
-			qdel(src)
-		return
-	. = ..()
+/obj/structure/fluff/pillow
+	name = "pillows"
+	desc = "Soft plush pillows. Resting your head on one is so relaxing."
+	icon = 'icons/roguetown/misc/structure.dmi'
+	icon_state = "pillow"
+	density = FALSE
 
-/obj/structure/fluff/empty_terrarium //Empty terrariums are created when a preserved terrarium in a lavaland seed vault is activated.
-	name = "empty terrarium"
-	desc = ""
-	icon = 'icons/obj/lavaland/spawners.dmi'
-	icon_state = "terrarium_open"
-	density = TRUE
+/obj/structure/fluff/pillow/red
+	color = CLOTHING_RED
 
-/obj/structure/fluff/empty_sleeper //Empty sleepers are created by a good few ghost roles in lavaland.
-	name = "empty sleeper"
-	desc = ""
-	icon = 'icons/obj/machines/sleeper.dmi'
-	icon_state = "sleeper-open"
+/obj/structure/fluff/pillow/blue
+	color = CLOTHING_BLUE
 
-/obj/structure/fluff/empty_sleeper/nanotrasen
-	name = "broken hypersleep chamber"
-	desc = "A Nanotrasen hypersleep chamber - this one appears broken. \
-		There are exposed bolts for easy disassembly using a wrench."
-	icon_state = "sleeper-o"
+/obj/structure/fluff/pillow/green
+	color = CLOTHING_DARK_GREEN
 
-/obj/structure/fluff/empty_sleeper/syndicate
-	icon_state = "sleeper_s-open"
+/obj/structure/fluff/pillow/brown
+	color = CLOTHING_BROWN
 
-/obj/structure/fluff/empty_cryostasis_sleeper //Empty cryostasis sleepers are created when a malfunctioning cryostasis sleeper in a lavaland shelter is activated
-	name = "empty cryostasis sleeper"
-	desc = ""
-	icon = 'icons/obj/lavaland/spawners.dmi'
-	icon_state = "cryostasis_sleeper_open"
+/obj/structure/fluff/pillow/magenta
+	color = CLOTHING_MAGENTA
 
-/obj/structure/fluff/broken_flooring
-	name = "broken tiling"
-	desc = ""
-	icon = 'icons/obj/brokentiling.dmi'
-	icon_state = "corner"
+/obj/structure/fluff/pillow/purple
+	color = CLOTHING_PURPLE
+
+/obj/structure/fluff/pillow/black
+	color = CLOTHING_BLACK
 
 /obj/structure/fluff/drake_statue //Ash drake status spawn on either side of the necropolis gate in lavaland.
 	name = "drake statue"
-	desc = ""
+	desc = "Possibly the only time you'll ever see its likeness up close and live to tell the tale."
 	icon = 'icons/effects/64x64.dmi'
 	icon_state = "drake_statue"
 	pixel_x = -16
@@ -72,58 +53,13 @@
 	desc = ""
 	icon_state = "drake_statue_falling"
 
-
-/obj/structure/fluff/bus
-	name = "bus"
-	desc = ""
-	icon = 'icons/obj/bus.dmi'
-	density = TRUE
-	anchored = TRUE
-	deconstructible = FALSE
-
-/obj/structure/fluff/bus/dense
-	name = "bus"
-	icon_state = "backwall"
-
-/obj/structure/fluff/bus/passable
-	name = "bus"
-	icon_state = "frontwalltop"
-	density = FALSE
-	layer = ABOVE_ALL_MOB_LAYER //except for the stairs tile, which should be set to OBJ_LAYER aka 3.
-
-
-/obj/structure/fluff/bus/passable/seat
-	name = "seat"
-	desc = ""
-	icon_state = "backseat"
-	pixel_y = 17
-	layer = OBJ_LAYER
-
-
-/obj/structure/fluff/bus/passable/seat/driver
-	name = "driver's seat"
-	desc = ""
-	icon_state = "driverseat"
-
-/obj/structure/fluff/bus/passable/seat/driver/attack_hand(mob/user)
-	playsound(src, 'sound/blank.ogg', 50, TRUE)
-	. = ..()
-
-/obj/structure/fluff/paper
-	name = "dense lining of papers"
-	desc = ""
-	icon = 'icons/obj/fluff.dmi'
-	icon_state = "paper"
-	deconstructible = FALSE
-
 /obj/structure/fluff/paper/corner
 	icon_state = "papercorner"
 
 /obj/structure/fluff/paper/stack
 	name = "dense stack of papers"
-	desc = ""
+	desc = "You can already feel your eyes glazing over and the boredom creeping in."
 	icon_state = "paperstack"
-
 
 /obj/structure/fluff/divine
 	name = "Miracle"
@@ -164,12 +100,6 @@
 	desc = ""
 	icon_state = "shrine"
 
-/obj/structure/fluff/fokoff_sign
-	name = "crude sign"
-	desc = ""
-	icon = 'icons/obj/fluff.dmi'
-	icon_state = "fokof"
-
 /obj/structure/fluff/big_chain
 	name = "giant chain"
 	desc = ""
@@ -182,7 +112,7 @@
 
 /obj/structure/fluff/railing
 	name = "railing"
-	desc = ""
+	desc = "A simple barrier of wood meant to prevent falls."
 	icon = 'icons/obj/railing.dmi'
 	icon_state = "railing"
 	density = FALSE
@@ -190,14 +120,26 @@
 	deconstructible = FALSE
 	flags_1 = ON_BORDER_1
 	climbable = TRUE
-	var/passcrawl = TRUE
 	layer = ABOVE_MOB_LAYER
+	/// Living mobs can lay down to go past
+	var/pass_crawl = TRUE
+	/// Projectiles can go past
+	var/pass_projectile = TRUE
+	/// Throwing atoms can go past
+	var/pass_throwing = TRUE
+	/// Throwing/Flying non mobs can always exit the turf regardless of other flags
+	var/allow_flying_outwards = TRUE
 
 /obj/structure/fluff/railing/Initialize()
 	. = ..()
+	init_connect_loc_element()
 	var/lay = getwlayer(dir)
 	if(lay)
 		layer = lay
+
+/obj/structure/fluff/railing/proc/init_connect_loc_element()
+	var/static/list/loc_connections = list(COMSIG_ATOM_EXIT = PROC_REF(on_exit))
+	AddElement(/datum/element/connect_loc, loc_connections)
 
 /obj/structure/fluff/railing/proc/getwlayer(dirin)
 	switch(dirin)
@@ -223,7 +165,7 @@
 	if(isliving(mover))
 		var/mob/living/M = mover
 		if(!(M.mobility_flags & MOBILITY_STAND))
-			if(passcrawl)
+			if(pass_crawl)
 				return TRUE
 	if(icon_state == "woodrailing" && (dir in CORNERDIRS))
 		var/list/baddirs = list()
@@ -242,36 +184,31 @@
 		return 0
 	return 1
 
-/obj/structure/fluff/railing/CheckExit(atom/movable/O, turf/target)
-//	if(istype(O) && (O.pass_flags & PASSTABLE))
-//		return 1
-	if(istype(O, /obj/projectile))
-		return 1
-	if(O.throwing)
-		return 1
-	if(isobserver(O))
-		return 1
-	if(isliving(O))
-		var/mob/living/M = O
+/obj/structure/fluff/railing/proc/on_exit(datum/source, atom/movable/leaving, atom/new_location)
+	SIGNAL_HANDLER
+
+	if(dir in CORNERDIRS)
+		return
+
+	if(isobserver(leaving))
+		return
+
+	if(get_dir(leaving.loc, new_location) != dir)
+		return
+
+	if(pass_projectile && istype(leaving, /obj/projectile))
+		return
+
+	if(pass_throwing && leaving.throwing)
+		return
+
+	if(pass_crawl && isliving(leaving))
+		var/mob/living/M = leaving
 		if(!(M.mobility_flags & MOBILITY_STAND))
-			if(passcrawl)
-				return TRUE
-	if(icon_state == "woodrailing" && (dir in CORNERDIRS))
-		var/list/baddirs = list()
-		switch(dir)
-			if(SOUTHEAST)
-				baddirs = list(SOUTHEAST, SOUTH, EAST)
-			if(SOUTHWEST)
-				baddirs = list(SOUTHWEST, SOUTH, WEST)
-			if(NORTHEAST)
-				baddirs = list(NORTHEAST, NORTH, EAST)
-			if(NORTHWEST)
-				baddirs = list(NORTHWEST, NORTH, WEST)
-		if(get_dir(O.loc, target) in baddirs)
-			return 0
-	else if(get_dir(O.loc, target) == dir)
-		return 0
-	return 1
+			return
+
+	leaving.Bump(src)
+	return COMPONENT_ATOM_BLOCK_EXIT
 
 /obj/structure/fluff/railing/OnCrafted(dirin)
 	. = ..()
@@ -279,14 +216,45 @@
 	if(lay)
 		layer = lay
 
+/obj/structure/fluff/railing/border/north
+	dir = 1
+
+/obj/structure/fluff/railing/border/east
+	dir = 4
+
+/obj/structure/fluff/railing/border/west
+	dir = 8
+
 /obj/structure/fluff/railing/corner
-	icon_state = "railing_corner"
+	icon_state = "border"
 	density = FALSE
+	dir = 9
+
+/obj/structure/fluff/railing/corner/init_connect_loc_element()
+	return
+
+/obj/structure/fluff/railing/corner/north_east
+	dir = 5
+
+/obj/structure/fluff/railing/corner/south_west
+	dir = 10
+
+/obj/structure/fluff/railing/corner/south_east
+	dir = 6
 
 /obj/structure/fluff/railing/wood
 	icon_state = "woodrailing"
 	blade_dulling = DULLING_BASHCHOP
 	layer = ABOVE_MOB_LAYER
+
+/obj/structure/fluff/railing/wood/north
+	dir = 1
+
+/obj/structure/fluff/railing/wood/east
+	dir = 4
+
+/obj/structure/fluff/railing/wood/west
+	dir = 8
 
 /obj/structure/fluff/railing/stonehedge
 	icon_state = "stonehedge"
@@ -297,11 +265,11 @@
 	name = "border"
 	desc = ""
 	icon_state = "border"
-	passcrawl = FALSE
+	pass_crawl = FALSE
 
 /obj/structure/fluff/railing/fence
 	name = "palisade"
-	desc = ""
+	desc = "A rudimentary barrier that might keep the monsters at bay."
 	icon = 'icons/roguetown/misc/structure.dmi'
 	attacked_sound = 'sound/misc/woodhit.ogg'
 	destroy_sound = 'sound/misc/treefall.ogg'
@@ -312,7 +280,7 @@
 	layer = 2.91
 	climbable = FALSE
 	max_integrity = 400
-	passcrawl = FALSE
+	pass_crawl = FALSE
 	climb_offset = 6
 
 /obj/structure/fluff/railing/fence/Initialize()
@@ -354,13 +322,6 @@
 		return 0
 	return 1
 
-/obj/structure/fluff/railing/fence/CheckExit(atom/movable/O, turf/target)
-	if(istype(O, /obj/projectile))
-		return 1
-	if(get_dir(O.loc, target) == dir)
-		return 0
-	return 1
-
 /obj/structure/bars
 	name = "bars"
 	desc = ""
@@ -378,6 +339,10 @@
 	obj_flags = CAN_BE_HIT | BLOCK_Z_OUT_DOWN
 	attacked_sound = list("sound/combat/hits/onmetal/metalimpact (1).ogg", "sound/combat/hits/onmetal/metalimpact (2).ogg")
 
+/obj/structure/bars/obj_break(damage_flag)
+	loud_message("A sickening, metallic scrape of bars getting broken rings out", hearing_distance = 14)
+	. = ..()
+
 /obj/structure/bars/CanPass(atom/movable/mover, turf/target)
 	if(isobserver(mover))
 		return 1
@@ -390,6 +355,9 @@
 /obj/structure/bars/shop
 	icon_state = "barsbent"
 	layer = BELOW_OBJ_LAYER
+
+/obj/structure/bars/shop/bronze
+	color = "#ff9c1a"
 
 /obj/structure/bars/chainlink
 	icon_state = "chainlink"
@@ -423,6 +391,7 @@
 	icon_state = "passage0"
 	density = TRUE
 	max_integrity = 1500
+	redstone_structure = TRUE
 
 /obj/structure/bars/passage/steel
 	name = "steel bars"
@@ -442,6 +411,7 @@
 	icon_state = "shutter0"
 	density = TRUE
 	opacity = TRUE
+	redstone_structure = TRUE
 
 /obj/structure/bars/passage/shutter/redstone_triggered()
 	if(obj_broken)
@@ -460,6 +430,29 @@
 	density = FALSE
 	opacity = FALSE
 
+/obj/structure/bars/passage/attackby(obj/item/I, mob/user, params)
+	. = ..()
+	var/obj/item = user.get_active_held_item()
+	if(user.used_intent.type == /datum/intent/chisel )
+		if (user.get_skill_level(/datum/skill/craft/engineering) <= 3)
+			to_chat(user, span_warning("I need more skill to carve a name into this passage."))
+			return
+		playsound(user, 'sound/misc/wood_saw.ogg', 100, TRUE)
+		user.visible_message("<span class='info'>[user] Carves a name into the passage.</span>")
+		if(do_after(user, 10))
+			var/passagename
+			passagename = input("What name would you like to carve into the passage?")
+			if (passagename)
+				name = passagename + "(passage)"
+				desc = "a passage with a name carved into it"
+			else
+				name = "passage"
+				desc = "a passage with a carving scratched out"
+			playsound(user, 'sound/misc/wood_saw.ogg', 100, TRUE)
+		return
+	else if(istype(item, /obj/item/rogueweapon/chisel/assembly))
+		to_chat(user, span_warning("You most use both hands to rename the passage."))
+
 /obj/structure/bars/grille
 	name = "grille"
 	desc = ""
@@ -472,9 +465,10 @@
 	obj_flags = CAN_BE_HIT | BLOCK_Z_OUT_DOWN | BLOCK_Z_IN_UP
 	attacked_sound = list('sound/combat/hits/onmetal/grille (1).ogg', 'sound/combat/hits/onmetal/grille (2).ogg', 'sound/combat/hits/onmetal/grille (3).ogg')
 	var/togg = FALSE
+	redstone_structure = TRUE
 
 /obj/structure/bars/grille/Initialize()
-	AddComponent(/datum/component/squeak, list('sound/foley/footsteps/FTMET_A1.ogg','sound/foley/footsteps/FTMET_A2.ogg','sound/foley/footsteps/FTMET_A3.ogg','sound/foley/footsteps/FTMET_A4.ogg'), 100)
+	AddComponent(/datum/component/squeak, list('sound/foley/footsteps/FTMET_A1.ogg','sound/foley/footsteps/FTMET_A2.ogg','sound/foley/footsteps/FTMET_A3.ogg','sound/foley/footsteps/FTMET_A4.ogg'), 40)
 	dir = pick(GLOB.cardinals)
 	return ..()
 
@@ -485,11 +479,11 @@
 /obj/structure/bars/grille/redstone_triggered()
 	if(obj_broken)
 		return
-	testing("togge")
+
 	togg = !togg
 	playsound(src, 'sound/foley/trap_arm.ogg', 100)
 	if(togg)
-		testing("togge1")
+
 		icon_state = "floorgrilleopen"
 		obj_flags = CAN_BE_HIT
 		var/turf/T = loc
@@ -497,10 +491,32 @@
 			for(var/mob/living/M in loc)
 				T.Entered(M)
 	else
-		testing("togge2")
+
 		icon_state = "floorgrille"
 		obj_flags = CAN_BE_HIT | BLOCK_Z_OUT_DOWN | BLOCK_Z_IN_UP
 
+/obj/structure/bars/grille/attackby(obj/item/I, mob/user, params)
+	. = ..()
+	var/obj/item = user.get_active_held_item()
+	if(user.used_intent.type == /datum/intent/chisel )
+		if (user.get_skill_level(/datum/skill/craft/engineering) <= 3)
+			to_chat(user, span_warning("I need more skill to carve a name into this grille."))
+			return
+		playsound(user, 'sound/misc/wood_saw.ogg', 100, TRUE)
+		user.visible_message("<span class='info'>[user] Carves a name into the grille.</span>")
+		if(do_after(user, 10))
+			var/grillename
+			grillename = input("What name would you like to carve into the grille?")
+			if (grillename)
+				name = grillename + "(grille)"
+				desc = "a grille with a name carved into it"
+			else
+				name = "grille"
+				desc = "a grille with a carving scratched out"
+			playsound(user, 'sound/misc/wood_saw.ogg', 100, TRUE)
+		return
+	else if(istype(item, /obj/item/rogueweapon/chisel/assembly))
+		to_chat(user, span_warning("You most use both hands to rename the grille."))
 
 /obj/structure/bars/pipe
 	name = "bronze pipe"
@@ -540,14 +556,15 @@
 	break_sound = "glassbreak"
 	destroy_sound = 'sound/combat/hits/onwood/destroyfurniture.ogg'
 	attacked_sound = 'sound/combat/hits/onglass/glasshit.ogg'
-	var/broke = FALSE
 	var/datum/looping_sound/clockloop/soundloop
 	drag_slowdown = 3
 
 /obj/structure/fluff/clock/Initialize()
-	soundloop = new(list(src), FALSE)
+	soundloop = new(src, FALSE)
 	soundloop.start()
 	. = ..()
+	var/static/list/loc_connections = list(COMSIG_ATOM_EXIT = PROC_REF(on_exit))
+	AddElement(/datum/element/connect_loc, loc_connections)
 
 /obj/structure/fluff/clock/Destroy()
 	if(soundloop)
@@ -555,60 +572,56 @@
 	..()
 
 /obj/structure/fluff/clock/obj_break(damage_flag)
-	if(!broke)
-		broke = TRUE
-		icon_state = "b[initial(icon_state)]"
-		if(soundloop)
-			soundloop.stop()
-		attacked_sound = list('sound/combat/hits/onwood/woodimpact (1).ogg','sound/combat/hits/onwood/woodimpact (2).ogg')
+	icon_state = "b[initial(icon_state)]"
+	if(soundloop)
+		soundloop.stop()
+	attacked_sound = list('sound/combat/hits/onwood/woodimpact (1).ogg','sound/combat/hits/onwood/woodimpact (2).ogg')
 	..()
 
 /obj/structure/fluff/clock/attack_right(mob/user)
-	if(user.mind && isliving(user))
-		if(user.mind.special_items && user.mind.special_items.len)
-			var/item = input(user, "What will I take?", "STASH") as null|anything in user.mind.special_items
-			if(item)
-				if(user.Adjacent(src))
-					if(user.mind.special_items[item])
-						var/path2item = user.mind.special_items[item]
-						user.mind.special_items -= item
-						var/obj/item/I = new path2item(user.loc)
-						user.put_in_hands(I)
-			return
+	handle_special_items_retrieval(user, src)
+	return
 
 /obj/structure/fluff/clock/examine(mob/user)
 	. = ..()
-	if(!broke)
-		var/day = "... actually, WHAT dae is it?"
-		switch(GLOB.dayspassed)
-			if(1)
-				day = "Moon's dae."
-			if(2)
-				day = "Tiw's dae."
-			if(3)
-				day = "Wedding's dae."
-			if(4)
-				day = "Thule's dae."
-			if(5)
-				day = "Freyja's dae."
-			if(6)
-				day = "Saturn's dae."
-			if(7)
-				day = "Sun's dae."
-		. += "Oh no, it's [station_time_timestamp("hh:mm")] on a [day]"
+	if(obj_broken)
+		return
+	var/day = "... actually, WHAT dae is it?"
+	switch(GLOB.dayspassed)
+		if(1)
+			day = "Moon's dae."
+		if(2)
+			day = "Tiw's dae."
+		if(3)
+			day = "Wedding's dae."
+		if(4)
+			day = "Thule's dae."
+		if(5)
+			day = "Freyja's dae."
+		if(6)
+			day = "Saturn's dae."
+		if(7)
+			day = "Sun's dae."
+	. += "Oh no, it's [station_time_timestamp("hh:mm")] on a [day]"
 //		if(SSshuttle.emergency.mode == SHUTTLE_DOCKED)
 //			if(SSshuttle.emergency.timeLeft() < 30 MINUTES)
 //				. += span_warning("The last boat will leave in [round(SSshuttle.emergency.timeLeft()/600)] minutes.")
+
+/obj/structure/fluff/clock/CanAStarPass(ID, to_dir, caller)
+	if(to_dir == dir)
+		return FALSE // don't even bother climbing over it
+	return ..()
 
 /obj/structure/fluff/clock/CanPass(atom/movable/mover, turf/target)
 	if(get_dir(loc, mover) == dir)
 		return 0
 	return 1
 
-/obj/structure/fluff/clock/CheckExit(atom/movable/O, turf/target)
-	if(get_dir(O.loc, target) == dir)
-		return 0
-	return 1
+/obj/structure/fluff/clock/proc/on_exit(datum/source, atom/movable/leaving, atom/new_location)
+	SIGNAL_HANDLER
+	if(get_dir(leaving.loc, new_location) == dir)
+		leaving.Bump(src)
+		return COMPONENT_ATOM_BLOCK_EXIT
 
 /obj/structure/fluff/wallclock
 	name = "clock"
@@ -625,8 +638,20 @@
 	break_sound = "glassbreak"
 	destroy_sound = 'sound/combat/hits/onwood/destroyfurniture.ogg'
 	attacked_sound = 'sound/combat/hits/onglass/glasshit.ogg'
-	var/broke = FALSE
 	pixel_y = 32
+
+/obj/structure/fluff/wallclock/attack_right(mob/user)
+	if(user.mind && isliving(user))
+		if(user.mind.special_items && user.mind.special_items.len)
+			var/item = input(user, "What will I take?", "STASH") as null|anything in user.mind.special_items
+			if(item)
+				if(user.Adjacent(src))
+					if(user.mind.special_items[item])
+						var/path2item = user.mind.special_items[item]
+						user.mind.special_items -= item
+						var/obj/item/I = new path2item(user.loc)
+						user.put_in_hands(I)
+			return
 
 /obj/structure/fluff/wallclock/Destroy()
 	if(soundloop)
@@ -635,41 +660,36 @@
 
 /obj/structure/fluff/wallclock/examine(mob/user)
 	. = ..()
-	if(!broke)
-		var/day = "... actually, WHAT dae is it?"
-		switch(GLOB.dayspassed)
-			if(1)
-				day = "Moon's dae."
-			if(2)
-				day = "Tiw's dae."
-			if(3)
-				day = "Wedding's dae."
-			if(4)
-				day = "Thule's dae."
-			if(5)
-				day = "Freyja's dae."
-			if(6)
-				day = "Saturn's dae."
-			if(7)
-				day = "Sun's dae."
-		. += "Oh no, it's [station_time_timestamp("hh:mm")] on a [day]"
-//		testing("mode is [SSshuttle.emergency.mode] should be [SHUTTLE_DOCKED]")
-//		if(SSshuttle.emergency.mode == SHUTTLE_DOCKED)
-//			if(SSshuttle.emergency.timeLeft() < 30 MINUTES)
-//				. += span_warning("The last boat will leave in [round(SSshuttle.emergency.timeLeft()/600)] minutes.")
+	if(obj_broken)
+		return
+	var/day = "... actually, WHAT dae is it?"
+	switch(GLOB.dayspassed)
+		if(1)
+			day = "Moon's dae."
+		if(2)
+			day = "Tiw's dae."
+		if(3)
+			day = "Wedding's dae."
+		if(4)
+			day = "Thule's dae."
+		if(5)
+			day = "Freyja's dae."
+		if(6)
+			day = "Saturn's dae."
+		if(7)
+			day = "Sun's dae."
+	. += "Oh no, it's [station_time_timestamp("hh:mm")] on a [day]"
 
 /obj/structure/fluff/wallclock/Initialize()
-	soundloop = new(list(src), FALSE)
+	soundloop = new(src, FALSE)
 	soundloop.start()
 	. = ..()
 
 /obj/structure/fluff/wallclock/obj_break(damage_flag)
-	if(!broke)
-		broke = TRUE
-		icon_state = "b[initial(icon_state)]"
-		if(soundloop)
-			soundloop.stop()
-		attacked_sound = list('sound/combat/hits/onwood/woodimpact (1).ogg','sound/combat/hits/onwood/woodimpact (2).ogg')
+	icon_state = "b[initial(icon_state)]"
+	if(soundloop)
+		soundloop.stop()
+	attacked_sound = list('sound/combat/hits/onwood/woodimpact (1).ogg','sound/combat/hits/onwood/woodimpact (2).ogg')
 	..()
 
 /obj/structure/fluff/wallclock/l
@@ -765,7 +785,7 @@
 /obj/structure/fluff/customsign/attackby(obj/item/W, mob/user, params)
 	if(!user.cmode)
 		if(!user.is_literate())
-			to_chat(user, span_warning("I don't know any verba."))
+			to_chat(user, span_warning("I do not know how to write."))
 			return
 		if((user.used_intent.blade_class == BCLASS_STAB) && (W.wlength == WLENGTH_SHORT))
 			if(wrotesign)
@@ -776,20 +796,10 @@
 				if(inputty && !wrotesign)
 					wrotesign = inputty
 					icon_state = "signwrote"
+		else
+			to_chat(user, span_warning("Alas, this will not work. I could carve words, if I stabbed at this with something posessing a short, sharp point. A knife comes to mind."))
+			return
 	..()
-
-/obj/structure/fluff/dryingrack
-	name = "drying rack"
-	desc = ""
-	icon = 'icons/roguetown/misc/structure.dmi'
-	icon_state = "dryrack"
-	density = TRUE
-	anchored = TRUE
-	layer = BELOW_OBJ_LAYER
-	blade_dulling = DULLING_BASHCHOP
-	max_integrity = 150
-	destroy_sound = 'sound/combat/hits/onwood/destroyfurniture.ogg'
-	attacked_sound = list('sound/combat/hits/onwood/woodimpact (1).ogg','sound/combat/hits/onwood/woodimpact (2).ogg')
 
 /obj/structure/fluff/alch
 	name = "alchemical lab"
@@ -804,6 +814,26 @@
 	destroy_sound = 'sound/combat/hits/onwood/destroyfurniture.ogg'
 	attacked_sound = list("sound/combat/hits/onmetal/metalimpact (1).ogg", "sound/combat/hits/onmetal/metalimpact (2).ogg")
 
+/obj/structure/fluff/alch/folding
+	name = "folding alchemical lab"
+	desc = "A compact laboratory. Laid out and ready to work."
+	icon = 'icons/roguetown/misc/gadgets.dmi'
+	icon_state = "foldingAlchstationDeployed"
+	max_integrity = 350
+	debris = list(/obj/item/grown/log/tree/small = 2)
+	climbable = TRUE
+	climb_offset = 10
+
+/obj/structure/fluff/alch/folding/examine()
+	. = ..()
+	. += span_blue("Right-Click to fold the lab.")
+
+/obj/structure/fluff/alch/folding/attack_right(mob/user)
+	if(do_after(user, 5 SECONDS, target = src))
+		user.visible_message(span_notice("[user] folds [src]."), span_notice("You fold [src]."))
+		new /obj/item/folding_alchstation_stored(drop_location())
+		qdel(src)
+		return ..()
 
 /obj/structure/fluff/statue
 	name = "statue"
@@ -818,36 +848,39 @@
 	max_integrity = 300
 	dir = SOUTH
 
+/obj/structure/fluff/statue/Initialize()
+	. = ..()
+	var/static/list/loc_connections = list(COMSIG_ATOM_EXIT = PROC_REF(on_exit))
+	AddElement(/datum/element/connect_loc, loc_connections)
+
 /obj/structure/fluff/statue/OnCrafted(dirin, user)
 	dirin = turn(dirin, 180)
 	. = ..()
 
 /obj/structure/fluff/statue/attack_right(mob/user)
-	if(user.mind && isliving(user))
-		if(user.mind.special_items && user.mind.special_items.len)
-			var/item = input(user, "What will I take?", "STASH") as null|anything in user.mind.special_items
-			if(item)
-				if(user.Adjacent(src))
-					if(user.mind.special_items[item])
-						var/path2item = user.mind.special_items[item]
-						user.mind.special_items -= item
-						var/obj/item/I = new path2item(user.loc)
-						user.put_in_hands(I)
-			return
-
+	handle_special_items_retrieval(user, src)
 
 /obj/structure/fluff/statue/CanPass(atom/movable/mover, turf/target)
 	if(get_dir(loc, mover) == dir)
 		return 0
 	return !density
 
-/obj/structure/fluff/statue/CheckExit(atom/movable/O, turf/target)
-	if(get_dir(O.loc, target) == dir)
-		return 0
-	return !density
+/obj/structure/fluff/statue/CanAStarPass(ID, to_dir, caller)
+	if(to_dir == dir)
+		return FALSE // don't even bother climbing over it
+	return ..()
+
+/obj/structure/fluff/statue/proc/on_exit(datum/source, atom/movable/leaving, atom/new_location)
+	SIGNAL_HANDLER
+	if(get_dir(leaving.loc, new_location) == dir)
+		leaving.Bump(src)
+		return COMPONENT_ATOM_BLOCK_EXIT
 
 /obj/structure/fluff/statue/gargoyle
 	icon_state = "gargoyle"
+
+/obj/structure/fluff/statue/aasimar
+	icon_state = "aasimar"
 
 /obj/structure/fluff/statue/gargoyle/candles
 	icon_state = "gargoyle_candles"
@@ -872,6 +905,19 @@
 	desc = "An ornamental stone statue of the sun Goddess Astrata, decorated with golden jewelry. Bless."
 	icon_state = "astrata_bling"
 
+//Why are all of these in one giant file.
+/obj/structure/fluff/statue/abyssor
+	name = "abyssor statue"
+	desc = "A slate statue of the ancient god abyssor. One of many depictions drawn from a dream no doubt. This particular one is horrifying to look at."
+	icon_state = "abyssor"
+	icon = 'icons/roguetown/misc/tallandwide.dmi'
+	pixel_x = -16
+
+/obj/structure/fluff/statue/abyssor/dolomite
+	name = "abyssor statue"
+	desc = "A rare dolomite statue of the ancient god abyssor. Hewn from bleached rock as if the shimmer makes his faceless gaze any less terrifying."
+	icon_state = "abyssor_dolomite"
+
 /obj/structure/fluff/statue/knight/r
 	icon_state = "knightstatue_r"
 
@@ -880,6 +926,9 @@
 
 /obj/structure/fluff/statue/knight/interior/r
 	icon_state = "oknightstatue_r"
+
+/obj/structure/fluff/statue/knight/interior/r/bronze
+	color = "#ff9c1a"
 
 /obj/structure/fluff/statue/knightalt
 	icon_state = "knightstatue2_l"
@@ -917,23 +966,23 @@
 	pixel_x = -32
 	pixel_y = -16
 
-/obj/structure/fluff/statue/femalestatue/Initialize()
-	. = ..()
-	var/matrix/M = new
-	M.Scale(0.7,0.7)
-	src.transform = M
+/obj/structure/fluff/statue/femalestatue1
+	icon = 'icons/roguetown/misc/ay.dmi'
+	icon_state = "2"
+	pixel_x = -32
+	pixel_y = -16
+
+/obj/structure/fluff/statue/femalestatue2
+	icon = 'icons/roguetown/misc/ay.dmi'
+	icon_state = "5"
+	pixel_x = -32
+	pixel_y = -16
 
 /obj/structure/fluff/statue/femalestatue/zizo
 	icon = 'icons/roguetown/misc/ay.dmi'
 	icon_state = "4"
 	pixel_x = -32
 	pixel_y = -16
-
-/obj/structure/fluff/statue/femalestatue/zizo/Initialize()
-	. = ..()
-	var/matrix/M = new
-	M.Scale(0.7,0.7)
-	src.transform = M
 
 /obj/structure/fluff/statue/scare
 	name = "scarecrow"
@@ -944,56 +993,62 @@
 	icon_state = "p_dummy"
 	icon = 'icons/roguetown/misc/structure.dmi'
 
-/obj/structure/fluff/statue/tdummy/attackby(obj/item/W, mob/user, params)
-	if(!user.cmode)
-		if(W.associated_skill)
-			if(user.mind)
-				if(isliving(user))
-					var/mob/living/L = user
-					var/probby = (L.STALUC / 10) * 100
-					probby = min(probby, 99)
-					user.changeNext_move(CLICK_CD_MELEE)
-					if(W.max_blade_int)
-						W.remove_bintegrity(5)
-					L.rogfat_add(rand(4,6))
-					if(!(L.mobility_flags & MOBILITY_STAND))
-						probby = 0
-					if(L.STAINT < 3)
-						probby = 0
-					if(prob(probby) && !user.buckled)
-						user.visible_message(span_info("[user] trains on [src]!"))
-						var/amt2raise = L.STAINT * 0.35
-						if(!can_train_combat_skill(user, W.associated_skill, SKILL_LEVEL_APPRENTICE))
-							to_chat(user, span_warning("I've learned all I can from doing this, it's time for the real thing."))
-							amt2raise = 0
-						if(amt2raise > 0)
-							user.mind.add_sleep_experience(W.associated_skill, amt2raise, FALSE)
-						playsound(loc,pick('sound/combat/hits/onwood/education1.ogg','sound/combat/hits/onwood/education2.ogg','sound/combat/hits/onwood/education3.ogg'), rand(50,100), FALSE)
-					else
-						user.visible_message(span_danger("[user] trains on [src], but [src] ripostes!"))
-						L.AdjustKnockdown(1)
-						L.throw_at(get_step(L, get_dir(src,L)), 2, 2, L, spin = FALSE)
-						playsound(loc, 'sound/combat/hits/kick/stomp.ogg', 100, TRUE, -1)
-					flick(pick("p_dummy_smashed","p_dummy_smashedalt"),src)
-					return
-	..()
+/obj/structure/fluff/statue/tdummy/attack_hand(mob/user)
+	if(user.cmode || !user.mind || !isliving(user))
+		return ..()
+	practice(user, /datum/skill/combat/unarmed, ATTACK_EFFECT_PUNCH)
+
+/obj/structure/fluff/statue/tdummy/attackby(obj/item/attacking_weapon, mob/user, params)
+	if(user.cmode || !attacking_weapon.associated_skill || !user.mind || !isliving(user))
+		return ..()
+	if(attacking_weapon.max_blade_int)
+		attacking_weapon.remove_bintegrity(5)
+	if(!ispath(attacking_weapon.associated_skill, /datum/skill/combat))
+		to_chat(user, span_warning("I don't think this weapon's skill cannot be practiced on a dummy..."))
+		return
+	practice(user, attacking_weapon.associated_skill, user.used_intent.animname)
+
+/obj/structure/fluff/statue/tdummy/proc/practice(var/mob/living/living_mob, var/associated_skill, var/attack_animation)
+	living_mob.changeNext_move(CLICK_CD_MELEE)
+	living_mob.stamina_add(rand(4, 6))
+
+	var/probby = (living_mob.STALUC / 10) * 100
+	probby = min(probby, 99)
+	if(!(living_mob.mobility_flags & MOBILITY_STAND))
+		probby = 0
+	if(living_mob.STAINT < 3)
+		probby = 0
+	if(prob(probby) && !living_mob.buckled)
+		living_mob.do_attack_animation(src, attack_animation)
+		living_mob.visible_message(span_info("[living_mob] trains on [src]!"))
+		var/amt2raise = living_mob.STAINT * 0.35
+		if(!can_train_combat_skill(living_mob, associated_skill, SKILL_LEVEL_APPRENTICE))
+			to_chat(living_mob, span_warning("I've learned all I can from doing this, it's time for the real thing."))
+			amt2raise = 0
+		if(amt2raise > 0)
+			living_mob.mind.add_sleep_experience(associated_skill, amt2raise, FALSE)
+		playsound(loc, pick('sound/combat/hits/onwood/education1.ogg', 'sound/combat/hits/onwood/education2.ogg', 'sound/combat/hits/onwood/education3.ogg'), rand(50,100), FALSE)
+	else
+		living_mob.visible_message(span_danger("[living_mob] trains on [src], but [src] ripostes!"))
+		living_mob.AdjustKnockdown(1)
+		living_mob.throw_at(get_step(living_mob, get_dir(src,living_mob)), 2, 2, living_mob, spin = FALSE)
+		playsound(loc, 'sound/combat/hits/kick/stomp.ogg', 100, TRUE, -1)
+	flick(pick("p_dummy_smashed", "p_dummy_smashedalt"), src)
 
 /obj/structure/fluff/statue/spider
 	name = "mother"
 	icon_state = "spidercore"
 
 /obj/structure/fluff/statue/spider/attackby(obj/item/W, mob/user, params)
-	if(istype(W, /obj/item/reagent_containers/food/snacks/rogue/honey))
+	if(istype(W, /obj/item/reagent_containers/food/snacks/rogue/honey/spider))
 		if(user.mind)
 			if(user.mind.special_role == "Dark Elf")
 				playsound(loc,'sound/misc/eat.ogg', rand(30,60), TRUE)
-				if(SSticker.mode)
-					var/datum/game_mode/chaosmode/C = SSticker.mode
-					C.delfcontrib += 1
-					if(C.delfcontrib >= C.delfgoal)
-						say("Well done, the brood will grow...",language = /datum/language/elvish)
-					else
-						say("Please bring me [C.delfgoal-C.delfcontrib] more honeys, children!",language = /datum/language/elvish)
+				SSmapping.retainer.delf_contribute += 1
+				if(SSmapping.retainer.delf_contribute >= SSmapping.retainer.delf_goal)
+					say("YOU HAVE DONE WELL, MY CHILD.",language = /datum/language/elvish)
+				else
+					say("BRING ME [SSmapping.retainer.delf_goal - SSmapping.retainer.delf_contribute] MORE. I HUNGER.",language = /datum/language/elvish)
 				qdel(W)
 				return TRUE
 	..()
@@ -1008,9 +1063,19 @@
 		/obj/item/roguecoin,
 		/obj/item/roguegem,
 		/obj/item/clothing/ring,
-		/obj/item/ingot,
+		/obj/item/ingot/gold,
+		/obj/item/ingot/silver,
+		/obj/item/ingot/blacksteel,
 		/obj/item/clothing/neck/roguetown/psicross,
 		/obj/item/reagent_containers/glass/cup,
+		/obj/item/candle/gold,
+		/obj/item/candle/silver,
+		/obj/item/candle/candlestick/silver,
+		/obj/item/candle/candlestick/gold,
+		/obj/item/kitchen/fork/silver,
+		/obj/item/kitchen/fork/gold,
+        /obj/item/kitchen/spoon/silver,
+		/obj/item/kitchen/spoon/gold,
 		/obj/item/roguestatue,
 		/obj/item/riddleofsteel,
 		/obj/item/listenstone,
@@ -1019,7 +1084,8 @@
 		/obj/item/rogue/painting,
 		/obj/item/clothing/head/roguetown/crown/serpcrown,
 		/obj/item/clothing/head/roguetown/vampire,
-		/obj/item/scomstone
+		/obj/item/scomstone,
+		/obj/item/reagent_containers/lux
 	)
 
 /obj/structure/fluff/statue/evil/attackby(obj/item/W, mob/user, params)
@@ -1028,6 +1094,9 @@
 	var/donatedamnt = W.get_real_price()
 	if(user.mind)
 		if(user)
+			if(W.flags_1 & HOARDMASTER_SPAWNED_1)
+				to_chat(user, span_warning("This item is from the Hoard!"))
+				return
 			if(W.sellprice <= 0)
 				to_chat(user, span_warning("This item is worthless."))
 				return
@@ -1043,6 +1112,7 @@
 					if(player.mind)
 						if(player.mind.has_antag_datum(/datum/antagonist/bandit))
 							var/datum/antagonist/bandit/bandit_players = player.mind.has_antag_datum(/datum/antagonist/bandit)
+							record_round_statistic(STATS_SHRINE_VALUE, W.get_real_price())
 							bandit_players.favor += donatedamnt
 							bandit_players.totaldonated += donatedamnt
 							to_chat(player, ("<font color='yellow'>[user.name] donates [donatedamnt] to the shrine! You now have [bandit_players.favor] favor.</font>"))
@@ -1063,8 +1133,6 @@
 	blade_dulling = DULLING_BASHCHOP
 	layer = BELOW_MOB_LAYER
 	max_integrity = 100
-	sellprice = 40
-	flags_1 = HEAR_1
 	var/chance2hear = 30
 	buckleverb = "crucifie"
 	can_buckle = 1
@@ -1073,6 +1141,18 @@
 	dir = NORTH
 	buckle_requires_restraints = 1
 	buckle_prevents_pull = 1
+	var/divine = TRUE
+	obj_flags = UNIQUE_RENAME | CAN_BE_HIT
+
+/obj/structure/fluff/psycross/Initialize()
+	. = ..()
+	become_hearing_sensitive()
+	var/static/list/loc_connections = list(COMSIG_ATOM_EXIT = PROC_REF(on_exit))
+	AddElement(/datum/element/connect_loc, loc_connections)
+
+/obj/structure/fluff/psycross/Destroy()
+	lose_hearing_sensitivity()
+	return ..()
 
 /obj/structure/fluff/psycross/post_buckle_mob(mob/living/M)
 	..()
@@ -1084,14 +1164,66 @@
 	M.reset_offsets("bed_buckle")
 
 /obj/structure/fluff/psycross/CanPass(atom/movable/mover, turf/target)
+	if(istype(mover, /mob/camera))
+		return TRUE
 	if(get_dir(loc, mover) == dir)
-		return 0
+		return FALSE
 	return !density
 
-/obj/structure/fluff/psycross/CheckExit(atom/movable/O, turf/target)
-	if(get_dir(O.loc, target) == dir)
-		return 0
-	return !density
+/obj/structure/fluff/psycross/CanAStarPass(ID, to_dir, caller)
+	if(to_dir == dir)
+		return FALSE // don't even bother climbing over it
+	return ..()
+
+/obj/structure/fluff/psycross/proc/on_exit(datum/source, atom/movable/leaving, atom/new_location)
+	SIGNAL_HANDLER
+	if(get_dir(leaving.loc, new_location) == dir)
+		leaving.Bump(src)
+		return COMPONENT_ATOM_BLOCK_EXIT
+
+/obj/structure/fluff/psycross/attack_hand(mob/user)
+	. = ..()
+	var/mob/living/carbon/H = user
+	if(user.mind?.antag_datums)
+		if(living_player_count() <= 25) //Only works if less than 25 people in a round. Otherwise good fucking luck lol
+			for(var/datum/antagonist/D in user.mind?.antag_datums)
+				if(istype(D, /datum/antagonist/zombie))
+					to_chat(H, span_warning("I press my palm to the cross and focus..."))
+					if(do_after(H, 1 MINUTES, TRUE, src))
+						self_revive(H)
+					return
+		else
+			to_chat(H, span_warning("I can't use this... The god's refuse, I must seek aid from someone else..."))
+	else if(do_after(H, 5 SECONDS, TRUE, src)) //Fluff interaction for RP purposes and a tiny mood boost as an alternative to praying and spamming admin chats. Works anywhere.
+		if(H.has_flaw(/datum/charflaw/addiction/godfearing))
+			H.sate_addiction() //For the especially devout...
+		H.visible_message(span_notice("[H] sends a silent prayer."), span_green("May the Ten forever grace us with their benevolent gaze..."))
+		H.add_stress(/datum/stressevent/psyprayer)
+
+//Most of this comes from Astrata, as she is benevolent enough to at least help bring those back to the light from the darkness they came...
+/obj/structure/fluff/psycross/proc/self_revive(mob/living/carbon/H)
+
+	//This proc works under assumption the target is already dead. In no way should this be called by dragging the already dead corpse under it to touch the cross.
+
+		//REMINDER! IT was NOT intended for people to get a FULL HEAL OUT OF THIS WITH A REVIVE PROC! I may add healing in the future or remove the fire burn!
+		//BUT YOU NEED TO SLEEP AFTERWARDS TO HEAL OR DRINK A POTION, this allows the church to still do their job if none of them can heal you!
+	if(istype(get_area(H), /area/rogue/indoors/town/church)) //Church check!
+		for(var/obj/structure/fluff/psycross/S in oview(5, H))
+			S.AOE_flash(H, range = 8)
+		H.adjustOxyLoss(-H.getOxyLoss()) //Ye Olde CPR
+		H.emote("breathgasp")
+		H.Jitter(100)
+		H.Paralyze(40) //Take some minor burn damage you vile fiend!
+		H.adjust_fire_stacks(2)
+		playsound(src, 'sound/magic/revive.ogg', 33, 0, 4)
+		playsound(src, 'sound/magic/woundheal.ogg', 100, 0, 6) //Fancy, weaker revive.
+		H.visible_message(span_notice("[H] is revived by holy light! Flames purge their rot!"), span_red("I awake from the void with a blistering pain!"))
+		H.mind.remove_antag_datum(/datum/antagonist/zombie)
+		H.remove_status_effect(/datum/status_effect/debuff/rotted_zombie) //Removes the rotted-zombie debuff if they have it - Failsafe for it.
+		H.apply_status_effect(/datum/status_effect/debuff/self_revived)	//Longer debuff for self revival. Hurts like a fuckin' TRUCK.
+		H.update_body()
+	else
+		H.visible_message(span_notice("[H] hopelessly clutches the cross, sorrow filling their cold, dead eyes..."), span_red("The Ten cannot help me here... I must find a church..."))
 
 /obj/structure/fluff/psycross/copper
 	name = "pantheon cross"
@@ -1106,13 +1238,44 @@
 	max_integrity = 80
 	chance2hear = 10
 
+/obj/structure/fluff/psycross/psycrucifix
+	name = "wooden psydonic crucifix"
+	desc = "A rarely seen symbol of absolute and devoted certainty, more common in Otava: HE yet lyves. HE yet breathes."
+	icon_state = "psycruci"
+	max_integrity = 80
+	chance2hear = 10
+
+/obj/structure/fluff/psycross/psycrucifix/stone
+	name = "stone psydonic crucifix"
+	desc = "Formed of stone, this great Psycross symbolises that HE is forever ENDURING. Considered a rare sight upon the Peaks."
+	icon_state = "psycruci_r"
+	max_integrity = 120
+	chance2hear = 10
+
+/obj/structure/fluff/psycross/psycrucifix/silver
+	name = "silver psydonic crucifix"
+	icon_state = "psycruci_s"
+	desc = "Constructed of Blessed Silver, this crucifix symbolises absolute faith in the ONE - For PSYDON WEEPS, for all mortal ilk. PSYDON WEEPS, for all who walk upon the soil. PSYDON WEEPS..."
+	attacked_sound = list("sound/combat/hits/onmetal/metalimpact (1).ogg", "sound/combat/hits/onmetal/metalimpact (2).ogg")
+	max_integrity = 450
+	chance2hear = 10
+
+/obj/structure/fluff/psycross/zizocross
+	name = "inverted cross"
+	desc = "An unholy symbol. Blasphemy for most, reverence for few."
+	icon_state = "invertedcross"
+	divine = FALSE
+
 /obj/structure/fluff/psycross/attackby(obj/item/W, mob/user, params)
 	if(user.mind)
-		if(user.mind.assigned_role == "Priest")
+		if(user.mind.assigned_role == "Bishop")
 			if(istype(W, /obj/item/reagent_containers/food/snacks/grown/apple))
 				if(!istype(get_area(user), /area/rogue/indoors/town/church/chapel))
 					to_chat(user, span_warning("I need to do this in the chapel."))
 					return FALSE
+				///Caustic edit
+				var/name_placement = 1 //this is here as we want it to reset ONLY on a NEW marriage attempt, not mid marraige. Thank you breakpoints
+				///Caustic edit end
 				var/marriage
 				var/obj/item/reagent_containers/food/snacks/grown/apple/A = W
 				//The MARRIAGE TEST BEGINS
@@ -1123,7 +1286,7 @@
 						var/mob/living/carbon/human/thebride
 						//Did anyone get cold feet on the wedding?
 						for(var/mob/M in viewers(src, 7))
-							testing("check [M]")
+
 							if(thegroom && thebride)
 								break
 							if(!ishuman(M))
@@ -1135,7 +1298,6 @@
 							* second. This seems to be the best way
 							* to use the least amount of variables.
 							*/
-							var/name_placement = 1
 							for(var/X in A.bitten_names)
 								//I think that guy is dead.
 								if(C.stat == DEAD)
@@ -1157,12 +1319,12 @@
 											if(thebride)
 												continue
 											thebride = C
-									testing("foundbiter [C.real_name]")
+
 									name_placement++
 
 						//WE FOUND THEM LETS GET THIS SHOW ON THE ROAD!
 						if(!thegroom || !thebride)
-							testing("fail22")
+
 							return
 						//Alright now for the boring surname formatting.
 						var/surname2use
@@ -1205,6 +1367,7 @@
 					return
 	return ..()
 
+
 /obj/structure/fluff/psycross/copper/Destroy()
 	addomen("psycross")
 	..()
@@ -1235,24 +1398,6 @@
 	if(M.flash_act())
 		var/diff = power - M.confused
 		M.confused += min(power, diff)
-
-/obj/structure/fluff/beach_towel
-	name = "beach towel"
-	desc = ""
-	icon = 'icons/obj/fluff.dmi'
-	icon_state = "railing"
-	density = FALSE
-	anchored = TRUE
-	deconstructible = FALSE
-
-/obj/structure/fluff/beach_umbrella
-	name = "beach umbrella"
-	desc = ""
-	icon = 'icons/obj/fluff.dmi'
-	icon_state = "brella"
-	density = FALSE
-	anchored = TRUE
-	deconstructible = FALSE
 
 /obj/structure/fluff/beach_umbrella/security
 	icon_state = "hos_brella"
@@ -1305,18 +1450,6 @@
 	name = "clockwork golem scrap"
 	desc = ""
 	icon_state = "clockgolem_dead"
-
-/obj/structure/fluff/statue/shisha
-	name = "shisha pipe"
-	desc = "A traditional shisha pipe, this one is broken."
-	icon = 'icons/roguetown/misc/64x64.dmi'
-	icon_state = "zbuski"
-	density = FALSE
-	anchored = TRUE
-	layer = ABOVE_MOB_LAYER
-	plane = GAME_PLANE_UPPER
-	blade_dulling = DULLING_BASH
-	max_integrity = 300
 
 /obj/structure/fluff/headstake
 	name = "head on a stake"

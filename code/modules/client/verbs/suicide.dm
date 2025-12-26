@@ -15,11 +15,6 @@
 
 /mob/living/silicon/robot/set_suicide(suicide_state)
 	. = ..()
-	if(mmi)
-		if(mmi.brain)
-			mmi.brain.suicided = suicide_state
-		if(mmi.brainmob)
-			mmi.brainmob.suiciding = suicide_state
 
 /mob/living/carbon/human/verb/suicide()
 	set hidden = 1
@@ -42,7 +37,6 @@
 				if(damagetype & SHAME)
 					adjustStaminaLoss(200)
 					set_suicide(FALSE)
-					SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "shameful_suicide", /datum/mood_event/shameful_suicide)
 					return
 
 				if(damagetype & MANUAL_SUICIDE_NONLETHAL) //Make sure to call the necessary procs if it does kill later

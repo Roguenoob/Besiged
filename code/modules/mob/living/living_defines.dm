@@ -4,12 +4,14 @@
 	see_invisible = SEE_INVISIBLE_LIVING
 	sight = 0
 	see_in_dark = 8
-	hud_possible = list(HEALTH_HUD,STATUS_HUD,ANTAG_HUD,NANITE_HUD,DIAG_NANITE_FULL_HUD)
-	pressure_resistance = 10
-
+	hud_possible = list(ANTAG_HUD)
+	
+	typing_indicator_enabled = TRUE
+	
 	var/resize = 1 //Badminnery resize
 	var/lastattacker = null
 	var/lastattackerckey = null
+	var/datum/weakref/lastattacker_weakref = null
 
 	//Health and life related vars
 	var/maxHealth = 100 //Maximum health that should be possible.
@@ -28,10 +30,8 @@
 
 	var/resting = FALSE
 	var/wallpressed = FALSE
+	var/climbing = FALSE
 
-	var/pixelshifted = FALSE
-	var/pixelshift_x = 0
-	var/pixelshift_y = 0
 	var/pixelshift_layer = 0
 
 	var/lying = 0			//number of degrees. DO NOT USE THIS IN CHECKS. CHECK FOR MOBILITY FLAGS INSTEAD!!
@@ -43,6 +43,8 @@
 
 	var/last_special = 0 //Used by the resist verb, likely used to prevent players from bypassing next_move by logging in/out.
 	var/timeofdeath = 0
+
+	var/infected = FALSE //Used to tell if the mob is in progress of turning into deadite
 
 	//Allows mobs to move through dense areas without restriction. For instance, in space or out of holder objects.
 	var/incorporeal_move = FALSE //FALSE is off, INCORPOREAL_MOVE_BASIC is normal, INCORPOREAL_MOVE_SHADOW is for ninjas
@@ -58,8 +60,12 @@
 
 	var/tod = null // Time of death
 
-	var/on_fire = 0 //The "Are we on fire?" var
-	var/fire_stacks = 0 //Tracks how many stacks of fire we have on, max is usually 20
+	/// The boolean "Are we on fire?" var. 
+	var/on_fire = FALSE
+	/// Helper vars for quick access to firestacks, these should be updated every time firestacks are adjusted
+	var/fire_stacks = 0
+	/// Rate at which fire stacks should decay from this mob
+	var/fire_stack_decay_rate = -0.05
 
 	var/bloodcrawl = 0 //0 No blood crawling, BLOODCRAWL for bloodcrawling, BLOODCRAWL_EAT for crawling+mob devour
 	var/holder = null //The holder for blood crawling
@@ -84,6 +90,8 @@
 	var/list/butcher_results = null //these will be yielded from butchering with a probability chance equal to the butcher item's effectiveness
 	var/list/guaranteed_butcher_results = null //these will always be yielded from butchering
 	var/butcher_difficulty = 0 //effectiveness prob. is modified negatively by this amount; positive numbers make it more difficult, negative ones make it easier
+
+	var/is_jumping = 0 //to differentiate between jumping and thrown mobs
 
 	var/hellbound = 0 //People who've signed infernal contracts are unrevivable.
 
@@ -116,23 +124,18 @@
 
 	var/can_be_held = FALSE	//whether this can be picked up and held.
 
-	var/radiation = 0 //If the mob is irradiated.
 	var/ventcrawl_layer = PIPING_LAYER_DEFAULT
 	var/losebreath = 0
-
-	//List of active diseases
-	var/list/diseases = list() // list of all diseases in a mob
-	var/list/disease_resistances = list()
 
 	var/slowed_by_drag = TRUE //Whether the mob is slowed down when dragging another prone mob
 
 	var/list/ownedSoullinks //soullinks we are the owner of
 	var/list/sharedSoullinks //soullinks we are a/the sharer of
 
-	var/maxrogstam = 1000
-	var/maxrogfat = 100
-	var/rogstam = 1000
-	var/rogfat = 0
+	var/max_energy = 1000
+	var/max_stamina = 100
+	var/energy = 1000
+	var/stamina = 0 // Stamina. In reality this is stamina damage and the higher it is the worse it is.
 
 	var/last_fatigued = 0
 	var/last_ps = 0
@@ -140,18 +143,23 @@
 	var/ambushable = 0
 
 	var/surrendering = 0
+	var/compliance = 0 // whether we are choosing to auto-resist grabs and stuff
 
 	var/defprob = 50 //base chance to defend against this mob's attacks, for simple mob combat
-	var/defdrain = 5
 	var/encumbrance = 0
 
 	var/eyesclosed = 0
 	var/fallingas = 0
-
+	var/is_asleep = FALSE
+	
 	var/bleed_rate = 0 //how much are we bleeding
 	var/bleedsuppress = 0 //for stopping bloodloss, eventually this will be limb-based like bleeding
 
 	var/list/next_attack_msg = list()
+
+	///The NAME (not the reference) of the mob's summoner and probable master.
+	var/summoner = null
+
 
 	var/datum/component/personal_crafting/craftingthing
 
@@ -178,6 +186,16 @@
 	/* Can be used to change the lighting threshholds at which players can sneak.*/
 	var/rogue_sneaking_light_threshhold = 0.15
 
+	var/voice_pitch = 1
 
-	/// Voice pitch for audible emotes
-	var/voice_pitch
+	var/domhand = 0
+
+	var/cmode_music_override = list() // set by prefs or the verb, ignored if empty
+	var/cmode_music_override_name // solely for autoselecting as a spawned-in mob
+	var/last_heard_raw_message //to prevent repeated messages from spamming
+
+	/// If the character has prominent mob descriptors, they'll make extra noise
+	var/loud_sneaking = FALSE
+
+	/// Parry timer for projectiles post-attack. Hooks into the attack animation, so is fairly clunky.
+	var/projectile_parry_timer

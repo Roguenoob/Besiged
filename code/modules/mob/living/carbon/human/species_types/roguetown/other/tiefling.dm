@@ -5,30 +5,26 @@
 	name = "Tiefling"
 	id = "tiefling"
 	desc = "<b>Tiefling</b><br>\
-	Tieflings, also known as Infernal-Spawn by the Dwarves, are a relatively new species in Grimmoria\
-	Having shown up sometime within the past two centuries, very little is known about their culture \
-	as many seem to simply intergrate within whatever society they find themselves in. \
-	Tieflings usually cause strong disturbances with their presence, as their fiendish looks \
-	Many have claimed that they are the spawn of a succubus (Or incubus) laying with a mortal. \
-	In this, their species has suffered vast tragedy throughout their short history, \
-	Facing scrutiny, judgement and even genocide in the past. Wounding many tiefling psyche \
-	and leading to most seeking a solitary life outside the watchful eyes of others. \
-	Tiefling cannot reproduce with mortals, and so no half-breed exists. \
-	Tiefling tend to be extremely perceptive and paranoid, as luck is rarely on their side \
-	and their unique biology makes them extremely susceptible to injury. \
-	+1 Intelligence."
+	The offspring of demons with mortal races, a consequence of demonic incursions into the mortal realm and dark pacts. \
+	Their origins dating back to the demonic invasion of Archdevil Vheslyn who pillaged and ravaged the mortal lands and its people before being stopped by Psydon. \
+	These offspring of demon and mortal races came to be known as 'Tieflings', largely despised by most people for centuries for their unnatural origins and appearances. \
+	It was only recently that they became more tolerated, even if the Church still watches them with a weary eye. \
+	When a Tiefling has offspring, no matter the race of their partner, the child would always be a pureblooded Tiefling. \
+	The taint of their very being going back generations, and no amount of cleansing can be rid of it. \
+	As over a millennium a simple handful of Tieflings have created extended bloodlines linking back to their infernal progenitors. Some Tieflings embrace their demonic origin, while other shun it. \
+	No matter if they embrace their demonic ancestors or not, Tieflings have formed an importance upon their bloodline and family due to often being shunned and hunted through out time in which only those of their blood and kin they could truly trust. <br>\
+	(+1 Constitution, +1 Intelligence)"
 
 	skin_tone_wording = "Progenitor"
 
 	species_traits = list(EYECOLOR,HAIR,FACEHAIR,LIPS,STUBBLE,OLDGREY)
 	inherent_traits = list(TRAIT_NOMOBSWAP)
 	default_features = MANDATORY_FEATURE_LIST
-	use_skintones = 1
-	skinned_type = /obj/item/stack/sheet/animalhide/human
+	use_skintones = TRUE
 	disliked_food = NONE
 	liked_food = NONE
 	possible_ages = ALL_AGES_LIST
-	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | ERT_SPAWN | RACE_SWAP | SLIME_EXTRACT
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | RACE_SWAP | SLIME_EXTRACT
 	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mt.dmi'
 	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fm.dmi'
 	dam_icon = 'icons/roguetown/mob/bodies/dam/dam_male.dmi'
@@ -47,7 +43,7 @@
 		OFFSET_NECK_F = list(0,-1), OFFSET_MOUTH_F = list(0,-1), OFFSET_PANTS_F = list(0,0), \
 		OFFSET_SHIRT_F = list(0,0), OFFSET_ARMOR_F = list(0,0), OFFSET_UNDIES_F = list(0,-1), \
 		)
-	race_bonus = list(STAT_INTELLIGENCE = 1)
+	race_bonus = list(STAT_INTELLIGENCE = 1, STAT_CONSTITUTION = 1)
 	enflamed_icon = "widefire"
 	organs = list(
 		ORGAN_SLOT_BRAIN = /obj/item/organ/brain,
@@ -73,19 +69,36 @@
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
 		/datum/customizer/bodypart_feature/underwear,
+		/datum/customizer/bodypart_feature/legwear,
 		/datum/customizer/organ/horns/anthro,
-		/datum/customizer/organ/tail/tiefling,
+		//Caustic edit
+		// /datum/customizer/organ/tail/tiefling,
+		/datum/customizer/organ/tail/demihuman,
+		//Caustic edit end
 		/datum/customizer/organ/testicles/anthro,
 		/datum/customizer/organ/penis/anthro,
 		/datum/customizer/organ/breasts/human,
+		/datum/customizer/organ/vagina/human_anthro,
+		/datum/customizer/organ/ears/tiefling,
+		//Caustic edit
 		/datum/customizer/organ/belly/human,
-		/datum/customizer/organ/vagina/human,
 		/datum/customizer/organ/butt/human,
+		//Caustic edit end
 		)
+	body_marking_sets = list(
+		/datum/body_marking_set/none,
+		/datum/body_marking_set/belly,
+		/datum/body_marking_set/bellysocks,
+		/datum/body_marking_set/tiger,
+		/datum/body_marking_set/tiger_dark,
+		/datum/body_marking_set/gradient,
+	)
 	body_markings = list(
 		/datum/body_marking/flushed_cheeks,
 		/datum/body_marking/eyeliner,
 		/datum/body_marking/tonage,
+		/datum/body_marking/bangs,
+		/datum/body_marking/bun,
 	)
 	languages = list(
 		/datum/language/common,
@@ -119,7 +132,18 @@
 		"Nessyss" = SKIN_COLOR_NESSYSS,
 		"Helixia" = SKIN_COLOR_HELIXIA,
 		"Nymsea" = SKIN_COLOR_NYMSEA,
-		"Calvus" = SKIN_COLOR_CALVUS
+		"Vodyanev" = SKIN_COLOR_ABYSS,
+		"Calvus" = SKIN_COLOR_CALVUS,
+		"Voibion" = SKIN_COLOR_VOIBION,
+		"Chyerno" = SKIN_COLOR_CHYERNO,
+		"Drema"	= SKIN_COLOR_DREMA,
+		"Chir"	= SKIN_COLOR_CHIR,
+		//Caustic edit
+		"Seeker" = SKIN_COLOR_SEEKER,
+		"Splendorous" = SKIN_COLOR_SPLENDOROUS,
+		"Witness"	= SKIN_COLOR_WITNESS,
+		"Blessed"	= SKIN_COLOR_BLESSED
+		//Caustic edit end
 	)
 
 /datum/species/tieberian/get_hairc_list()

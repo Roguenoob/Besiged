@@ -80,10 +80,6 @@ SUBSYSTEM_DEF(throwing)
 	src.target_zone = target_zone
 	src.extra = extra
 
-	if(HAS_TRAIT(src.target, TRAIT_STRONGTHROW))
-		src.maxrange *= 1.5
-		src.force *= 1.5
-
 /datum/thrownthing/Destroy()
 	SSthrowing.processing -= thrownthing
 	thrownthing.throwing = null
@@ -120,7 +116,7 @@ SUBSYSTEM_DEF(throwing)
 	//calculate how many tiles to move, making up for any missed ticks.
 	var/tilestomove = CEILING(min(((((world.time+world.tick_lag) - start_time + delayed_time) * speed) - (dist_travelled ? dist_travelled : -1)), speed*MAX_TICKS_TO_MAKE_UP) * (world.tick_lag * SSthrowing.wait), 1)
 	while (tilestomove-- > 0)
-		if ((dist_travelled >= maxrange || AM.loc == target_turf) && AM.has_gravity(AM.loc))
+		if ((dist_travelled >= maxrange || AM.loc == target_turf))
 			finalize()
 			return
 
@@ -169,9 +165,6 @@ SUBSYSTEM_DEF(throwing)
 			thrownthing.throw_impact(get_turf(thrownthing), src)  // we haven't hit something yet and we still must, let's hit the ground.
 			if(QDELETED(thrownthing)) //throw_impact can delete things, such as glasses smashing
 				return //deletion should already be handled by on_thrownthing_qdel()
-			thrownthing.newtonian_move(init_dir)
-	else
-		thrownthing.newtonian_move(init_dir)
 
 	if(target)
 		thrownthing.throw_impact(target, src)
@@ -186,7 +179,7 @@ SUBSYSTEM_DEF(throwing)
 
 	if(!thrownthing.zfalling) // I don't think you can zfall while thrown but hey, just in case.
 		var/turf/T = get_turf(thrownthing)
-		if(T && thrownthing.has_gravity(T))
+		if(T)
 			T.zFall(thrownthing)
 
 	qdel(src)
@@ -202,3 +195,6 @@ SUBSYSTEM_DEF(throwing)
 		if (AM.density && !(AM.pass_flags & LETPASSTHROW) && !(AM.flags_1 & ON_BORDER_1))
 			finalize(hit=TRUE, target=AM)
 			return TRUE
+
+#undef MAX_THROWING_DIST
+#undef MAX_TICKS_TO_MAKE_UP

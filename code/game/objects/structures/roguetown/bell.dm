@@ -10,7 +10,7 @@
 	var/datum/looping_sound/boatloop/soundloop
 
 /obj/structure/boatbell/Initialize()
-	soundloop = new(list(src), FALSE)
+	soundloop = new(src, FALSE)
 	soundloop.start()
 	. = ..()
 
@@ -18,7 +18,6 @@
 	if(world.time < last_ring + 50)
 		return
 	user.visible_message(span_info("[user] rings the bell."))
-	SSshuttle.moveShuttle("supply", "supply_away", TRUE)
 	playsound(src, 'sound/misc/boatbell.ogg', 100, extrarange = 5)
 	last_ring = world.time
 
@@ -29,58 +28,54 @@
 	playsound(src, 'sound/misc/boatbell.ogg', 100, extrarange = 5)
 	last_ring = world.time
 
-/obj/structure/boatbell/escape
-	desc = "This boat spells the doom of Roguetown. The bell being rung will naturally incite panic in everyone, as many fear the fate of many lordless border settlements should they stay."
-	var/bribe = 0
-	var/bribeprice = 500
+/obj/structure/standingbell
+	name = "service bell"
+	desc = "A small mana-infused bell that carries its chime across the city to a select few ears. Use this to call for service."
+	icon = 'icons/roguetown/misc/tallstructure.dmi'
+	icon_state = "standingbell"
+	density = FALSE
+	max_integrity = 0
+	anchored = TRUE
+	var/cooldown = 10 MINUTES
+	var/on_cooldown = FALSE
+	var/area/localarea
 
-/obj/structure/boatbell/escape/Initialize()
-	bribeprice = rand(300,700)
+/obj/structure/standingbell/Initialize()
 	. = ..()
+	localarea = get_area_name(src)
 
 
-/obj/structure/boatbell/escape/attackby(obj/item/P, mob/user, params)
-	if(!user.cmode)
-		if(istype(P, /obj/item/roguecoin) || istype(P, /obj/item/roguegem))
-			bribe += P.get_real_price()
-			qdel(P)
-			if(bribe >= bribeprice)
-				to_chat(user, span_warning("That should be enough."))
-			playsound(loc, 'sound/misc/machinevomit.ogg', 100, TRUE, -1)
-			return
-	..()
-
-/obj/structure/boatbell/escape/attack_hand(mob/user)
-	if(world.time < last_ring + 50)
-		return
-	last_ring = world.time
-	user.visible_message(span_info("[user] starts ringing the bell."))
-	for(var/i in 1 to rand(1,5))
-		playsound(src, 'sound/misc/boatbell.ogg', 100, extrarange = 5)
-		if(!do_after(user, 30, target = src))
-			return
-	var/realbribe = bribeprice - (round(((world.time - SSticker.round_start_time) / 9000))*100)
-	if(user.mind)
-		if(user.mind.has_antag_datum(/datum/antagonist/skeleton))
-			realbribe = 0
-	if(bribe < realbribe)
-		to_chat(user, span_warning("Not enough mammon to make the navigators betray the schedule."))
-		return
-//	SSshuttle.requestEvac(user, href_list["call"])
-	if(SSshuttle.emergency.mode != SHUTTLE_DOCKED)
-		return
-	if(SSshuttle.emergency.earlyLaunch == TRUE)
-		SSshuttle.emergency.earlyLaunch = FALSE
-//		SSshuttle.emergency.setTimer(max(SSshuttle.emergency.startTime + ROUNDTIMERBOAT - world.time, 5 MINUTES))
-		//announce delayed
-		priority_announce("The last boat was delayed.")
+/obj/structure/standingbell/attack_hand(mob/living/user)
+	if(on_cooldown)
+		to_chat(user, span_warning("The bell has already been rung recently."))
 	else
-		if(SSshuttle.emergency.timer < 5 MINUTES)
-			priority_announce("The last boat was delayed.")
-		else
-			priority_announce("The last boat is leaving early.", null, 'sound/misc/boatleave.ogg')
-		SSshuttle.emergency.earlyLaunch = TRUE
-		SSshuttle.emergency.setTimer(5 MINUTES)
-//	SSshuttle.moveShuttle("supply", "supply_away", TRUE)
-//	playsound(src, 'sound/misc/boatbell.ogg', 100, extrarange = 5)
+		user.changeNext_move(CLICK_CD_INTENTCAP)
+		user.visible_message(span_warning("[user] begins to ring [src]"))
+		if(do_after(user, 10 SECONDS))
+			on_cooldown = TRUE
+			user.visible_message(span_info("[user] rings [src]"))
+			playsound(src, 'sound/misc/bell.ogg', 100, extrarange = 5)
+			addtimer(CALLBACK(src, PROC_REF(reset_cooldown)), cooldown)
+			var/list/rolestonotify = list()
+			switch(localarea)
+				if("church")
+					rolestonotify = list("Bishop", "Acolyte", "Druid", "Martyr", "Templar", "Churchling")
+				if("Shop")
+					rolestonotify = list("Merchant", "Shophand")
+				if("Physician")
+					rolestonotify = list("Head Physician", "Apothecary")
+				if("The Guild of Craft")
+					rolestonotify = list("Guildmaster", "Guildsman")
+				if("Steward")
+					rolestonotify = list("Steward", "Clerk")
+				if("Baths")
+					rolestonotify = list("Bathmaster", "Bathhouse Attendant")
+				if("The Inquisition")
+					rolestonotify = list("Inquisitor", "Orthodoxist", "Absolver")
+				if("Garrison")
+					rolestonotify = list("Man at Arms", "Sergeant", "Dungeoneer", "Watchman")
+			send_ooc_note(("I hear the distant sounds of [src] ringing. I'm being called to the [localarea]."), job = rolestonotify)
 
+/obj/structure/standingbell/proc/reset_cooldown()
+	visible_message(span_notice ("[src] is ready for use again."))
+	on_cooldown = FALSE

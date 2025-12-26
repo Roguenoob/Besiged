@@ -27,8 +27,6 @@
 	icon_state = "pulling"
 	icon_state = "grabbing_greyscale"
 	color = "#FFFFFF"
-	var/xp_interval = 150
-	var/xp_cooldown = 0
 	var/right_click = FALSE
 	var/thaumaturgy_devotion = 10
 	var/light_devotion = 5
@@ -36,17 +34,6 @@
 
 /obj/item/melee/touch_attack/orison/attack_self()
 	qdel(src)
-
-/obj/item/melee/touch_attack/orison/proc/handle_xp(mob/living/carbon/human/user, fatigue, ignore_cooldown = FALSE)
-	if (!ignore_cooldown)
-		if (world.time < xp_cooldown + xp_interval)
-			return
-
-	xp_cooldown = world.time
-
-	var/obj/effect/proc_holder/spell/targeted/touch/orison/base_spell = attached_spell
-	if (user)
-		adjust_experience(user, base_spell.associated_skill, fatigue+attached_spell.devotion_cost)
 
 /obj/item/melee/touch_attack/orison/MiddleClick(mob/living/user, params)
 	. = ..()
@@ -61,20 +48,19 @@
 		if (/datum/intent/fill)
 			fatigue_used = create_water(target, user)
 			if (fatigue_used)
-				handle_xp(user, fatigue_used)
 				qdel(src)
 		if (INTENT_HELP)
 			fatigue_used = thaumaturgy(target, user)
 			if (fatigue_used)
-				handle_xp(user, fatigue_used)
 				user.devotion?.update_devotion(-fatigue_used)
 				qdel(src)
 		if (/datum/intent/use)
 			fatigue_used = cast_light(target, user)
 			if (fatigue_used)
-				handle_xp(user, fatigue_used)
 				user.devotion?.update_devotion(-fatigue_used)
 				qdel(src)
+
+#define BLESSINGOFLIGHT_FILTER "bol_glow"
 
 /atom/movable/screen/alert/status_effect/light_buff
 	name = "Miraculous Light"
@@ -87,43 +73,33 @@
 	duration = 5 MINUTES
 	status_type = STATUS_EFFECT_REFRESH
 	examine_text = "SUBJECTPRONOUN is surrounded by an aura of gentle light."
-	var/potency = 1
+	var/outline_colour = "#ffffff"
 	var/list/mobs_affected
-
-/datum/status_effect/light_buff/on_creation(mob/living/new_owner, light_power)
-	potency = light_power
-	return ..()
+	var/obj/effect/dummy/lighting_obj/moblight/mob_light_obj
 
 /datum/status_effect/light_buff/refresh()
-	// stack this up as much as we can be bothered to cast it
-	duration += initial(duration)
+	duration += initial(duration) // stack this up as much as we can be bothered to cast it
 
 /datum/status_effect/light_buff/on_apply()
+	. = ..()
+	if (!.)
+		return
+	playsound(owner, 'sound/magic/whiteflame.ogg', 75, FALSE)
 	to_chat(owner, span_notice("Light blossoms into being around me!"))
-	add_light(owner)
+	var/filter = owner.get_filter(BLESSINGOFLIGHT_FILTER)
+	if (!filter)
+		owner.add_filter(BLESSINGOFLIGHT_FILTER, 2, list("type" = "outline", "color" = outline_colour, "alpha" = 60, "size" = 1))
+	mob_light_obj = owner.mob_light(7, 7, _color ="#f5edda")
 	return TRUE
 
-/datum/status_effect/light_buff/proc/add_light(mob/living/source)
-	var/obj/effect/dummy/lighting_obj/moblight/mob_light_obj = source.mob_light(potency)
-	LAZYSET(mobs_affected, source, mob_light_obj)
-	RegisterSignal(source, COMSIG_PARENT_QDELETING, PROC_REF(on_living_holder_deletion))
-
-/datum/status_effect/light_buff/proc/remove_light(mob/living/source)
-	UnregisterSignal(source, COMSIG_PARENT_QDELETING)
-	var/obj/effect/dummy/lighting_obj/moblight/mob_light_obj = LAZYACCESS(mobs_affected, source)
-	LAZYREMOVE(mobs_affected, source)
-	if(mob_light_obj)
-		qdel(mob_light_obj)
-
-/datum/status_effect/light_buff/proc/on_living_holder_deletion(mob/living/M)
-	remove_light(M)
-
 /datum/status_effect/light_buff/on_remove()
+	playsound(owner, 'sound/items/firesnuff.ogg', 75, FALSE)
 	to_chat(owner, span_notice("The miraculous light surrounding me has fled..."))
-	remove_light(owner)
+	owner.remove_filter(BLESSINGOFLIGHT_FILTER)
+	QDEL_NULL(mob_light_obj)
 
 /obj/item/melee/touch_attack/orison/proc/cast_light(atom/thing, mob/living/carbon/human/user)
-	var/holy_skill = user.mind?.get_skill_level(attached_spell.associated_skill)
+	var/holy_skill = user.get_skill_level(attached_spell.associated_skill)
 	var/cast_time = 35 - (holy_skill * 3)
 	if (!thing.Adjacent(user))
 		to_chat(user, span_info("I need to be next to [thing] to channel a blessing of light!"))
@@ -139,6 +115,7 @@
 		if (do_after(user, cast_time, target = thing))
 			var/mob/living/living_thing = thing
 			var/light_power = clamp(4 + (holy_skill - 3), 4, 7)
+			set_light_on()
 
 			if (living_thing.has_status_effect(/datum/status_effect/light_buff))
 				user.visible_message(span_notice("The holy light emanating from [living_thing] becomes brighter!"), span_notice("I feed further devotion into [living_thing]'s blessing of light."))
@@ -152,6 +129,7 @@
 		to_chat(user, span_notice("Only living creachers can bear the blessing of [user.patron.name]'s light."))
 		return
 
+#undef BLESSINGOFLIGHT_FILTER
 /atom/movable/screen/alert/status_effect/thaumaturgy
 	name = "Thaumaturgical Voice"
 	desc = "The power of my god will make the next thing I say carry much further!"
@@ -168,7 +146,7 @@
 	return ..()
 
 /obj/item/melee/touch_attack/orison/proc/thaumaturgy(thing, mob/living/carbon/human/user)
-	var/holy_skill = user.mind?.get_skill_level(attached_spell.associated_skill)
+	var/holy_skill = user.get_skill_level(attached_spell.associated_skill)
 	if (thing == user)
 		// give us a buff that makes our next spoken thing really loud and also cause any linked, un-muted scom to shriek out the phrase at a 15% chance
 		var/cast_time = 50 - (holy_skill * 5)
@@ -234,20 +212,25 @@
 
 /datum/reagent/water/blessed/on_mob_life(mob/living/carbon/M)
 	. = ..()
-	if(ishuman(M))
-		if(M.blood_volume < BLOOD_VOLUME_SAFE)
-			M.blood_volume = min(M.blood_volume+10, BLOOD_VOLUME_SAFE)
 	if (M.mob_biotypes & MOB_UNDEAD)
-		M.adjustFireLoss(0.5*REM)
+		M.adjustFireLoss(0.5  * REAGENTS_EFFECT_MULTIPLIER)
 	else
-		M.adjustBruteLoss(-0.1*REM)
-		M.adjustFireLoss(-0.1*REM)
+		M.adjustBruteLoss(-0.1  * REAGENTS_EFFECT_MULTIPLIER)
+		M.adjustFireLoss(-0.1  * REAGENTS_EFFECT_MULTIPLIER)
 		M.adjustOxyLoss(-0.1, 0)
 		var/list/our_wounds = M.get_wounds()
 		if (LAZYLEN(our_wounds))
 			var/upd = M.heal_wounds(1)
 			if (upd)
 				M.update_damage_overlays()
+
+/datum/reagent/water/blessed/on_mob_metabolize(mob/living/L)
+	..()
+	if(L.mob_biotypes & MOB_UNDEAD)
+		L.adjust_fire_stacks(2)
+		L.ignite_mob()
+		L.emote("scream")
+		L.visible_message(span_warning("[L] erupts into angry fizzling and hissing!"), span_warning("BLESSED WATER!!! IT BURNS!!!"))
 
 /datum/reagent/water/blessed/reaction_mob(mob/living/M, method=TOUCH, reac_volume)
 	if (!istype(M))
@@ -271,8 +254,8 @@
 	if(istype(M,/mob/living/carbon/human/))
 		M_hum = M
 	if((M.mob_biotypes & MOB_UNDEAD) || (M_hum.patron.undead_hater == FALSE))
-		M.adjustBruteLoss(-0.1*REM)
-		M.adjustFireLoss(-0.1*REM)
+		M.adjustBruteLoss(-0.1  * REAGENTS_EFFECT_MULTIPLIER)
+		M.adjustFireLoss(-0.1  * REAGENTS_EFFECT_MULTIPLIER)
 		M.adjustOxyLoss(-0.1, 0)
 		var/list/our_wounds = M.get_wounds()
 		if (LAZYLEN(our_wounds))
@@ -280,15 +263,15 @@
 			if (upd)
 				M.update_damage_overlays()
 	else
-		M.adjustBruteLoss(-0.1*REM)
-		M.adjustFireLoss(-0.1*REM)
+		M.adjustBruteLoss(-0.1  * REAGENTS_EFFECT_MULTIPLIER)
+		M.adjustFireLoss(-0.1  * REAGENTS_EFFECT_MULTIPLIER)
 		M.adjustOxyLoss(-0.1, 0)
 		var/list/our_wounds = M.get_wounds()
 		if (LAZYLEN(our_wounds))
 			var/upd = M.heal_wounds(1)
 			if (upd)
 				M.update_damage_overlays()
-		M.rogfat_add(0.5*REM)
+		M.stamina_add(0.5  * REAGENTS_EFFECT_MULTIPLIER)
 
 /obj/item/melee/touch_attack/orison/proc/create_water(atom/thing, mob/living/carbon/human/user)
 	// normally we wouldn't use fatigue here to keep in line w/ other holy magic, but we have to since water is a persistent resource
@@ -303,7 +286,7 @@
 		
 		user.visible_message(span_info("[user] closes [user.p_their()] eyes in prayer and extends a hand over [thing] as water begins to stream from [user.p_their()] fingertips..."), span_notice("I utter forth a plea to [user.patron.name] for succour, and hold my hand out above [thing]..."))
 
-		var/holy_skill = user.mind?.get_skill_level(attached_spell.associated_skill)
+		var/holy_skill = user.get_skill_level(attached_spell.associated_skill)
 		var/drip_speed = 56 - (holy_skill * 8)
 		var/fatigue_spent = 0
 		var/fatigue_used = max(3, holy_skill)
@@ -311,29 +294,32 @@
 			if (thing.reagents.holder_full() || (user.devotion.devotion - fatigue_used <= 0))
 				break
 
-			var/water_qty = max(1, holy_skill / 2) + 1
+			var/water_qty = max(1, holy_skill) + 1
 			var/list/water_contents = list(/datum/reagent/water/cursed = water_qty)
 			if(user.patron.undead_hater == TRUE)
 				water_contents = list(/datum/reagent/water/blessed = water_qty)
+
 			var/datum/reagents/reagents_to_add = new()
 			reagents_to_add.add_reagent_list(water_contents)
 			reagents_to_add.trans_to(thing, reagents_to_add.total_volume, transfered_by = user, method = INGEST)
 
 			fatigue_spent += fatigue_used
-			user.rogfat_add(fatigue_used)
-			user.devotion?.update_devotion(-0.5)
+			user.stamina_add(fatigue_used)
+			user.devotion?.update_devotion(-1.0)
 
 			if (prob(80))
 				playsound(user, 'sound/items/fillcup.ogg', 55, TRUE)
 		
-		return fatigue_spent
+		return min(50, fatigue_spent)
 	else if (istype(thing, /obj/item/natural/cloth))
 		// stupid little easter egg here: you can dampen a cloth to clean with it, because prestidigitation also lets you clean things. also a lot cheaper devotion-wise than filling a bucket
 		var/obj/item/natural/cloth/the_cloth = thing
-		if (!the_cloth.wet)
-			var/holy_skill = user.mind?.get_skill_level(attached_spell.associated_skill)
-			the_cloth.wet += holy_skill * 5
-			user.visible_message(span_info("[user] closes [user.p_their()] eyes in prayer, beads of moisture coalescing in [user.p_their()] hands to moisten [the_cloth]."), span_notice("I utter forth a plea to [user.patron.name] for succour, and will moisture into [the_cloth]. I should be able to clean with it properly now."))
-			return water_moisten
+		var/holy_skill = user.get_skill_level(attached_spell.associated_skill)
+		if(the_cloth.wet >= holy_skill * 5) // Don't reduce the wetness if someone better than you already blessed it
+			to_chat(user, span_warning("I cannot soak this cloth any further"))
+			return
+		the_cloth.wet = holy_skill * 5
+		user.visible_message(span_info("[user] closes [user.p_their()] eyes in prayer, beads of moisture coalescing in [user.p_their()] hands to moisten [the_cloth]."), span_notice("I utter forth a plea to [user.patron.name] for succour, and will moisture into [the_cloth]. I should be able to clean with it properly now."))
+		return water_moisten
 	else
 		to_chat(user, span_info("I'll need to find a container that can hold water."))

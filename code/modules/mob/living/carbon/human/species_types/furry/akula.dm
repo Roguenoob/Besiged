@@ -11,14 +11,28 @@
 	Due to their penchant for trade and travel, they can be found all over the world, oftentimes \
 	seeing places many could not even dream of. They look down at those they considered the 'settled' \
 	and often uproot themselves quite often in their lifetimes. However, due to the isolation in Azure, many Axians \
-	find their sanity being clawed away as they find themselves stuck in one place."
+	find their sanity being clawed away as they find themselves stuck in one place.<br>\
+	(+1 Constitution, +1 Willpower)"
 	species_traits = list(EYECOLOR,LIPS,STUBBLE,MUTCOLORS)
-	species_traits = list(EYECOLOR,LIPS,STUBBLE,MUTCOLORS)
-	inherent_traits = list(TRAIT_WATERBREATHING)
+
+	///Caustic edit
+	allowed_taur_types = list(
+		/obj/item/bodypart/taur/lamia,
+		/obj/item/bodypart/taur/tent,
+		/obj/item/bodypart/taur/tentacle,
+		/obj/item/bodypart/taur/slug,
+		/obj/item/bodypart/taur/mermaid,
+		/obj/item/bodypart/taur/altnaga,
+		/obj/item/bodypart/taur/altnagatailmaw,
+		/obj/item/bodypart/taur/fatnaga,
+	)
+	///Caustic edit end
+
+	inherent_traits = list(TRAIT_WATERBREATHING, TRAIT_SEA_DRINKER)
 	possible_ages = ALL_AGES_LIST
-	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | ERT_SPAWN | RACE_SWAP | SLIME_EXTRACT
-	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mt.dmi'
-	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fm.dmi'
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | RACE_SWAP | SLIME_EXTRACT
+	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mta.dmi'
+	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fma.dmi'
 	dam_icon = 'icons/roguetown/mob/bodies/dam/dam_male.dmi'
 	dam_icon_f = 'icons/roguetown/mob/bodies/dam/dam_female.dmi'
 	soundpack_m = /datum/voicepack/male
@@ -34,8 +48,11 @@
 		OFFSET_FACE_F = list(0,-1), OFFSET_BELT_F = list(0,0), OFFSET_BACK_F = list(0,-1), \
 		OFFSET_NECK_F = list(0,-1), OFFSET_MOUTH_F = list(0,-1), OFFSET_PANTS_F = list(0,0), \
 		OFFSET_SHIRT_F = list(0,0), OFFSET_ARMOR_F = list(0,0), OFFSET_UNDIES_F = list(0,-1), \
+		//Caustic Edit
+		OFFSET_TAUR = list(-16,0), OFFSET_TAUR_F = list(-16,0), \
+		//Caustic End
 		)
-	race_bonus = list(STAT_ENDURANCE = 1)
+	race_bonus = list(STAT_WILLPOWER = 1, STAT_CONSTITUTION = 1)
 	enflamed_icon = "widefire"
 	attack_verb = "slash"
 	attack_sound = 'sound/blank.ogg'
@@ -50,7 +67,7 @@
 		ORGAN_SLOT_LIVER = /obj/item/organ/liver,
 		ORGAN_SLOT_STOMACH = /obj/item/organ/stomach,
 		ORGAN_SLOT_APPENDIX = /obj/item/organ/appendix,
-		ORGAN_SLOT_TAIL = /obj/item/organ/tail/akula,
+		//ORGAN_SLOT_TAIL = /obj/item/organ/tail/akula, //caustic remove the customizer already gives the organ
 		ORGAN_SLOT_SNOUT = /obj/item/organ/snout/akula,
 		//ORGAN_SLOT_TESTICLES = /obj/item/organ/testicles,
 		//ORGAN_SLOT_PENIS = /obj/item/organ/penis/tapered,
@@ -68,19 +85,25 @@
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
 		/datum/customizer/bodypart_feature/underwear,
+		/datum/customizer/bodypart_feature/legwear,
 		/datum/customizer/organ/snout/akula,
 		/datum/customizer/organ/tail/axian,
 		/datum/customizer/organ/ears/axian,
 		/datum/customizer/organ/testicles/anthro,
 		/datum/customizer/organ/penis/anthro,
 		/datum/customizer/organ/breasts/human,
-		/datum/customizer/organ/belly/human,
-		/datum/customizer/organ/butt/human,
 		/datum/customizer/organ/vagina/human_anthro,
+		//Caustic edit - If the chest is human, so is the butt?
+		/datum/customizer/organ/belly/animal,
+		/datum/customizer/organ/butt/human,
+		//Caustic edit end
 		)
 	body_marking_sets = list(
 		/datum/body_marking_set/none,
 		/datum/body_marking_set/belly,
+		/datum/body_marking_set/tiger,
+		/datum/body_marking_set/tiger_dark,
+		/datum/body_marking_set/gradient,
 	)
 	body_markings = list(
 		/datum/body_marking/flushed_cheeks,
@@ -89,12 +112,18 @@
 		/datum/body_marking/bellyslim,
 		/datum/body_marking/butt,
 		/datum/body_marking/tonage,
+		/datum/body_marking/tiger,
 		/datum/body_marking/tiger/dark,
+		/datum/body_marking/nose,
+		/datum/body_marking/bangs,
+		/datum/body_marking/bun,
+		/datum/body_marking/gradient,
 	)
 	descriptor_choices = list(
+		/datum/descriptor_choice/trait,
+		/datum/descriptor_choice/stature,
 		/datum/descriptor_choice/height,
 		/datum/descriptor_choice/body,
-		/datum/descriptor_choice/stature,
 		/datum/descriptor_choice/face,
 		/datum/descriptor_choice/face_exp,
 		/datum/descriptor_choice/scales,

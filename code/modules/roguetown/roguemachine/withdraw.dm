@@ -1,6 +1,6 @@
 /obj/structure/roguemachine/withdraw
 	name = "vomitorium"
-	desc = ""
+	desc = "A magitech wall device connected to the local trade network. Users can buy basic goods, crafting materials, and food for a price from these units, either from in-town or imported for a heftier price."
 	icon = 'icons/roguetown/misc/machines.dmi'
 	icon_state = "submit"
 	density = FALSE
@@ -19,6 +19,12 @@
 	return ..()
 
 /obj/structure/roguemachine/withdraw/attackby(obj/item/P, mob/user, params)
+	if(istype(P, /obj/item/roguecoin/aalloy))
+		return
+
+	if(istype(P, /obj/item/roguecoin/inqcoin))	
+		return
+
 	if(istype(P, /obj/item/roguecoin))
 		withdraw_tab.insert_coins(P)
 		return attack_hand(user)

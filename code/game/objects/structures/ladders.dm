@@ -34,13 +34,13 @@
 	var/obj/structure/ladder/L
 
 	if (!down)
-		L = locate() in SSmapping.get_turf_below(T)
+		L = locate() in GET_TURF_BELOW(T)
 		if (L)
 			down = L
 			L.up = src  // Don't waste effort looping the other way
 			L.update_icon()
 	if (!up)
-		L = locate() in SSmapping.get_turf_above(T)
+		L = locate() in GET_TURF_ABOVE(T)
 		if (L)
 			up = L
 			L.down = src  // Don't waste effort looping the other way
@@ -70,11 +70,6 @@
 	else	//wtf make your ladders properly assholes
 		icon_state = "ladder00"
 
-/obj/structure/ladder/singularity_pull()
-	if (!(resistance_flags & INDESTRUCTIBLE))
-		visible_message(span_danger("[src] is torn to pieces by the gravitational pull!"))
-		qdel(src)
-
 /obj/structure/ladder/proc/travel(going_up, mob/user, is_ghost, obj/structure/ladder/ladder)
 	if(is_ghost)
 		return
@@ -88,13 +83,13 @@
 		show_fluff_message(going_up, user)
 		ladder.add_fingerprint(user)
 	var/turf/T = get_turf(ladder)
-	if(isliving(user))
-		mob_move_travel_z_level(user, T)
-	else
-		user.forceMove(T)
+	movable_travel_z_level(user, T)
 
 /obj/structure/ladder/proc/use(mob/user, is_ghost=FALSE)
 	if(!in_range(src, user))
+		return
+
+	if(user.buckled)
 		return
 
 	if (up && down)
@@ -113,7 +108,7 @@
 	else if(down)
 		travel(FALSE, user, is_ghost, down)
 	else
-		to_chat(user, span_warning("[src] doesn't seem to lead anywhere!"))
+		to_chat(user, "<span class='warning'>[src] doesn't seem to lead anywhere!</span>")
 
 	if(!is_ghost)
 		add_fingerprint(user)
@@ -128,13 +123,7 @@
 	return use(user)
 
 /obj/structure/ladder/attackby(obj/item/W, mob/user, params)
-	if(obj_flags & CAN_BE_HIT)
-		return ..()
 	return use(user)
-
-/obj/structure/ladder/attack_robot(mob/living/silicon/robot/R)
-	if(R.Adjacent(src))
-		return use(R)
 
 //ATTACK GHOST IGNORING PARENT RETURN VALUE
 /obj/structure/ladder/attack_ghost(mob/dead/observer/user)
@@ -143,9 +132,9 @@
 
 /obj/structure/ladder/proc/show_fluff_message(going_up, mob/user)
 	if(going_up)
-		user.visible_message(span_notice("[user] climbs up [src]."), span_notice("I climb up [src]."))
+		user.visible_message("<span class='notice'>[user] climbs up [src].</span>", "<span class='notice'>I climb up [src].</span>")
 	else
-		user.visible_message(span_notice("[user] climbs down [src]."), span_notice("I climb down [src]."))
+		user.visible_message("<span class='notice'>[user] climbs down [src].</span>", "<span class='notice'>I climb down [src].</span>")
 
 
 // Indestructible away mission ladders which link based on a mapped ID and height value rather than X/Y/Z.
@@ -214,12 +203,14 @@
 	anchored = TRUE
 	var/obj/structure/ladder/down   //the ladder below this one
 	var/obj/structure/ladder/up     //the ladder above this one
-	obj_flags = BLOCK_Z_OUT_DOWN | CAN_BE_HIT
+	obj_flags = BLOCK_Z_OUT_DOWN
 	max_integrity = 200
 	blade_dulling = DULLING_BASHCHOP
 
+
+
 /obj/structure/wallladder/OnCrafted(dirin)
-	. = ..()
+	dir = dirin
 	layer = BELOW_MOB_LAYER
 	switch(dir)
 		if(NORTH)
@@ -230,3 +221,4 @@
 			pixel_x = -4
 		if(EAST)
 			pixel_x = 4
+	. = ..()

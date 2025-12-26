@@ -52,7 +52,6 @@
 	w_class = WEIGHT_CLASS_TINY
 	throw_range = 1
 	throw_speed = 1
-	pressure_resistance = 0
 	slot_flags = ITEM_SLOT_HEAD
 	body_parts_covered = HEAD
 	resistance_flags = FLAMMABLE
@@ -76,10 +75,15 @@
 	var/contact_poison_volume = 0
 	dropshrink = 0.5
 	var/textper = 100
-	var/maxlen = 2500
+	var/maxlen = 2000
 
 	var/cached_mailer
 	var/cached_mailedto
+	var/trapped
+
+/obj/item/paper/examine()
+	. = ..()
+	. += span_info("Use a feather to write on it. You can create a two-page manuscript that can be turned into a book by writing on it and applying it to another piece of paper that also have something written on it.")
 
 /obj/item/paper/get_real_price()
 	if(info)
@@ -118,6 +122,16 @@
 	pixel_x = rand(-9, 9)
 	update_icon_state()
 	updateinfolinks()
+	var/static/list/slapcraft_recipe_list = list(
+		/datum/crafting_recipe/roguetown/survival/sigsweet,
+		/datum/crafting_recipe/roguetown/survival/sigdry,
+		/datum/crafting_recipe/roguetown/survival/rocknutdry,
+		)
+
+	AddElement(
+		/datum/element/slapcrafting,\
+		slapcraft_recipes = slapcraft_recipe_list,\
+		)
 
 /obj/item/paper/update_icon_state()
 	if(mailer)
@@ -147,12 +161,22 @@
 	if(!user.hud_used.reads)
 		return
 	if(!user.can_read(src))
+		if(info)
+			user.adjust_experience(/datum/skill/misc/reading, 2, FALSE)
 		return
 	if(mailer)
 		return
 	if(in_range(user, src) || isobserver(user))
-//		var/atom/movable/screen/read/R = user.hud_used.reads
-		format_browse(info, user)
+//		var/obj/screen/read/R = user.hud_used.reads
+		var/dat = {"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">
+			<html><head><style type=\"text/css\">
+			body { background-image:url('book.png');background-repeat: repeat; }</style></head><body scroll=yes>"}
+		dat += info
+		dat += "<br>"
+		dat += "<a href='?src=[REF(src)];close=1' style='position:absolute;right:50px'>Close</a>"
+		dat += "</body></html>"
+		user << browse(dat, "window=reading;size=500x400;can_close=1;can_minimize=0;can_maximize=0;can_resize=1;titlebar=0;border=0")
+		onclose(user, "reading", src)
 	else
 		return span_warning("I'm too far away to read it.")
 
@@ -165,8 +189,19 @@
 			user << browse("<HTML><HEAD><TITLE>[name]</TITLE>[extra_headers]</HEAD><BODY>[stars(info)]<HR></BODY></HTML>", "window=paper[md5(name)]")
 			onclose(user, "paper[md5(name)]")
 	else
-		return span_warning("You're too far away to read it.")
+		return "<span class='warning'>You're too far away to read it.</span>"
 */
+
+/obj/item/paper/proc/format_browse(t, mob/user)
+	user << browse_rsc('html/book.png')
+	var/dat = {"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">
+			<html><head><style type=\"text/css\">
+			body { background-image:url('book.png');background-repeat: repeat; }</style></head><body scroll=yes>"}
+	dat += "[t]<br>"
+	dat += "<a href='?src=[REF(src)];close=1' style='position:absolute;right:50px'>Close</a>"
+	dat += "</body></html>"
+	user << browse(dat, "window=reading;size=500x400;can_close=1;can_minimize=0;can_maximize=0;can_resize=1;titlebar=0;border=0")
+
 /obj/item/paper/verb/rename()
 	set name = "Rename paper"
 	set hidden = 1
@@ -174,13 +209,6 @@
 
 	if(usr.incapacitated() || !usr.is_literate())
 		return
-	if(ishuman(usr))
-		var/mob/living/carbon/human/H = usr
-		if(HAS_TRAIT(H, TRAIT_CLUMSY) && prob(25))
-			to_chat(H, span_warning("I cut myself on the paper! Ahhhh! Ahhhhh!"))
-			H.damageoverlaytemp = 9001
-			H.update_damage_hud()
-			return
 	var/n_name = stripped_input(usr, "What would you like to label the paper?", "Paper Labelling", null, MAX_NAME_LEN)
 	if((loc == usr && usr.stat == CONSCIOUS))
 		name = "paper[(n_name ? text("- '[n_name]'") : null)]"
@@ -188,7 +216,7 @@
 
 
 /obj/item/paper/suicide_act(mob/user)
-	user.visible_message(span_suicide("[user] scratches a grid on [user.p_their()] wrist with the paper! It looks like [user.p_theyre()] trying to commit sudoku..."))
+	user.visible_message("<span class='suicide'>[user] scratches a grid on [user.p_their()] wrist with the paper! It looks like [user.p_theyre()] trying to commit sudoku...</span>")
 	return (BRUTELOSS)
 
 /obj/item/paper/proc/reset_spamflag()
@@ -196,34 +224,27 @@
 
 /obj/item/paper/attack_self(mob/user)
 	if(mailer)
-		user.visible_message(span_notice("[user] opens the letter from [mailer]."))
+		user.visible_message("<span class='notice'>[user] opens the letter from [mailer].</span>")
 		cached_mailer = mailer
 		cached_mailedto = mailedto
 		mailer = null
 		mailedto = null
 		update_icon()
 		return
+	if(trapped)
+		var/mob/living/victim = user
+		victim.visible_message(span_notice("[user] opens the [src]."))
+		to_chat(user, span_warning("This parchment is full of strange symbols that start to glow. How odd. Wait-"))
+		sleep(5)
+		victim.adjust_fire_stacks(15)
+		victim.ignite_mob()
+		victim.visible_message(span_danger("[user] bursts into flames upon reading [src]!"))
 	read(user)
 	if(rigged && (SSevents.holidays && SSevents.holidays[APRIL_FOOLS]))
 		if(!spam_flag)
 			spam_flag = TRUE
 			playsound(loc, 'sound/blank.ogg', 50, TRUE)
 			addtimer(CALLBACK(src, PROC_REF(reset_spamflag)), 20)
-
-
-/obj/item/paper/attack_ai(mob/living/silicon/ai/user)
-	var/dist
-	if(istype(user) && user.current) //is AI
-		dist = get_dist(src, user.current)
-	else //cyborg or AI not seeing through a camera
-		dist = get_dist(src, user)
-	if(dist < 2)
-		usr << browse("<HTML><HEAD><TITLE>[name]</TITLE></HEAD><BODY>[info]<HR>[stamps]</BODY></HTML>", "window=[name]")
-		onclose(usr, "[name]")
-	else
-		usr << browse("<HTML><HEAD><TITLE>[name]</TITLE></HEAD><BODY>[stars(info)]<HR>[stamps]</BODY></HTML>", "window=[name]")
-		onclose(usr, "[name]")
-
 
 /obj/item/paper/proc/addtofield(id, text, links = 0)
 	var/locid = 0
@@ -285,18 +306,10 @@
 
 	t = parsemarkdown(t, user, iscrayon)
 
-	if(!iscrayon)
-		if(istype(P, /obj/item/pen))
-			var/obj/item/pen/J = P
-			t = "<font face=\"[J.font]\" color=[J.colour]>[t]</font>"
-		else if(istype(P, /obj/item/natural/thorn))
-			t = "<font face=\"[FOUNTAIN_PEN_FONT]\" color=#862f20>[t]</font>"
-		else if(istype(P, /obj/item/natural/feather))
-			t = "<font face=\"[FOUNTAIN_PEN_FONT]\" color=#14103f>[t]</font>"
-
-	else
-		var/obj/item/toy/crayon/C = P
-		t = "<font face=\"[CRAYON_FONT]\" color=[C.paint_color]><b>[t]</b></font>"
+	if(istype(P, /obj/item/natural/thorn))
+		t = "<font face=\"[FOUNTAIN_PEN_FONT]\" color=#862f20>[t]</font>"
+	else if(istype(P, /obj/item/natural/feather))
+		t = "<font face=\"[FOUNTAIN_PEN_FONT]\" color=#14103f>[t]</font>"
 
 	// Count the fields
 	var/laststart = 1
@@ -336,7 +349,8 @@
 		((text)) : Decreases the <font size = \"1\">size</font> of the text.<br>
 		* item : An unordered list item.<br>
 		&nbsp;&nbsp;* item: An unordered list child item.<br>
-		--- : Adds a horizontal rule.
+		--- : Adds a horizontal rule.<br>
+		-=FFFFFFtext=- : Adds a specific <font color = '#FFFFFF'>colour</font> to text.
 	</BODY></HTML>"}, "window=paper_help")
 
 
@@ -358,6 +372,14 @@
 		return
 
 	if(href_list["read"])
+		if(trapped)
+			var/mob/living/victim = usr
+			victim.visible_message(span_notice("[usr] opens the [src]."))
+			to_chat(usr, span_warning("This parchment is full of strange symbols that start to glow. How odd. Wait-"))
+			sleep(5)
+			victim.adjust_fire_stacks(15)
+			victim.ignite_mob()
+			victim.visible_message(span_danger("[usr] bursts into flames upon reading [src]!"))
 		read(usr)
 
 	if(href_list["help"])
@@ -370,45 +392,28 @@
 		if(!t || !usr.canUseTopic(src, BE_CLOSE, literate))
 			return
 		var/obj/item/i = usr.get_active_held_item()	//Check to see if he still got that darn pen, also check if he's using a crayon or pen.
-		var/iscrayon = 0
-		if(!istype(i, /obj/item/pen))
-			if(istype(i, /obj/item/toy/crayon))
-				iscrayon = 1
-			else
-				if(!istype(i, /obj/item/natural/thorn))
-					if(!istype(i, /obj/item/natural/feather))
-						return
+		if(!istype(i, /obj/item/natural/thorn))
+			if(!istype(i, /obj/item/natural/feather))
+				return
 
-		if(!in_range(src, usr) && loc != usr && !istype(loc, /obj/item/clipboard) && loc.loc != usr && usr.get_active_held_item() != i)	//Some check to see if he's allowed to write
+		if(!in_range(src, usr) && loc != usr && loc.loc != usr && usr.get_active_held_item() != i)	//Some check to see if he's allowed to write
 			return
 
 		log_paper("[key_name(usr)] writing to paper [t]")
-		t = parsepencode(t, i, usr, iscrayon) // Encode everything from pencode to html
+		t = parsepencode(t, i, usr, FALSE) // Encode everything from pencode to html
 
 		if(t != null)	//No input from the user means nothing needs to be added
 			if((length(info) + length(t)) > maxlen)
-				to_chat(usr, span_warning("Too long. Try again."))
+				to_chat(usr, "<span class='warning'>Too long. Try again.</span>")
 				return
 			if(id!="end")
 				addtofield(text2num(id), t) // He wants to edit a field, let him.
 			else
 				info += t // Oh, he wants to edit to the end of the file, let him.
-				testing("[length(info)]")
-				testing("[findtext(info, "\n")]")
 				updateinfolinks()
 			playsound(src, 'sound/items/write.ogg', 100, FALSE)
 			format_browse(info_links, usr)
 			update_icon_state()
-
-/obj/item/paper/proc/format_browse(t, mob/user)
-	user << browse_rsc('html/book.png')
-	var/dat = {"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">
-			<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><style type=\"text/css\">
-			body { background-image:url('book.png');background-repeat: repeat; }</style></head><body scroll=yes>"}
-	dat += "[t]<br>"
-	dat += "<a href='?src=[REF(src)];close=1' style='position:absolute;right:50px'>Close</a>"
-	dat += "</body></html>"
-	user << browse(dat, "window=reading;size=500x400;can_close=1;can_minimize=0;can_maximize=0;can_resize=1;titlebar=0;border=0")
 
 /obj/item/paper/attackby(obj/item/P, mob/living/carbon/human/user, params)
 	if(resistance_flags & ON_FIRE)
@@ -420,16 +425,24 @@
 	if(is_blind(user))
 		return ..()
 
-	if(istype(P, /obj/item/pen) || istype(P, /obj/item/natural/thorn)|| istype(P, /obj/item/natural/feather))
+	if(istype(P, /obj/item/natural/feather/infernal))
+		if(trapped)
+			to_chat(user, span_warning("[src] is already trapped."))
+		else
+			to_chat(user, span_warning("I draw infernal symbols on this [src], rigging it to explode."))
+			trapped = TRUE
+
+	if(istype(P, /obj/item/natural/thorn)|| istype(P, /obj/item/natural/feather))
 		if(length(info) > maxlen)
-			to_chat(user, span_warning("[src] is full of verba."))
+			to_chat(user, "<span class='warning'>[src] is full of verba.</span>")
 			return
 		if(user.can_read(src))
 			format_browse(info_links, user)
 			update_icon_state()
 			return
-		to_chat(user, span_warning("I can't write."))
-		return
+		else
+			to_chat(user, "<span class='warning'>I can't write.</span>")
+			return
 
 	if(istype(P, /obj/item/paper))
 		var/obj/item/paper/p = P
@@ -445,66 +458,37 @@
 				user.put_in_inactive_hand(M)
 			. = ..()
 			return qdel(src)
-
 	if(!P.can_be_package_wrapped())
 		return ..()
 
-	to_chat(user, span_info("I start to wrap [P] in [src]..."))
-	if(do_after(user, 30, 0, target = src))
-		if(user.is_holding(P))
-			if(!user.dropItemToGround(P))
+	if(!istype(src, /obj/item/paper/inqslip))
+		to_chat(user, span_info("I start to wrap [P] in [src]..."))
+		if(do_after(user, 30, 0, target = src))
+			if(user.is_holding(P))
+				if(!user.dropItemToGround(P))
+					return
+			else if(!isturf(P.loc))
 				return
-		else if(!isturf(P.loc))
-			return
-		var/obj/item/smallDelivery/D = new /obj/item/smallDelivery(get_turf(P.loc))
-		if(user.Adjacent(D))
-			D.add_fingerprint(user)
-			P.add_fingerprint(user)
-			user.put_in_hands(D)
-		P.forceMove(D)
-		var/size = round(P.w_class)
-		D.name = "[weightclass2text(size)] package"
-		D.w_class = size
-		size = min(size, 5)
-		D.icon_state = "deliverypackage[size]"
-		qdel(src)
+			var/obj/item/smallDelivery/D = new /obj/item/smallDelivery(get_turf(P.loc))
+			if(user.Adjacent(D))
+				D.add_fingerprint(user)
+				P.add_fingerprint(user)
+				user.put_in_hands(D)
+			P.forceMove(D)
+			var/size = round(P.w_class)
+			D.name = "[weightclass2text(size)] package"
+			D.w_class = size
+			size = min(size, 5)
+			D.grid_height = P.grid_height
+			D.grid_width = P.grid_width
+			D.icon_state = "deliverypackage[size]"
+			D.note = src
+			forceMove(D)
 
-/*	else if(istype(P, /obj/item/stamp))
-
-		if(!in_range(src, user))
-			return
-
-		var/datum/asset/spritesheet/sheet = get_asset_datum(/datum/asset/spritesheet/simple/paper)
-		if (isnull(stamps))
-			stamps = sheet.css_tag()
-		stamps += sheet.icon_tag(P.icon_state)
-		var/mutable_appearance/stampoverlay = mutable_appearance('icons/obj/bureaucracy.dmi', "paper_[P.icon_state]")
-		stampoverlay.pixel_x = rand(-2, 2)
-		stampoverlay.pixel_y = rand(-3, 2)
-
-		LAZYADD(stamped, P.icon_state)
-		add_overlay(stampoverlay)
-
-		to_chat(user, span_notice("I stamp the paper with your rubber stamp."))
-
-	if(P.get_temperature())
-		if(HAS_TRAIT(user, TRAIT_CLUMSY) && prob(10))
-			user.visible_message(span_warning("[user] accidentally ignites [user.p_them()]self!"), \
-								span_danger("I miss the paper and accidentally light myself on fire!"))
-			user.dropItemToGround(P)
-			user.adjust_fire_stacks(1)
-			user.IgniteMob()
-			return
-
-		if(!(in_range(user, src))) //to prevent issues as a result of telepathically lighting a paper
-			return
-
-		user.dropItemToGround(src)
-		user.visible_message(span_danger("[user] lights [src] ablaze with [P]!"), span_danger("I light [src] on fire!"))
-		fire_act()*/
-
-	add_fingerprint(user)
-	return ..()
+		add_fingerprint(user)
+		return ..()
+	else
+		return ..()
 
 /obj/item/paper/fire_act(added, maxstacks)
 	..()
@@ -548,3 +532,87 @@
 
 /obj/item/paper/crumpled/muddy
 	icon_state = "scrap_mud"
+
+/obj/item/smallDelivery
+	name = "package"
+	desc = ""
+	icon = 'icons/roguetown/clothing/storage.dmi'
+	icon_state = "deliverypackage3"
+	item_state = "deliverypackage"
+	var/giftwrapped = 0
+	var/sortTag = 0
+	var/obj/item/paper/note
+
+/obj/item/smallDelivery/contents_explosion(severity, target)
+	for(var/atom/movable/AM in contents)
+		AM.ex_act()
+
+/obj/item/smallDelivery/attack_self(mob/user)
+	user.temporarilyRemoveItemFromInventory(src, TRUE)
+	for(var/X in contents)
+		var/atom/movable/AM = X
+		user.put_in_hands(AM)
+	playsound(src.loc, 'sound/blank.ogg', 50, TRUE)
+	user.visible_message(span_warning("[user] opens [src]."))
+	if(note)
+		note.forceMove(user.loc)
+	qdel(src)
+
+/obj/item/smallDelivery/attack_self_tk(mob/user)
+	if(ismob(loc))
+		var/mob/M = loc
+		M.temporarilyRemoveItemFromInventory(src, TRUE)
+		for(var/X in contents)
+			var/atom/movable/AM = X
+			M.put_in_hands(AM)
+	else
+		for(var/X in contents)
+			var/atom/movable/AM = X
+			AM.forceMove(src.loc)
+	if(note)
+		note.forceMove(user.loc)
+	playsound(src.loc, 'sound/blank.ogg', 50, TRUE)
+	qdel(src)
+
+/obj/item/smallDelivery/examine(mob/user)
+	. = ..()
+	if(note && length(note.info))
+		if(!in_range(user, src))
+			. += "There's a [note.name] attached to it. You can't read it from here."
+		else
+			. += "There's a [note.name] attached to it..."
+			. += note.examine(user)
+	if(mailer)
+		. += "It's from [mailer], addressed to [mailedto].</a>"
+
+/obj/item/smallDelivery/attackby(obj/item/W, mob/user, params)
+	if(istype(W, /obj/item/natural/feather))
+		if(!user.is_literate())
+			to_chat(user, span_notice("I scribble illegibly on the side of [src]!"))
+			return
+		var/str = copytext(sanitize(input(user,"Label text?","Set label","")),1,MAX_NAME_LEN)
+		if(!user.canUseTopic(src, BE_CLOSE))
+			return
+		if(!str || !length(str))
+			to_chat(user, span_warning("Invalid text!"))
+			return
+		user.visible_message(span_notice("[user] labels [src] as [str]."))
+		name = "[name] ([str])"
+
+/obj/item/proc/can_be_package_wrapped() //can the item be wrapped with package wrapper into a delivery package
+	return 1
+
+/obj/item/storage/can_be_package_wrapped()
+	return 0
+
+/obj/item/storage/box/can_be_package_wrapped()
+	return 1
+
+/obj/item/storage/belt/rogue/pouch/can_be_package_wrapped()
+	return 1
+
+/obj/item/smallDelivery/can_be_package_wrapped()
+	return 0
+
+/obj/item/inqarticles/indexer/can_be_package_wrapped()
+	return 0

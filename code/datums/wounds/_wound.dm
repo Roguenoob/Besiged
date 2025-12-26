@@ -64,31 +64,34 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 	var/disabling = FALSE
 	/// If TRUE, this is a crit wound
 	var/critical = FALSE
-
+	/// Some wounds cause instant death for CRITICAL_WEAKNESS
+	var/mortal = FALSE
 	/// Amount we heal passively while sleeping
 	var/sleep_healing = 1
 	/// Amount we heal passively, always
 	var/passive_healing = 0
 	/// Embed chance if this wound allows embedding
 	var/embed_chance = 0
-
+	/// Bypass bloody wound checks, used for fractures so they apply to skeleton-mobs.
+	var/bypass_bloody_wound_check = FALSE
 	/// Some wounds make no sense on a dismembered limb and need to go
 	var/qdel_on_droplimb = FALSE
+	/// Severity names, assoc list.
+	var/list/severity_names = list()
+	/// Whether miracles heal it.
+	var/healable_by_miracles = TRUE
 
 /datum/wound/Destroy(force)
-	. = ..()
-	if(zombie_infection_timer)
-		deltimer(zombie_infection_timer)
-		zombie_infection_timer = null
-	if(werewolf_infection_timer)
-		deltimer(werewolf_infection_timer)
-		werewolf_infection_timer = null
 	if(bodypart_owner)
 		remove_from_bodypart()
 	else if(owner)
 		remove_from_mob()
+	if(werewolf_infection_timer)
+		deltimer(werewolf_infection_timer)
+		werewolf_infection_timer = null
 	bodypart_owner = null
 	owner = null
+	. = ..()
 
 /// Description of this wound returned to the player when a bodypart is examined and such
 /datum/wound/proc/get_visible_name(mob/user)
@@ -99,17 +102,11 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 		visible_name += " <span class='green'>(sewn)</span>"
 	if(is_clotted())
 		visible_name += " <span class='danger'>(clotted)</span>"
-	if(has_special_infection())
-		visible_name += " <span class='infection'>(INFECTED)</span>"
 	return visible_name
 
 /// Description of this wound returned to the player when the bodypart is checked with check_for_injuries()
 /datum/wound/proc/get_check_name(mob/user)
-	var/visible_name = check_name
-	if(visible_name)
-		if(has_special_infection())
-			visible_name += " <span class='infection'>\[INFECTION\]</span>"
-	return visible_name
+	return check_name
 
 /// Crit message that should be appended when this wound is applied in combat
 /datum/wound/proc/get_crit_message(mob/living/affected, obj/item/bodypart/affected_bodypart)
@@ -127,7 +124,7 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 	else
 		final_message = replacetext(final_message, "%BODYPART", parse_zone(BODY_ZONE_CHEST))
 	if(critical)
-		final_message = span_crit("<b>Critical hit!</b> [final_message]")
+		final_message = "<span class='crit'><b>Critical hit!</b> [final_message]</span>"
 	return final_message
 
 /// Sound that plays when this wound is applied to a mob
@@ -140,7 +137,7 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 /datum/wound/proc/can_apply_to_bodypart(obj/item/bodypart/affected)
 	if(bodypart_owner || owner || QDELETED(affected) || QDELETED(affected.owner))
 		return FALSE
-	if(!isnull(bleed_rate) && !affected.can_bloody_wound())
+	if(!isnull(bleed_rate) && !affected.can_bloody_wound() && !bypass_bloody_wound_check)
 		return FALSE
 	for(var/datum/wound/other_wound as anything in affected.wounds)
 		if(!can_stack_with(other_wound))
@@ -163,8 +160,9 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 	sortTim(affected.wounds, GLOBAL_PROC_REF(cmp_wound_severity_dsc))
 	bodypart_owner = affected
 	owner = bodypart_owner.owner
+	bodypart_owner.bleeding += bleed_rate // immediately apply our base bleeding
 	on_bodypart_gain(affected)
-	on_mob_gain(affected.owner)
+	INVOKE_ASYNC(src, PROC_REF(on_mob_gain), affected.owner) //this is literally a fucking lint error like new species cannot possible spawn with wounds until after its ass
 	if(crit_message)
 		var/message = get_crit_message(affected.owner, affected)
 		if(message)
@@ -174,6 +172,7 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 		if(sounding)
 			playsound(affected.owner, sounding, 100, vary = FALSE)
 	return TRUE
+
 
 /// Effects when a wound is gained on a bodypart
 /datum/wound/proc/on_bodypart_gain(obj/item/bodypart/affected)
@@ -186,6 +185,7 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 /datum/wound/proc/remove_from_bodypart()
 	if(!bodypart_owner)
 		return FALSE
+	set_bleed_rate(0)
 	var/obj/item/bodypart/was_bodypart = bodypart_owner
 	var/mob/living/was_owner = owner
 	LAZYREMOVE(bodypart_owner.wounds, src)
@@ -218,8 +218,9 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 	else if(owner)
 		remove_from_mob()
 	LAZYADD(affected.simple_wounds, src)
-	sortTim(affected.simple_wounds, GLOBAL_PROC_REF(cmp_wound_severity_dsc))
+	sortList(affected.simple_wounds, GLOBAL_PROC_REF(cmp_wound_severity_dsc))
 	owner = affected
+	owner.simple_bleeding += bleed_rate // immediately apply our base bleed to the host mob
 	on_mob_gain(affected)
 	if(crit_message)
 		var/message = get_crit_message(affected)
@@ -235,61 +236,74 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 /datum/wound/proc/on_mob_gain(mob/living/affected)
 	if(mob_overlay)
 		affected.update_damage_overlays()
-	if(zombie_infection_timer)
-		deltimer(zombie_infection_timer)
-		zombie_infection_timer = null
-		zombie_infect_attempt()
 	if(werewolf_infection_timer)
 		deltimer(werewolf_infection_timer)
 		werewolf_infection_timer = null
 		werewolf_infect_attempt()
+	if(mortal && HAS_TRAIT(affected, TRAIT_CRITICAL_WEAKNESS))
+		affected.death()
 
 /// Removes this wound from a given, simpler than adding to a bodypart - No extra effects
 /datum/wound/proc/remove_from_mob()
 	if(!owner)
 		return FALSE
-	var/mob/was_owner = owner
+	on_mob_loss(owner)
+	set_bleed_rate(0)
 	LAZYREMOVE(owner.simple_wounds, src)
 	owner = null
-	on_mob_loss(was_owner)
 	return TRUE
 
 /// Effects when this wound is removed from a given mob
 /datum/wound/proc/on_mob_loss(mob/living/affected)
 	if(mob_overlay)
 		affected.update_damage_overlays()
-	if(zombie_infection_timer)
-		deltimer(zombie_infection_timer)
 
 /// Called on handle_wounds(), on the life() proc
 /datum/wound/proc/on_life()
-	if(whp <= 0)
-		return FALSE
 	if(!isnull(clotting_threshold) && clotting_rate && (bleed_rate > clotting_threshold))
-		bleed_rate = max(clotting_threshold, bleed_rate - clotting_rate)
-	if(passive_healing)
+		set_bleed_rate(max(clotting_threshold, bleed_rate - clotting_rate))
+	if(HAS_TRAIT(owner, TRAIT_PSYDONITE) && !passive_healing)
+		heal_wound(0.6) // psydonites are supposed to apparently slightly heal wounds whether dead or alive
+	if(owner.stat != DEAD && passive_healing) // passive healing is only called if we're like, you know, alive
 		heal_wound(passive_healing)
 	return TRUE
 
 /// Called on handle_wounds(), on the life() proc
 /datum/wound/proc/on_death()
-	return
+	// for optimization's sake, only do dead wound healing if the mob has a client.
+	if (!owner.client)
+		return
+
+	if (HAS_TRAIT(owner, TRAIT_PSYDONITE) && !passive_healing)
+		heal_wound(0.6) // psydonites are supposed to apparently slightly heal wounds whether dead or alive
 	
+	return TRUE
+
+/// Setter for any adjustments we make to our bleed_rate, propagating them to the host bodypart.
+/datum/wound/proc/set_bleed_rate(amount)
+    if(!bodypart_owner || !owner)
+        return
+
+    // do simple bleeding
+    if(owner.simple_wounds?.len)
+        owner.simple_bleeding -= bleed_rate
+        bleed_rate = amount
+        owner.simple_bleeding += bleed_rate
+    else
+        bodypart_owner.bleeding -= bleed_rate
+        bleed_rate = amount
+        bodypart_owner.bleeding += bleed_rate
+
 /// Heals this wound by the given amount, and deletes it if it's healed completely
 /datum/wound/proc/heal_wound(heal_amount)
 	// Wound cannot be healed normally, whp is null
 	if(isnull(whp))
 		return 0
 	var/amount_healed = min(whp, round(heal_amount, DAMAGE_PRECISION))
+	var/pain_healed = min(woundpain, round(heal_amount / 2, DAMAGE_PRECISION))
 	whp -= amount_healed
+	woundpain -= pain_healed
 	if(whp <= 0)
-		bleed_rate = 0
-		woundpain = 0
-		can_sew = FALSE
-		can_cauterize = FALSE
-		disabling = FALSE
-		critical = FALSE
-		mob_overlay = ""
 		if(!should_persist())
 			if(bodypart_owner)
 				remove_from_bodypart(src)
@@ -305,7 +319,7 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 		return FALSE
 	var/old_overlay = mob_overlay
 	mob_overlay = sewn_overlay
-	bleed_rate = sewn_bleed_rate
+	set_bleed_rate(sewn_bleed_rate)
 	clotting_rate = sewn_clotting_rate
 	clotting_threshold = sewn_clotting_threshold
 	woundpain = sewn_woundpain
@@ -316,14 +330,25 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 	passive_healing = max(passive_healing, 1)
 	if(mob_overlay != old_overlay)
 		owner?.update_damage_overlays()
+	record_round_statistic(STATS_WOUNDS_SEWED)
 	return TRUE
+
+/// Checks if this wound has a special infection (zombie or werewolf)
+/datum/wound/proc/has_special_infection()
+	return (werewolf_infection_timer)
+
+/// Some wounds cannot go away naturally
+/datum/wound/proc/should_persist()
+	if(has_special_infection())
+		return TRUE
+	return FALSE
 
 /// Cauterizes the wound
 /datum/wound/proc/cauterize_wound()
 	if(!can_cauterize)
 		return FALSE
 	if(!isnull(clotting_threshold) && bleed_rate > clotting_threshold)
-		bleed_rate = clotting_threshold
+		set_bleed_rate(clotting_threshold)
 	heal_wound(40)
 	return TRUE
 
@@ -335,16 +360,6 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 /datum/wound/proc/is_clotted()
 	return !isnull(clotting_threshold) && (bleed_rate <= clotting_threshold)
 
-/// Checks if this wound has a special infection (zombie or werewolf)
-/datum/wound/proc/has_special_infection()
-	return (zombie_infection_timer || werewolf_infection_timer)
-
-/// Some wounds cannot go away naturally
-/datum/wound/proc/should_persist()
-	if(has_special_infection())
-		return TRUE
-	return FALSE
-
 /// Returns whether or not this wound should embed a weapon
 /proc/should_embed_weapon(datum/wound/wound_or_boolean, obj/item/weapon)
 	if(!istype(wound_or_boolean))
@@ -352,3 +367,65 @@ GLOBAL_LIST_INIT(primordial_wounds, init_primordial_wounds())
 	if(weapon && !can_embed(weapon))
 		return FALSE
 	return prob(wound_or_boolean.embed_chance)
+
+/// Upgrades a wound's stats based on damage dealt. Used mainly by dynamic wounds.
+/datum/wound/proc/upgrade(dam as num)
+	SHOULD_CALL_PARENT(TRUE)	//Don't skip this if you're making new dynamic wounds.
+	return
+
+/datum/wound/proc/update_name()
+	var/newname
+	var/oldname = name
+	if(length(severity_names))
+		for(var/sevname in severity_names)
+			if(severity_names[sevname] <= bleed_rate)
+				newname = sevname
+	name = "[newname  ? "[newname] " : ""][initial(name)]"	//[adjective] [name], aka, "gnarly slash" or "slash"
+	if(name != oldname)
+		owner.visible_message(span_red("The [oldname] on [owner]'s [lowertext(bodyzone2readablezone(bodypart_to_zone(bodypart_owner)))] gets worse!"))
+
+// Blank because it'll be overridden by wound code.
+/datum/wound/dynamic
+	var/is_maxed = FALSE
+	var/is_armor_maxed = FALSE
+	clotting_rate = 0.4
+	clotting_threshold = 0
+
+/datum/wound/dynamic/sew_wound()
+	heal_wound(whp)
+
+/datum/wound/dynamic/proc/armor_check(armor, cap)
+	if(armor)
+		if(!bodypart_owner.unlimited_bleeding)
+			if(bleed_rate >= cap)
+				set_bleed_rate(cap)
+				if(!is_armor_maxed)
+					playsound(owner, 'sound/combat/armored_wound.ogg', 100, TRUE)
+					owner.visible_message(span_crit("The wound tears open from [bodypart_owner.owner]'s <b>[bodyzone2readablezone(bodypart_to_zone(bodypart_owner))]</b>, the armor won't let it go any further!"))
+					is_armor_maxed = TRUE
+
+#define CLOT_THRESHOLD_INCREASE_PER_HIT 0.1	//This raises the MINIMUM bleed the wound can clot to.
+#define CLOT_DECREASE_PER_HIT 0.05	//This reduces the amount of clotting the wound has.
+#define CLOT_RATE_ARTERY 0	//Artery exceptions. Essentially overrides the clotting threshold.
+#define CLOT_THRESHOLD_ARTERY 2
+
+/// Make sure this is called AFTER your child upgrade proc, unless you have a reason for the bleed rate to be above artery on a regular wound.
+/datum/wound/dynamic/upgrade(dam as num)
+	if(!bodypart_owner.unlimited_bleeding)
+		if(bleed_rate >= ARTERY_LIMB_BLEEDRATE)
+			set_bleed_rate(ARTERY_LIMB_BLEEDRATE)
+			if(!is_maxed)
+				playsound(owner, 'sound/combat/wound_tear.ogg', 100, TRUE)
+				owner.visible_message(span_crit("The wound gushes open from [bodypart_owner.owner]'s <b>[bodyzone2readablezone(bodypart_to_zone(bodypart_owner))]</b>, nicking an artery!"))
+				is_maxed = TRUE
+			clotting_rate = CLOT_RATE_ARTERY
+			clotting_threshold = CLOT_THRESHOLD_ARTERY
+	if(!is_maxed)
+		clotting_rate = max(0.01, (clotting_rate - CLOT_DECREASE_PER_HIT))
+		clotting_threshold += CLOT_THRESHOLD_INCREASE_PER_HIT
+	..()
+
+#undef CLOT_THRESHOLD_INCREASE_PER_HIT
+#undef CLOT_DECREASE_PER_HIT
+#undef CLOT_RATE_ARTERY
+#undef CLOT_THRESHOLD_ARTERY

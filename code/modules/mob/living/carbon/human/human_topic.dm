@@ -1,25 +1,20 @@
+GLOBAL_VAR_INIT(year, time2text(world.realtime,"YYYY"))
+GLOBAL_VAR_INIT(year_integer, text2num(year)) // = 2013???
+
 /mob/living/carbon/human/Topic(href, href_list)
 	var/observer_privilege = isobserver(usr)
+
+	if(href_list["task"] == "bloodpoolinfo")
+		to_chat(usr, span_notice("Usable blood that yields Vitae and total blood is not the same thing. It takes some time for blood to become nourishing for us."))
+		return
 
 	if(href_list["task"] == "view_headshot")
 		if(!ismob(usr))
 			return
-		var/mob/user = usr
-		var/list/dat = list()
-		if(valid_headshot_link(null, headshot_link, TRUE))
-			dat += "<br>"
-			dat += ("<div align='center'><img src='[headshot_link]' width='325px' height='325px'></div>")
-		dat += "<br>"
-		dat += "<div align='center'>[src]</div>"
-		if(flavortext)
-			dat += "<div align='left'>[replacetext(flavortext, "\n", "<BR>")]</div>"
-		if(ooc_notes)
-			dat += "<br>"
-			dat += "<div align='center'><b>OOC notes</b></div>"
-			dat += "<div align='left'>[replacetext(ooc_notes, "\n", "<BR>")]"
-		var/datum/browser/popup = new(user, "[src]", 600, 900)
-		popup.set_content(dat.Join())
-		popup.open(FALSE)
+		var/datum/examine_panel/mob_examine_panel = new(src)
+		mob_examine_panel.holder = src
+		mob_examine_panel.viewing = usr
+		mob_examine_panel.ui_interact(usr)
 		return
 
 	if(href_list["inspect_limb"] && (observer_privilege || usr.canUseTopic(src, BE_CLOSE, NO_DEXTERITY)))
@@ -36,8 +31,8 @@
 				msg += "[bodypart] is healthy."
 		else
 			msg += "<B>[capitalize(parse_zone(checked_zone))]:</B>"
-			msg += span_dead("Limb is missing!")
-		to_chat(usr, span_info("[msg.Join("\n")]"))
+			msg += "<span class='dead'>Limb is missing!</span>"
+		to_chat(usr, "<span class='info'>[msg.Join("\n")]</span>")
 
 	if(href_list["embedded_object"] && usr.canUseTopic(src, BE_CLOSE, NO_DEXTERITY))
 		var/obj/item/bodypart/L = locate(href_list["embedded_limb"]) in bodyparts
@@ -48,9 +43,9 @@
 			return
 		var/time_taken = I.embedding.embedded_unsafe_removal_time*I.w_class
 		if(usr == src)
-			usr.visible_message(span_warning("[usr] attempts to remove [I] from [usr.p_their()] [L.name]."),span_warning("I attempt to remove [I] from my [L.name]..."))
+			usr.visible_message("<span class='warning'>[usr] attempts to remove [I] from [usr.p_their()] [L.name].</span>","<span class='warning'>I attempt to remove [I] from my [L.name]...</span>")
 		else
-			usr.visible_message(span_warning("[usr] attempts to remove [I] from [src]'s [L.name]."),span_warning("I attempt to remove [I] from [src]'s [L.name]..."))
+			usr.visible_message("<span class='warning'>[usr] attempts to remove [I] from [src]'s [L.name].</span>","<span class='warning'>I attempt to remove [I] from [src]'s [L.name]...</span>")
 		if(do_after(usr, time_taken, needhand = TRUE, target = src))
 			if(QDELETED(I) || QDELETED(L) || !L.remove_embedded_object(I))
 				return
@@ -59,21 +54,26 @@
 			emote("pain", TRUE)
 			playsound(loc, 'sound/foley/flesh_rem.ogg', 100, TRUE, -2)
 			if(usr == src)
-				usr.visible_message(span_notice("[usr] rips [I] out of [usr.p_their()] [L.name]!"), span_notice("I successfully remove [I] from my [L.name]."))
+				usr.visible_message("<span class='notice'>[usr] rips [I] out of [usr.p_their()] [L.name]!</span>", "<span class='notice'>I successfully remove [I] from my [L.name].</span>")
 			else
-				usr.visible_message(span_notice("[usr] rips [I] out of [src]'s [L.name]!"), span_notice("I successfully remove [I] from [src]'s [L.name]."))
+				usr.visible_message("<span class='notice'>[usr] rips [I] out of [src]'s [L.name]!</span>", "<span class='notice'>I successfully remove [I] from [src]'s [L.name].</span>")
 
 	if(href_list["bandage"] && usr.canUseTopic(src, BE_CLOSE, NO_DEXTERITY))
 		var/obj/item/bodypart/L = locate(href_list["bandaged_limb"]) in bodyparts
 		if(!L)
 			return
+
+		if(!usr.Adjacent(src))
+			to_chat(usr, span_warning("I need to be closer to remove that!"))
+			return
+
 		var/obj/item/I = L.bandage
 		if(!I)
 			return
 		if(usr == src)
-			usr.visible_message(span_warning("[usr] starts unbandaging [usr.p_their()] [L.name]."),span_warning("I start unbandaging [L.name]..."))
+			usr.visible_message("<span class='warning'>[usr] starts unbandaging [usr.p_their()] [L.name].</span>","<span class='warning'>I start unbandaging [L.name]...</span>")
 		else
-			usr.visible_message(span_warning("[usr] starts unbandaging [src]'s [L.name]."),span_warning("I start unbandaging [src]'s [L.name]..."))
+			usr.visible_message("<span class='warning'>[usr] starts unbandaging [src]'s [L.name].</span>","<span class='warning'>I start unbandaging [src]'s [L.name]...</span>")
 		if(do_after(usr, 50, needhand = TRUE, target = src))
 			if(QDELETED(I) || QDELETED(L) || (L.bandage != I))
 				return
@@ -85,6 +85,14 @@
 		if(slot in check_obscured_slots(TRUE))
 			to_chat(usr, span_warning("I can't reach that! Something is covering it."))
 			return
+
+	if(href_list["species_lore"])
+		if(!dna?.species?.desc)
+			return
+		var/datum/browser/popup = new(usr, "species_info", "<center>Lore</center>", 460, 550)
+		popup.set_content(dna.species.desc)
+		popup.open()
+		return
 
 	if(href_list["undiesthing"]) //canUseTopic check for this is handled by mob/Topic()
 		if(!get_location_accessible(src, BODY_ZONE_PRECISE_GROIN, skipundies = TRUE))
@@ -102,6 +110,22 @@
 				C.put_in_hands(underwear)
 			underwear = null
 
+	if(href_list["legwearsthing"]) //canUseTopic check for this is handled by mob/Topic()
+		if(!get_location_accessible(src, BODY_ZONE_PRECISE_GROIN, skipundies = TRUE))
+			to_chat(usr, span_warning("I can't reach that! Something is covering it."))
+			return
+		if(!legwear_socks)
+			return
+		usr.visible_message(span_warning("[usr] starts taking off [src]'s [legwear_socks.name]."),span_warning("I start taking off [src]'s [legwear_socks.name]..."))
+		if(do_after(usr, 50, needhand = 1, target = src))
+			var/obj/item/bodypart/chest = get_bodypart(BODY_ZONE_CHEST)
+			chest.remove_bodypart_feature(legwear_socks.legwears_feature)
+			underwear.forceMove(get_turf(src))
+			if(iscarbon(usr))
+				var/mob/living/carbon/C = usr
+				C.put_in_hands(underwear)
+			underwear = null
+
 	if(href_list["pockets"] && usr.canUseTopic(src, BE_CLOSE, NO_DEXTERITY)) //TODO: Make it match (or intergrate it into) strippanel so you get 'item cannot fit here' warnings if mob_can_equip fails
 		var/pocket_side = href_list["pockets"]
 		var/pocket_id = (pocket_side == "right" ? SLOT_R_STORE : SLOT_L_STORE)
@@ -111,10 +135,10 @@
 		var/delay_denominator = 1
 		if(pocket_item && !(pocket_item.item_flags & ABSTRACT))
 			if(HAS_TRAIT(pocket_item, TRAIT_NODROP))
-				to_chat(usr, span_warning("I try to empty [src]'s [pocket_side] pocket, it seems to be stuck!"))
-			to_chat(usr, span_notice("I try to empty [src]'s [pocket_side] pocket."))
+				to_chat(usr, "<span class='warning'>I try to empty [src]'s [pocket_side] pocket, it seems to be stuck!</span>")
+			to_chat(usr, "<span class='notice'>I try to empty [src]'s [pocket_side] pocket.</span>")
 		else if(place_item && place_item.mob_can_equip(src, usr, pocket_id, 1) && !(place_item.item_flags & ABSTRACT))
-			to_chat(usr, span_notice("I try to place [place_item] into [src]'s [pocket_side] pocket."))
+			to_chat(usr, "<span class='notice'>I try to place [place_item] into [src]'s [pocket_side] pocket.</span>")
 			delay_denominator = 4
 		else
 			return
@@ -132,228 +156,399 @@
 				//updating inv screen after handled by living/Topic()
 		else
 			// Display a warning if the user mocks up
-			to_chat(src, span_warning("I feel your [pocket_side] pocket being fumbled with!"))
+			to_chat(src, "<span class='warning'>I feel your [pocket_side] pocket being fumbled with!</span>")
 
-///////HUDs///////
-	if(href_list["hud"])
+	if(href_list["task"] == "assess")
 		if(!ishuman(usr))
 			return
-		var/mob/living/carbon/human/H = usr
-		var/perpname = get_face_name(get_id_name(""))
-		if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD) && !HAS_TRAIT(H, TRAIT_MEDICAL_HUD))
+		if(!ishuman(src))
 			return
-		var/datum/data/record/R = find_record("name", perpname, GLOB.data_core.general)
-		if(href_list["photo_front"] || href_list["photo_side"])
-			if(!R)
-				return
-			if(!H.canUseHUD())
-				return
-			if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD) && !HAS_TRAIT(H, TRAIT_MEDICAL_HUD))
-				return
-			var/obj/item/photo/P = null
-			if(href_list["photo_front"])
-				P = R.fields["photo_front"]
-			else if(href_list["photo_side"])
-				P = R.fields["photo_side"]
-			if(P)
-				P.show(H)
+		var/success = FALSE
+		var/obscured_name = FALSE 
+
+		var/static/list/unknown_names = list(
+		"Unknown",
+		"Unknown Man",
+		"Unknown Woman",
+		)
+		
+		var/mob/living/carbon/human/H = src
+		var/mob/living/carbon/human/user = usr
+		var/intellectual = HAS_TRAIT(user, TRAIT_INTELLECTUAL)
+
+		if(H.get_visible_name() in unknown_names)
+			obscured_name = TRUE
+
+		if(get_dist(user, H) <= (2 + clamp(floor(((user.STAPER - 10))),-1, 4) + intellectual))
+			success = TRUE
+		if(!success)
+			to_chat(user, span_info("They've moved too far away!"))
 			return
+		user.visible_message("[user] begins assessing [src].")
+		
+		if(do_mob(user, src, ((intellectual ? 20 : 40)) - (user.STAINT - 10) - (user.STAPER - 10) - user.get_skill_level(/datum/skill/misc/reading), uninterruptible = intellectual, double_progress = (intellectual ? FALSE : TRUE)))
+			var/is_guarded = HAS_TRAIT(src, TRAIT_DECEIVING_MEEKNESS)	//Will scramble Stats and prevent skills from being shown
+			var/is_smart = FALSE	//Maximum info (all skills, gear and stats) either Intellectual virtue or having high enough PER / INT / Reading
+			var/is_stupid = FALSE	//Less than 9 INT, Intellectual virtue overrides it.
+			var/is_normal = FALSE	//High amount of info -- most gear slots, combat skills. No stats.
+			//If you don't get any of these, you'll still get to see 3 gear slots and shown weapon skills in Assess.
+			if(intellectual || ((user.STAINT - 10) + (user.STAPER - 10) + user.get_skill_level(/datum/skill/misc/reading)) >= 10)
+				is_smart = TRUE	
+			if(user.STAINT < 10 && !is_smart)
+				is_stupid = TRUE
+			if(!is_smart && !is_stupid && ((user.STAINT - 10) + (user.STAPER - 10) + user?.get_skill_level(/datum/skill/misc/reading)) >= 5)
+				is_normal = TRUE
+			var/list/dat = list()
+			// Top-level table
+			dat += "<table style='width: 100%; line-height: 20px;'>"
+			// NEXT ROW
+			dat += "<tr>"
+			dat += "<td style='width:16%;text-align:left;vertical-align: text-top'>"
+			if(intellectual && (!obscured_name || !H.client?.prefs.masked_examine))
+				dat += "<b>STATS:</b><br><br>"
+				if(!is_guarded)
+					dat +=("STR: \Roman [H.STASTR]<br>")
+					dat +=("PER: \Roman [H.STAPER]<br>")
+					dat +=("INT: \Roman [H.STAINT]<br>")
+					dat +=("CON: \Roman [H.STACON]<br>")
+					dat +=("END: \Roman [H.STAWIL]<br>")
+					dat +=("SPD: \Roman [H.STASPD]<br>")
+				else
+					dat +=("STR: \Roman [rand(1,20)]<br>")
+					dat +=("PER: \Roman [rand(1,20)]<br>")
+					dat +=("INT: \Roman [rand(1,20)]<br>")
+					dat +=("CON: \Roman [rand(1,20)]<br>")
+					dat +=("END: \Roman [rand(1,20)]<br>")
+					dat +=("SPD: \Roman [rand(1,20)]<br>")
+				if(is_guarded || job == "Jester")
+					dat += "Something feels off..."
+				dat += "</td>"
+			else
+				dat += "</td>"
 
-		if(href_list["hud"] == "m")
-			if(!HAS_TRAIT(H, TRAIT_MEDICAL_HUD))
-				return
-			if(href_list["evaluation"])
-				if(!getBruteLoss() && !getFireLoss() && !getOxyLoss() && getToxLoss() < 20)
-					to_chat(usr, "<span class='notice'>No external injuries detected.</span><br>")
-					return
-				var/span = "notice"
-				var/status = ""
-				if(getBruteLoss())
-					to_chat(usr, "<b>Physical trauma analysis:</b>")
-					for(var/X in bodyparts)
-						var/obj/item/bodypart/BP = X
-						var/brutedamage = BP.brute_dam
-						if(brutedamage > 0)
-							status = "received minor physical injuries."
-							span = "notice"
-						if(brutedamage > 20)
-							status = "been seriously damaged."
-							span = "danger"
-						if(brutedamage > 40)
-							status = "sustained major trauma!"
-							span = "danger"
-						if(brutedamage)
-							to_chat(usr, "<span class='[span]'>[BP] appears to have [status]</span>")
-				if(getFireLoss())
-					to_chat(usr, "<b>Analysis of skin burns:</b>")
-					for(var/X in bodyparts)
-						var/obj/item/bodypart/BP = X
-						var/burndamage = BP.burn_dam
-						if(burndamage > 0)
-							status = "signs of minor burns."
-							span = "notice"
-						if(burndamage > 20)
-							status = "serious burns."
-							span = "danger"
-						if(burndamage > 40)
-							status = "major burns!"
-							span = "danger"
-						if(burndamage)
-							to_chat(usr, "<span class='[span]'>[BP] appears to have [status]</span>")
-				if(getOxyLoss())
-					to_chat(usr, span_danger("Patient has signs of suffocation, emergency treatment may be required!"))
-				if(getToxLoss() > 20)
-					to_chat(usr, span_danger("Gathered data is inconsistent with the analysis, possible cause: poisoning."))
-			if(!H.wear_ring) //You require access from here on out.
-				to_chat(H, span_warning("ERROR: Invalid access"))
-				return
-			var/list/access = H.wear_ring.GetAccess()
-			if(!(ACCESS_MEDICAL in access))
-				to_chat(H, span_warning("ERROR: Invalid access"))
-				return
-			if(href_list["p_stat"])
-				var/health_status = input(usr, "Specify a new physical status for this person.", "Medical HUD", R.fields["p_stat"]) in list("Active", "Physically Unfit", "*Unconscious*", "*Deceased*", "Cancel")
-				if(!R)
-					return
-				if(!H.canUseHUD())
-					return
-				if(!HAS_TRAIT(H, TRAIT_MEDICAL_HUD))
-					return
-				if(health_status && health_status != "Cancel")
-					R.fields["p_stat"] = health_status
-				return
-			if(href_list["m_stat"])
-				var/health_status = input(usr, "Specify a new mental status for this person.", "Medical HUD", R.fields["m_stat"]) in list("Stable", "*Watch*", "*Unstable*", "*Insane*", "Cancel")
-				if(!R)
-					return
-				if(!H.canUseHUD())
-					return
-				if(!HAS_TRAIT(H, TRAIT_MEDICAL_HUD))
-					return
-				if(health_status && health_status != "Cancel")
-					R.fields["m_stat"] = health_status
-				return
-			return //Medical HUD ends here.
+			dat += "<td style='width:33%;text-align:left;vertical-align: text-top'>"
+			var/list/damtypes = list("blunt","slash","stab","piercing")
+			var/list/body_parts = list(skin_armor, head, wear_mask, wear_wrists, gloves, wear_neck, cloak, wear_armor, wear_shirt, shoes, wear_pants, backr, backl, belt, s_store, glasses, ears, wear_ring)
+			var/list/coverage_exposed = list(READABLE_ZONE_HEAD, READABLE_ZONE_CHEST, READABLE_ZONE_ARMS, READABLE_ZONE_L_ARM, READABLE_ZONE_R_ARM, READABLE_ZONE_LEGS, READABLE_ZONE_L_LEG, READABLE_ZONE_R_LEG, READABLE_ZONE_NOSE, READABLE_ZONE_MOUTH, READABLE_ZONE_EYES, READABLE_ZONE_NECK, READABLE_ZONE_VITALS, READABLE_ZONE_GROIN, READABLE_ZONE_HANDS, READABLE_ZONE_L_HAND, READABLE_ZONE_R_HAND, READABLE_ZONE_FEET, READABLE_ZONE_L_FOOT, READABLE_ZONE_R_FOOT)
+			var/list/coverage = list()	//All of the covered areas
+			var/list/blunt_max = list()	//Highest armor prot values
+			var/list/slash_max = list()	
+			var/list/stab_max = list()
+			var/list/piercing_max = list()
+			var/list/crit_weakness = list()	//The critical damage type the zone will be weak to
+			for(var/part in body_parts)
+				if(!part)
+					continue
+				if(part && istype(part, /obj/item/clothing))
+					var/obj/item/clothing/C = part
+					var/list/readable_coverage
+					var/list/critclasses = list(BCLASS_CUT, BCLASS_STAB, BCLASS_CHOP, BCLASS_BLUNT, BCLASS_TWIST, BCLASS_SMASH, BCLASS_PICK)
+					if(C.max_integrity)
+						if(C.obj_integrity <= 0)
+							continue
+						if(C.integrity_failure)
+							if(C.obj_broken)
+								continue
+					if(!C.armor)	//No armor -- no need to care about it
+						continue
+					if(C.armor)
+						if(C.armor.slash == 0 && C.armor.stab == 0 && C.armor.blunt == 0 && C.armor.piercing == 0)	//No armor but there's an armor datum. Useless for Assess, so we skip it.
+							continue
+					if(C.body_parts_covered_dynamic)
+						readable_coverage = body_parts_covered2organ_names(C.body_parts_covered_dynamic, verbose = TRUE)
+					
+					if(length(C.prevent_crits) && (is_normal || is_smart))
+						for(var/critzone in C.prevent_crits)
+							for(var/crit in critclasses)
+								if(critzone == crit)
+									LAZYREMOVE(critclasses, crit)
+									continue
 
-		if(href_list["hud"] == "s")
-			if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD))
-				return
-			if(usr.stat || usr == src) //|| !usr.canmove || usr.restrained()) Fluff: Sechuds have eye-tracking technology and sets 'arrest' to people that the wearer looks and blinks at.
-				return													  //Non-fluff: This allows sec to set people to arrest as they get disarmed or beaten
-			// Checks the user has security clearence before allowing them to change arrest status via hud, comment out to enable all access
-			var/allowed_access = null
-			var/obj/item/clothing/glasses/hud/security/G = H.glasses
-			if(istype(G) && (G.obj_flags & EMAGGED))
-				allowed_access = "@%&ERROR_%$*"
-			else //Implant and standard glasses check access
-				if(H.wear_ring)
-					var/list/access = H.wear_ring.GetAccess()
-					if(ACCESS_SEC_DOORS in access)
-						allowed_access = H.get_authentification_name()
+					for(var/coverageflag in readable_coverage)
+						for(var/type in damtypes)
+							switch(type)			//We get the max armor  values for this coverage flag
+								if("blunt")
+									blunt_max[coverageflag] = max(C.armor.getRating(type), blunt_max[coverageflag])
+								if("slash")
+									slash_max[coverageflag] = max(C.armor.getRating(type), slash_max[coverageflag])
+								if("stab")
+									stab_max[coverageflag] = max(C.armor.getRating(type), stab_max[coverageflag])
+								if("piercing")
+									piercing_max[coverageflag] = max(C.armor.getRating(type), piercing_max[coverageflag])
+						coverage[coverageflag] += 1
+						if(length(critclasses) && (is_normal || is_smart))
+							var/str
+							for(var/critzone in critclasses)
+								if(critzone == BCLASS_PICK)
+									critzone = "Pick"
+								str += "| [capitalize(critzone)] | "
+							crit_weakness[coverageflag] = str
+						switch(coverageflag)		//This removes covered zones from the _exposed list. The remainder, if any, will be highlighted in red as an "exposed" zone.
+							if(READABLE_ZONE_L_ARM)
+								coverage_exposed.Remove(READABLE_ZONE_ARMS, READABLE_ZONE_L_ARM)
+							if(READABLE_ZONE_R_ARM)
+								coverage_exposed.Remove(READABLE_ZONE_ARMS, READABLE_ZONE_R_ARM)	//Since individual limbs can be exposed, this is needed for the accuracy / granularity of the printout.
+							if(READABLE_ZONE_L_LEG)
+								coverage_exposed.Remove(READABLE_ZONE_LEGS, READABLE_ZONE_L_LEG)	//However it do be ugly.
+							if(READABLE_ZONE_R_LEG)	
+								coverage_exposed.Remove(READABLE_ZONE_LEGS, READABLE_ZONE_R_LEG)
+							if(READABLE_ZONE_L_HAND)
+								coverage_exposed.Remove(READABLE_ZONE_HANDS, READABLE_ZONE_L_HAND)
+							if(READABLE_ZONE_R_HAND)
+								coverage_exposed.Remove(READABLE_ZONE_HANDS, READABLE_ZONE_R_HAND)
+							if(READABLE_ZONE_R_FOOT)
+								coverage_exposed.Remove(READABLE_ZONE_FEET, READABLE_ZONE_R_FOOT)
+							if(READABLE_ZONE_L_FOOT)
+								coverage_exposed.Remove(READABLE_ZONE_FEET, READABLE_ZONE_L_FOOT)
+							else
+								coverage_exposed.Remove(coverageflag)
+			for(var/coverageflag in coverage)	//We go through the set up list and filter out redundancies. (ie Left Arm & Right Arm having identical stats to Arms)
+				switch(coverageflag)
+					if(READABLE_ZONE_ARMS)
+						if(coverage[READABLE_ZONE_L_ARM] == coverage[READABLE_ZONE_R_ARM])
+							if((blunt_max[READABLE_ZONE_L_ARM] == blunt_max[READABLE_ZONE_R_ARM]) && (slash_max[READABLE_ZONE_L_ARM] == slash_max[READABLE_ZONE_R_ARM]) && (stab_max[READABLE_ZONE_L_ARM] == stab_max[READABLE_ZONE_R_ARM]))
+								coverage.Remove(READABLE_ZONE_L_ARM, READABLE_ZONE_R_ARM)
+							else
+								coverage.Remove(READABLE_ZONE_ARMS)
+						else
+							coverage.Remove(READABLE_ZONE_ARMS)
+					if(READABLE_ZONE_LEGS)
+						if(coverage[READABLE_ZONE_L_LEG] == coverage[READABLE_ZONE_R_LEG])
+							if((blunt_max[READABLE_ZONE_L_LEG] == blunt_max[READABLE_ZONE_R_LEG]) && (slash_max[READABLE_ZONE_L_LEG] == slash_max[READABLE_ZONE_R_LEG]) && (stab_max[READABLE_ZONE_L_LEG] == stab_max[READABLE_ZONE_R_LEG]))
+								coverage.Remove(READABLE_ZONE_L_LEG, READABLE_ZONE_R_LEG)
+							else
+								coverage.Remove(READABLE_ZONE_LEGS)
+						else
+							coverage.Remove(READABLE_ZONE_LEGS)
+					if(READABLE_ZONE_HANDS)
+						if(coverage[READABLE_ZONE_L_HAND] == coverage[READABLE_ZONE_R_HAND])
+							if((blunt_max[READABLE_ZONE_L_HAND] == blunt_max[READABLE_ZONE_R_HAND]) && (slash_max[READABLE_ZONE_L_HAND] == slash_max[READABLE_ZONE_R_HAND]) && (stab_max[READABLE_ZONE_L_HAND] == stab_max[READABLE_ZONE_R_HAND]))
+								coverage.Remove(READABLE_ZONE_L_HAND, READABLE_ZONE_R_HAND)
+							else
+								coverage.Remove(READABLE_ZONE_HANDS)
+						else
+							coverage.Remove(READABLE_ZONE_HANDS)
+					if(READABLE_ZONE_FEET)
+						if(coverage[READABLE_ZONE_L_FOOT] == coverage[READABLE_ZONE_R_FOOT])
+							if((blunt_max[READABLE_ZONE_L_FOOT] == blunt_max[READABLE_ZONE_R_FOOT]) && (slash_max[READABLE_ZONE_L_FOOT] == slash_max[READABLE_ZONE_R_FOOT]) && (stab_max[READABLE_ZONE_L_FOOT] == stab_max[READABLE_ZONE_R_FOOT]))
+								coverage.Remove(READABLE_ZONE_L_FOOT, READABLE_ZONE_R_FOOT)
+							else
+								coverage.Remove(READABLE_ZONE_FEET)
+						else
+							coverage.Remove(READABLE_ZONE_FEET)		
+			for(var/exposedzone in coverage_exposed)	//We also filter out redundancies from the exposed remainder. Mostly L / Rs if there's a combined flag that slipped through.
+				switch(exposedzone)
+					if(READABLE_ZONE_HANDS)
+						coverage_exposed.Remove(READABLE_ZONE_L_HAND, READABLE_ZONE_R_HAND)
+					if(READABLE_ZONE_ARMS)
+						coverage_exposed.Remove(READABLE_ZONE_L_ARM, READABLE_ZONE_R_ARM)
+					if(READABLE_ZONE_LEGS)
+						coverage_exposed.Remove(READABLE_ZONE_L_LEG, READABLE_ZONE_R_LEG)
+					if(READABLE_ZONE_FEET)
+						coverage_exposed.Remove(READABLE_ZONE_L_FOOT, READABLE_ZONE_R_FOOT)
+					if(READABLE_ZONE_HEAD)
+						coverage_exposed.Remove(READABLE_ZONE_MOUTH, READABLE_ZONE_EYES, READABLE_ZONE_NOSE)
 
-			if(!allowed_access)
-				to_chat(H, span_warning("ERROR: Invalid access."))
-				return
+			if(!is_stupid)
+				dat += "<b><center>BODY:</center></b><br>"
+			if(length(coverage))
+				var/str
+				if(!is_smart && !is_normal)	//We get a significantly simplified printout if we don't have the stats / trait
+					coverage.Remove(READABLE_ZONE_NECK, READABLE_ZONE_MOUTH, READABLE_ZONE_EYES, READABLE_ZONE_NOSE, READABLE_ZONE_FACE, READABLE_ZONE_VITALS, READABLE_ZONE_GROIN, READABLE_ZONE_HANDS, READABLE_ZONE_FEET, READABLE_ZONE_L_FOOT, READABLE_ZONE_R_FOOT, READABLE_ZONE_L_HAND, READABLE_ZONE_R_HAND, READABLE_ZONE_L_ARM, READABLE_ZONE_R_ARM, READABLE_ZONE_L_LEG, READABLE_ZONE_R_LEG)
+				if(!is_smart && is_normal)
+					coverage.Remove(READABLE_ZONE_NECK, READABLE_ZONE_MOUTH, READABLE_ZONE_EYES, READABLE_ZONE_NOSE, READABLE_ZONE_FACE, READABLE_ZONE_VITALS, READABLE_ZONE_GROIN, READABLE_ZONE_HANDS, READABLE_ZONE_FEET, READABLE_ZONE_L_FOOT, READABLE_ZONE_R_FOOT, READABLE_ZONE_L_HAND, READABLE_ZONE_R_HAND)
+				if(!is_stupid)
+					if(is_normal || is_smart)
+						if(length(coverage_exposed))
+							for(var/exposed in coverage_exposed)
+								str += "<b>[exposed]</b>: <font color = '#770404'><b>EXPOSED!</B></font><br>"
+					for(var/thing in coverage)
+						str += "<b>[thing]</b> LAYERS: <b>[coverage[thing]]</b> | [colorgrade_rating("", blunt_max[thing], TRUE)] | [colorgrade_rating("", slash_max[thing], TRUE)] | [colorgrade_rating("", stab_max[thing], TRUE)] | [colorgrade_rating("", piercing_max[thing], TRUE)] <br><font color = '#a35252'>[crit_weakness[thing]]</font><br>"
+					dat += str
+				else
+					dat += "<b><center>I don't know! Just hit them!</center></b>"
+			else
+				dat += "<b><center>They're wearing nothing.</center></b>"
+			dat += "</td>"
 
-			if(!perpname)
-				to_chat(H, span_warning("ERROR: Can not identify target."))
-				return
-			R = find_record("name", perpname, GLOB.data_core.security)
-			if(!R)
-				to_chat(usr, span_warning("ERROR: Unable to locate data core entry for target."))
-				return
-			if(href_list["status"])
-				var/setcriminal = input(usr, "Specify a new criminal status for this person.", "Security HUD", R.fields["criminal"]) in list("None", "*Arrest*", "Incarcerated", "Paroled", "Discharged", "Cancel")
-				if(setcriminal != "Cancel")
-					if(!R)
-						return
-					if(!H.canUseHUD())
-						return
-					if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD))
-						return
-					investigate_log("[key_name(src)] has been set from [R.fields["criminal"]] to [setcriminal] by [key_name(usr)].", INVESTIGATE_RECORDS)
-					R.fields["criminal"] = setcriminal
-					sec_hud_set_security_status()
-				return
+			dat += "<td style='width:40%;text-align:center;vertical-align: text-top'>"
+			if(!is_guarded && !is_stupid && (!obscured_name || !H.client?.prefs.masked_examine))	//We don't see Guarded people's skills at all.
+				dat += "<b>SKILLS:</b><br><br>"
+				var/list/wornstuff = list(H.backr, H.backl, H.beltl, H.beltr)
+				if(!is_normal && !is_smart)	//At minimum we get to see the skills of the weapons the person is holding, if we have them.
+					for(var/stuff in wornstuff)
+						if(stuff)
+							if(istype(stuff, /obj/item))
+								var/obj/item/wornthing = stuff
+								if(wornthing.associated_skill)
+									var/datum/skill/SK = wornthing.associated_skill
+									if(user.get_skill_level(SK) > 0)
+										dat += "<font size = 4; font color = '#dddada'><b>[SK.name]</b><br></font>"
+										var/skilldiff = user.get_skill_level(SK) - H.get_skill_level(SK)
+										dat += "[skilldiff_report(skilldiff)] <br>"
+										dat += "-----------------------<br>"
+					for(var/obj/item/I in held_items)	//Also what's in their hands!
+						if(!(I.item_flags & ABSTRACT))
+							if(I.associated_skill)
+								var/datum/skill/SK = I.associated_skill
+								if(user.get_skill_level(SK) > 0)
+									dat += "<font size = 4; font color = '#dddada'><b>[SK.name]</b><br></font>"
+									var/skilldiff = user.get_skill_level(SK) - H.get_skill_level(SK)
+									dat += "[skilldiff_report(skilldiff)] <br>"
+									dat += "-----------------------<br>"
+				else	//Otherwise, we get to see all of their combat skills
+					for(var/S in subtypesof(/datum/skill/combat))
+						var/datum/skill/combat/SK = S
+						if(user.get_skill_level(S) > 0)
+							dat += "<font size = 4; font color = '#dddada'><b>[SK.name]</b><br></font>"
+							var/skilldiff = user.get_skill_level(S) - H.get_skill_level(S)
+							dat += "[skilldiff_report(skilldiff)] <br>"
+							dat += "-----------------------<br>"
+					if(is_smart)	//And if we're smart enough, /all/ skills.
+						for(var/S in subtypesof(/datum/skill))
+							if(user.get_skill_level(S) > 0)
+								if(!ispath(S, /datum/skill/combat))	//We already did these.
+									var/datum/skill/SL = S
+									dat += "<font size = 4; font color = '#dddada'><b>[SL.name]</b><br></font>"
+									var/skilldiff = user.get_skill_level(S) - H.get_skill_level(S)
+									dat += "[skilldiff_report(skilldiff)] <br>"
+									dat += "-----------------------<br>"
+								else
+									continue
+					
+			dat += "</td>"
+			dat += "</tr>"
+			var/datum/browser/popup = new(user, "assess", ntitle = "[src] Assesment", nwidth = 1000, nheight = 600)
+			popup.set_content(dat.Join())
+			popup.open(FALSE)
+		else
+			user.visible_message("[user] fails to assess [src]!")
+		return
+	return ..() //end of this massive fucking chain. TODO: make the hud chain not spooky. - Yeah, great job doing that. - I made it worse sorry guys.
 
-			if(href_list["view"])
-				if(!H.canUseHUD())
-					return
-				if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD))
-					return
-				to_chat(usr, "<b>Name:</b> [R.fields["name"]]	<b>Criminal Status:</b> [R.fields["criminal"]]")
-				to_chat(usr, "<b>Minor Crimes:</b>")
-				for(var/datum/data/crime/c in R.fields["mi_crim"])
-					to_chat(usr, "<b>Crime:</b> [c.crimeName]")
-					to_chat(usr, "<b>Details:</b> [c.crimeDetails]")
-					to_chat(usr, "Added by [c.author] at [c.time]")
-					to_chat(usr, "----------")
-					to_chat(usr, "<b>Major Crimes:</b>")
-				for(var/datum/data/crime/c in R.fields["ma_crim"])
-					to_chat(usr, "<b>Crime:</b> [c.crimeName]")
-					to_chat(usr, "<b>Details:</b> [c.crimeDetails]")
-					to_chat(usr, "Added by [c.author] at [c.time]")
-					to_chat(usr, "----------")
-				to_chat(usr, "<b>Notes:</b> [R.fields["notes"]]")
-				return
+//Sorry colorblind folks...
+/proc/colorgrade_rating(input, rating, elaborate = FALSE)
+	var/str
+	if(isnull(rating))
+		rating = 0
+	switch(rating)
+		if(0 to 9)
+			var/color = "#f81a1a"
+			str = elaborate ? "<font color = '[color]'>[input] (F)</font>" : "<font color = '[color]'>[input] (F)</font>"
+		if(10 to 19)
+			var/color = "#680d0d"
+			str = elaborate ? "<font color = '[color]'>[input] (D)</font>" : "<font color = '[color]'>[input] (D)</font>"
+		if(20 to 39)
+			var/color = "#753e11"
+			str = elaborate ? "<font color = '[color]'>[input] (D+)</font>" : "<font color = '[color]'>[input] (D+)</font>"
+		if(40 to 49)
+			var/color = "#c0a739"
+			str = elaborate ? "<font color = '[color]'>[input] (C)</font>" : "<font color = '[color]'>[input] (C to C+)</font>"
+		if(50 to 59)
+			var/color = "#e3e63c"
+			str = elaborate ? "<font color = '[color]'>[input] (C+)</font>" : "<font color = '[color]'>[input] (C to C+)</font>"
+		if(60 to 69)
+			var/color = "#425c33"
+			str = elaborate ? "<font color = '[color]'>[input] (B)</font>" : "<font color = '[color]'>[input] (B to B+)</font>"
+		if(70 to 79)
+			var/color = "#1a9c00"
+			str = elaborate ? "<font color = '[color]'>[input] (B+)</font>" : "<font color = '[color]'>[input] (B to B+)</font>"
+		if(80 to 89)
+			var/color = "#0fe021"
+			str = elaborate ? "<font color = '[color]'>[input] (A)</font>" : "<font color = '[color]'>[input] (A to A+)</font>"
+		if(90 to 99)
+			var/color = "#ffffff"
+			str = elaborate ? "<font color = '[color]'>[input] (A+)</font>" : "<font color = '[color]'>[input] (A to A+)</font>"
+		if(100)
+			var/color = "#339dff"
+			str = "<font color = '[color]'>[input] (S)</font>"
+		if(101 to 200)
+			var/color = "#c757af"
+			str = "<font color = '[color]'>[input] (S+)</font>"
+		else
+			str = "[input] (Under 0 or above 200! Contact coders.)"
+	return str
 
-			if(href_list["add_crime"])
-				switch(alert("What crime would you like to add?","Security HUD","Minor Crime","Major Crime","Cancel"))
-					if("Minor Crime")
-						var/t1 = stripped_input("Please input minor crime names:", "Security HUD", "", null)
-						var/t2 = stripped_multiline_input("Please input minor crime details:", "Security HUD", "", null)
-						if(!R || !t1 || !t2 || !allowed_access)
-							return
-						if(!H.canUseHUD())
-							return
-						if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD))
-							return
-						var/crime = GLOB.data_core.createCrimeEntry(t1, t2, allowed_access, station_time_timestamp())
-						GLOB.data_core.addMinorCrime(R.fields["id"], crime)
-						investigate_log("New Minor Crime: <strong>[t1]</strong>: [t2] | Added to [R.fields["name"]] by [key_name(usr)]", INVESTIGATE_RECORDS)
-						to_chat(usr, span_notice("Successfully added a minor crime."))
-						return
-					if("Major Crime")
-						var/t1 = stripped_input("Please input major crime names:", "Security HUD", "", null)
-						var/t2 = stripped_multiline_input("Please input major crime details:", "Security HUD", "", null)
-						if(!R || !t1 || !t2 || !allowed_access)
-							return
-						if(!H.canUseHUD())
-							return
-						if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD))
-							return
-						var/crime = GLOB.data_core.createCrimeEntry(t1, t2, allowed_access, station_time_timestamp())
-						GLOB.data_core.addMajorCrime(R.fields["id"], crime)
-						investigate_log("New Major Crime: <strong>[t1]</strong>: [t2] | Added to [R.fields["name"]] by [key_name(usr)]", INVESTIGATE_RECORDS)
-						to_chat(usr, span_notice("Successfully added a major crime."))
-				return
+/*/proc/defense_report(var/obj/item/clothing/C, var/stupid, var/normal, var/smart, var/stupid_string)
+	var/str
 
-			if(href_list["view_comment"])
-				if(!H.canUseHUD())
-					return
-				if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD))
-					return
-				to_chat(usr, "<b>Comments/Log:</b>")
-				var/counter = 1
-				while(R.fields[text("com_[]", counter)])
-					to_chat(usr, R.fields[text("com_[]", counter)])
-					to_chat(usr, "----------")
-					counter++
-				return
+	if(!istype(C, /obj/item/clothing))
+		str += "<br>---------------------------<br>"
+		return str
+	if(C.armor)
+		var/defense = "<u><b>ABSORPTION: </b></u><br>"
+		var/datum/armor/def_armor = C.armor
+		defense += "[colorgrade_rating("BLUNT", def_armor.blunt, smart)] | "
+		defense += "[colorgrade_rating("SLASH", def_armor.slash, smart)] | "
+		defense += "[colorgrade_rating("STAB", def_armor.stab, smart)] | "
+		defense += "[colorgrade_rating("PIERCING", def_armor.piercing, smart)] "
+		str += "[defense]<br>"
 
-			if(href_list["add_comment"])
-				var/t1 = stripped_multiline_input("Add Comment:", "Secure. records", null, null)
-				if (!R || !t1 || !allowed_access)
-					return
-				if(!H.canUseHUD())
-					return
-				if(!HAS_TRAIT(H, TRAIT_SECURITY_HUD))
-					return
-				var/counter = 1
-				while(R.fields[text("com_[]", counter)])
-					counter++
-				R.fields[text("com_[]", counter)] = text("Made by [] on [] [], []<BR>[]", allowed_access, station_time_timestamp(), time2text(world.realtime, "MMM DD"), GLOB.year_integer+540, t1)
-				to_chat(usr, span_notice("Successfully added comment."))
-				return
+	var/coverage = "<u><b>COVERS: </b></u><br>"
+	if(!stupid)
+		coverage += "<font color = '#cccccc'> | </font>"
+		for(var/zone in body_parts_covered2organ_names(C.body_parts_covered))
+			coverage += "<font color = '#cccccc'><b>[zone] | </b></font>"
+		str += "[coverage]<br>"
+	else
+		str += coverage
+		str += stupid_string
+	if(normal || smart)
+		var/list/critclasses = list(BCLASS_CUT, BCLASS_STAB, BCLASS_CHOP, BCLASS_BLUNT, BCLASS_TWIST, BCLASS_SMASH, BCLASS_PICK)
+		var/crits
+		if(C.prevent_crits || smart)
+			crits = "<b><u>PREVENTS CRITS: </u></b>"
+		if(C.prevent_crits)
+			crits += "<br>"
+			crits += "<font color = '#69a1a8'>| </font>"
+			for(var/zone in C.prevent_crits)
+				for(var/crit in critclasses)
+					if(zone == crit)
+						if(zone == BCLASS_PICK)
+							zone = "pick"		//Pick is labelled as 'Stab'
+						zone = "<font color = '#69a1a8'>[capitalize(zone)] | </font>"
+						crits += zone
+						LAZYREMOVE(critclasses, crit)
+						continue
+		if(smart)
+			crits += "<br>"
+			crits += "<font color = '#a35252'>| </font>"
+			for(var/crit in critclasses)
+				if(crit == BCLASS_PICK)
+					crit = "pick"		//Pick is labelled as 'Stab', this prevents confusion
+				crit = "<font color = '#a35252'>[capitalize(crit)] | </font>"
+				crits += crit
 
-	return ..() //end of this massive fucking chain. TODO: make the hud chain not spooky. - Yeah, great job doing that.
+		str += crits
+	str += "<br>---------------------------<br>"
+	
+	return str*/
+
+/proc/skilldiff_report(var/input)
+	switch (input)
+		if(-6)
+			return "<font color = '#ff4ad2'>I know nothing. They -- everything</font>"
+		if(-5)
+			return "<font color = '#eb0000'><i>I stand no chance against them</i></font>"
+		if(-4)
+			return "<font color = '#c53c3c'><i>I am inferior</i></font>"
+		if(-3)
+			return "<font color = '#db8484'><i>I am notably worse</i></font>"
+		if(-2)
+			return "<font color = '#e4a1a1'><i>I am worse</i></font>"
+		if(-1)
+			return "<font color = '#f8d3d3'><i>I am slightly worse</i></font>"
+		if(0)
+			return "We are equal"
+		if(1)
+			return "<font color = '#3f6343'>I am slightly better</font>"
+		if(2)
+			return "<font color = '#49944f'>I am better</font>"
+		if(3)
+			return "<font color = '#44db51'>I am notably better</font>"
+		if(4)
+			return"<font color = '#62b4be'>I am superior</font>"
+		if(5)
+			return "<font color = '#2bdcfc'>They have no chance in this field</font>"
+		if(6)
+			return "<font color = '#ff4ad2'>They know nothing. A whelp</font>"

@@ -53,7 +53,14 @@
 		if(!C.get_bodypart(BODY_ZONE_L_LEG) && !C.get_bodypart(BODY_ZONE_R_LEG))
 			return
 		if(C.m_intent == MOVE_INTENT_SNEAK && !T.footstepstealth)
-			return// stealth
+			if(!C.loud_sneaking || C.rogue_sneaking)
+				return// stealth
+			steps++
+			if(steps&2 == 2) // Hrrghn... Colonel, I'm trying to sneak around, but I'm dummy thicc, and the clap of my asscheeks keeps ALERTING THE GUARDS
+				playsound(C, pick(list('sound/misc/mat/thicc (1).ogg','sound/misc/mat/thicc (2).ogg','sound/misc/mat/thicc (3).ogg','sound/misc/mat/thicc (4).ogg')), 15 * volume)
+			if(steps >= 6)
+				steps = 0
+			return// uhm... stealth?
 	steps++
 
 	if(steps >= 6)
@@ -62,11 +69,11 @@
 	if(steps % 2)
 		return
 
-	if(steps != 0 && !LM.has_gravity(T)) // don't need to step as often when you hop around
-		return
 	return T
 
 /datum/component/footstep/proc/play_simplestep()
+	if(HAS_TRAIT(parent, TRAIT_SILENT_FOOTSTEPS))
+		return
 	var/turf/open/T = prepare_step()
 	if(!T)
 		return
@@ -87,7 +94,6 @@
 		return
 	//SANITY CHECK, WILL NOT PLAY A SOUND IF THE LIST IS INVALID
 	if(!footstep_sounds[turf_footstep] || (LAZYLEN(footstep_sounds) < 3))
-		testing("SOME silly guy GAVE AN INVALID FOOTSTEP [footstep_type] VALUE ([turf_footstep]) TO [T.type]!!! FIX THIS SHIT!!!")
 		return
 	playsound(T, pick(footstep_sounds[turf_footstep][1]), footstep_sounds[turf_footstep][2], FALSE, footstep_sounds[turf_footstep][3] + e_range)
 
@@ -95,19 +101,18 @@
 	var/turf/open/T = prepare_step()
 	if(!T)
 		return
-	var/mob/living/carbon/human/H = parent
-	if(HAS_TRAIT(H,TRAIT_LIGHT_STEP)) //TODO, Look into implementing soft fluttering sounds instead, and prevent this check that will happen for every footstep ever
+	if(HAS_TRAIT(parent, TRAIT_SILENT_FOOTSTEPS))
 		return
+	var/mob/living/carbon/human/H = parent
 	var/feetCover = (H.wear_armor && (H.wear_armor.body_parts_covered & FEET)) || (H.wear_pants && (H.wear_pants.body_parts_covered & FEET))
 
 	var/used_sound
 	var/list/used_footsteps
 	var/obj/item/clothing/shoes/humshoes = H.shoes
 
-	if((humshoes && !humshoes?.is_barefoot) || feetCover) //are we wearing shoes, and do they actually cover the sole
+	if((istype(humshoes) && !humshoes?.is_barefoot) || feetCover) //are we wearing shoes, and do they actually cover the sole
 		//SANITY CHECK, WILL NOT PLAY A SOUND IF THE LIST IS INVALID
 		if(!GLOB.footstep[T.footstep] || (LAZYLEN(GLOB.footstep[T.footstep]) < 3))
-			testing("SOME silly guy GAVE AN INVALID FOOTSTEP VALUE ([T.footstep]) TO [T.type]!!! FIX THIS SHIT!!!")
 			return
 		used_footsteps = GLOB.footstep[T.footstep][1]
 		used_footsteps = used_footsteps.Copy()
@@ -125,7 +130,6 @@
 	else
 		//SANITY CHECK, WILL NOT PLAY A SOUND IF THE LIST IS INVALID
 		if(!GLOB.barefootstep[T.barefootstep] || (LAZYLEN(GLOB.barefootstep[T.barefootstep]) < 3))
-			testing("SOME silly guy GAVE AN INVALID BAREFOOTSTEP VALUE ([T.barefootstep]) TO [T.type]!!! FIX THIS SHIT!!!")
 			return
 		used_footsteps = GLOB.barefootstep[T.barefootstep][1]
 		used_footsteps = used_footsteps.Copy()

@@ -146,10 +146,6 @@
 		return FALSE
 	if(!has_hand_for_held_index(hand_index))
 		return FALSE
-	//To prevent zombies from grabbing items.
-	if(HAS_TRAIT(src, TRAIT_DECAYEDHANDS) && !istype(I, /obj/item/grabbing))
-		to_chat(src, span_warning(pick("...Huh?", "My fingers twitch...", "I can't pick it up...")))
-		return FALSE
 	return !held_items[hand_index]
 
 /mob/proc/put_in_hand(obj/item/I, hand_index, forced = FALSE, ignore_anim = TRUE)
@@ -179,7 +175,6 @@
 	if(hud_used)
 		hud_used.throw_icon?.update_icon()
 		hud_used.give_intent?.update_icon()
-	givingto = null
 	return hand_index
 
 //Puts the item into the first available left hand if possible and calls all necessary triggers/updates. returns 1 on success.
@@ -196,6 +191,16 @@
 /mob/living/put_in_hand_check(obj/item/I)
 	if(I.twohands_required && get_inactive_held_item())
 		return FALSE
+	if((I.is_silver || I.smeltresult == /obj/item/ingot/silver) && (HAS_TRAIT(src, TRAIT_SILVER_WEAK) &&  !has_status_effect(STATUS_EFFECT_ANTIMAGIC)))
+		var/datum/antagonist/vampire/V_lord = mind?.has_antag_datum(/datum/antagonist/vampire)
+		if(!istype(V_lord) || V_lord?.generation < GENERATION_METHUSELAH)
+			to_chat(src, span_userdanger("I can't pick up the silver, it is my BANE!"))
+			Knockdown(10)
+			Paralyze(10)
+			adjustFireLoss(25)
+			adjust_fire_stacks(3, /datum/status_effect/fire_handler/fire_stacks/sunder)
+			ignite_mob()
+			return FALSE
 	if(istype(I) && ((mobility_flags & MOBILITY_PICKUP) || (I.item_flags & ABSTRACT)))
 		return TRUE
 	return FALSE
@@ -216,26 +221,6 @@
 /mob/proc/put_in_hands(obj/item/I, del_on_fail = FALSE, merge_stacks = TRUE, forced = FALSE)
 	if(!I)
 		return FALSE
-
-	// If the item is a stack and we're already holding a stack then merge
-	if (istype(I, /obj/item/stack))
-		var/obj/item/stack/I_stack = I
-		var/obj/item/stack/active_stack = get_active_held_item()
-
-		if (I_stack.zero_amount())
-			return FALSE
-
-		if (merge_stacks)
-			if (istype(active_stack) && istype(I_stack, active_stack.merge_type))
-				if (I_stack.merge(active_stack))
-					to_chat(usr, span_notice("My [active_stack.name] stack now contains [active_stack.get_amount()] [active_stack.singular_name]\s."))
-					return TRUE
-			else
-				var/obj/item/stack/inactive_stack = get_inactive_held_item()
-				if (istype(inactive_stack) && istype(I_stack, inactive_stack.merge_type))
-					if (I_stack.merge(inactive_stack))
-						to_chat(usr, span_notice("My [inactive_stack.name] stack now contains [inactive_stack.get_amount()] [inactive_stack.singular_name]\s."))
-						return TRUE
 
 	if(put_in_active_hand(I, forced))
 		return TRUE
@@ -338,16 +323,15 @@
 	if(hud_used)
 		hud_used.throw_icon?.update_icon()
 		hud_used.give_intent?.update_icon()
-	givingto = null
 	update_a_intents()
 	return TRUE
 
 //Outdated but still in use apparently. This should at least be a human proc.
 //Daily reminder to murder this - Remie.
-/mob/living/proc/get_equipped_items(include_pockets = FALSE)
+/mob/living/proc/get_equipped_items(include_pockets = FALSE, include_beltslots = TRUE)
 	return
 
-/mob/living/carbon/get_equipped_items(include_pockets = FALSE)
+/mob/living/carbon/get_equipped_items(include_pockets = FALSE, include_beltslots = TRUE)
 	var/list/items = list()
 	if(back)
 		items += back
@@ -359,14 +343,15 @@
 		items += wear_neck
 	return items
 
-/mob/living/carbon/human/get_equipped_items(include_pockets = FALSE)
+/mob/living/carbon/human/get_equipped_items(include_pockets = FALSE, include_beltslots = TRUE)
 	var/list/items = ..()
 	if(belt)
 		items += belt
-	if(beltr)
-		items += beltr
-	if(beltl)
-		items += beltl
+	if(include_beltslots) //prototype arg defined as true for legacy
+		if(beltr)
+			items += beltr
+		if(beltl)
+			items += beltl
 	if(backr)
 		items += backr
 	if(backl)

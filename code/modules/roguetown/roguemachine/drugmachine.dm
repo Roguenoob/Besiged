@@ -9,12 +9,14 @@
 	name = "PURITY"
 	desc = "You want to destroy your life."
 	icon = 'icons/roguetown/misc/machines.dmi'
-	icon_state = "streetvendor1"
+	icon_state = "purity"
 	density = TRUE
 	blade_dulling = DULLING_BASH
 	max_integrity = 0
 	anchored = TRUE
 	layer = BELOW_OBJ_LAYER
+	light_outer_range = 6
+	light_color = "#ff13d8ff"
 	var/list/held_items = list()
 	var/locked = FALSE
 	var/budget = 0
@@ -42,6 +44,10 @@
 				playsound(loc, 'sound/misc/beep.ogg', 100, FALSE, -1)
 				update_icon()
 				return attack_hand(user)
+	if(istype(P, /obj/item/roguecoin/aalloy))
+		return
+	if(istype(P, /obj/item/roguecoin/inqcoin))	
+		return			
 	if(istype(P, /obj/item/roguecoin))
 		budget += P.get_real_price()
 		qdel(P)
@@ -67,10 +73,10 @@
 	. = ..()
 	if(!ishuman(usr))
 		return
+	var/mob/living/carbon/human/human_mob = usr
 	if(href_list["buy"])
 		if(!usr.canUseTopic(src, BE_CLOSE) || locked)
 			return
-		var/mob/M = usr
 		var/O = text2path(href_list["buy"])
 		if(held_items[O]["PRICE"])
 			var/tax_amt = FLOOR(SStreasury.tax_value * held_items[O]["PRICE"], 1)
@@ -79,14 +85,19 @@
 				full_price = held_items[O]["PRICE"]
 			if(budget >= full_price)
 				budget -= full_price
+				record_round_statistic(STATS_PURITY_VALUE_SPENT, full_price)
 				recent_payments += held_items[O]["PRICE"]
 				if(!(drugrade_flags & DRUGRADE_NOTAX))
 					SStreasury.give_money_treasury(tax_amt, "purity import tax")
+					record_featured_stat(FEATURED_STATS_TAX_PAYERS, human_mob, tax_amt)
+					record_round_statistic(STATS_TAXES_COLLECTED, tax_amt)
+				else
+					record_round_statistic(STATS_TAXES_EVADED, tax_amt)
 			else
 				say("Not enough!")
 				return
 		var/obj/item/I = new O(get_turf(src))
-		M.put_in_hands(I)
+		human_mob.put_in_hands(I)
 	if(href_list["change"])
 		if(!usr.canUseTopic(src, BE_CLOSE) || locked)
 			return
@@ -114,21 +125,28 @@
 			return
 		switch(select)
 			if("Withdraw Cut")
-				options = list("To Bank", "Direct")
+				if(secret_budget < 1)
+					say("There is no mammon to move, Master.")
+					return
+				options = list("To Bank (Taxed)", "Direct")
 				select = input(usr, "Please select an option.", "", null) as null|anything in options
 				if(!select)
 					return
 				if(!usr.canUseTopic(src, BE_CLOSE) || locked)
 					return
+				if(secret_budget < 1)
+					say("There is no mammon to move, Master.")
+					return
 				switch(select)
-					if("To Bank")
+					if("To Bank (Taxed)")
 						var/mob/living/carbon/human/H = usr
-						SStreasury.generate_money_account(secret_budget, H)
+						if(!(SStreasury.generate_money_account(floor(secret_budget), H))) //We returned false on executing the transfer
+							say("I could not put your cut in your account, Master. My apologies.")
+							return
 						secret_budget = 0
 					if("Direct")
-						if(secret_budget > 0)
-							budget2change(secret_budget, usr)
-							secret_budget = 0
+						budget2change(floor(secret_budget), usr)
+						secret_budget = 0
 			if("Enable Paying Taxes")
 				drugrade_flags &= ~DRUGRADE_NOTAX
 				playsound(loc, 'sound/misc/beep.ogg', 100, FALSE, -1)
@@ -165,7 +183,7 @@
 		return
 	if(locked)
 		return
-	user.changeNext_move(CLICK_CD_MELEE)
+	user.changeNext_move(CLICK_CD_INTENTCAP)
 	playsound(loc, 'sound/misc/beep.ogg', 100, FALSE, -1)
 	var/canread = user.can_read(src, TRUE)
 	var/contents
@@ -180,9 +198,11 @@
 	var/mob/living/carbon/human/H = user
 	if(H.job == "Bathmaster")
 		if(canread)
-			contents = "<a href='?src=[REF(src)];secrets=1'>Secrets</a>"
+			contents += "<a href='?src=[REF(src)];secrets=1'>Secrets</a><BR>"
+			contents += "Mammon Washing: [recent_payments] -- Your cut, Master! [secret_budget]<BR>"
 		else
-			contents = "<a href='?src=[REF(src)];secrets=1'>[stars("Secrets")]</a>"
+			contents += "<a href='?src=[REF(src)];secrets=1'>[stars("Secrets")]</a><BR>"
+			contents += "[stars("Mammon Washing:")] [recent_payments] -- [stars("Your cut, Master!")] [secret_budget]<BR>"
 
 	contents += "</center>"
 
@@ -216,7 +236,7 @@
 	if(obj_broken)
 		set_light(0)
 		return
-	set_light(1, 1, "#1b7bf1")
+	set_light(1, 1, 1, l_color = "#1b7bf1")
 	add_overlay(mutable_appearance(icon, "vendor-drug"))
 
 
@@ -234,13 +254,15 @@
 	held_items[/obj/item/reagent_containers/powder/moondust] = list("PRICE" = rand(13,25),"NAME" = "moondust")
 	held_items[/obj/item/clothing/mask/cigarette/rollie/cannabis] = list("PRICE" = rand(12,18),"NAME" = "swampweed zig")
 	held_items[/obj/item/clothing/mask/cigarette/rollie/nicotine] = list("PRICE" = rand(5,10),"NAME" = "zig")
-/*	held_items[/obj/item/reagent_containers/glass/bottle/rogue/wine] = list("PRICE" = rand(35,77),"NAME" = "vino")
-	held_items[/obj/item/rogueweapon/huntingknife/idagger] = list("PRICE" = rand(20,33),"NAME" = "kinfe")
-	held_items[/obj/item/clothing/cloak/half] = list("PRICE" = rand(103,110),"NAME" = "black halfcloak")
-	held_items[/obj/item/clothing/gloves/roguetown/fingerless] = list("PRICE" = rand(16,31),"NAME" = "gloves with 6 holes")
-	held_items[/obj/item/clothing/head/roguetown/roguehood/black] = list("PRICE" = rand(43,45),"NAME" = "black hood")
-	held_items[/obj/item/gun/ballistic/revolver/grenadelauncher/crossbow] = list("PRICE" = rand(58,88),"NAME" = "crossed bow")
-	held_items[/obj/item/ammo_holder/quiver/bolts] = list("PRICE" = rand(33,57),"NAME" = "quiver w/ bolts")*/
+	// azure peak addition start - lipstick
+	held_items[/obj/item/azure_lipstick] = list("PRICE" = rand(33,50),"NAME" = "red lipstick")
+	held_items[/obj/item/azure_lipstick/jade] = list("PRICE" = rand(33,50),"NAME" = "jade lipstick")
+	held_items[/obj/item/azure_lipstick/purple] = list("PRICE" = rand(33,50),"NAME" = "purple lipstick")
+	held_items[/obj/item/azure_lipstick/black] = list("PRICE" = rand(33,50),"NAME" = "black lipstick")
+	//azure peak addition - zigbox
+	held_items[/obj/item/quiver/zigs] = list("PRICE" = rand(5,10), "NAME" = "zigbox, empty")
+	held_items[/obj/item/reagent_containers/glass/bottle/alchemical/fermented_crab] = list("PRICE" = rand(50,70), "NAME" = "fermented crab")
+	// azure peak addition end
 
 #undef DRUGRADE_MONEYA
 #undef DRUGRADE_MONEYB

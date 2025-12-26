@@ -45,6 +45,25 @@
 
 	return zone
 
+/// Returns the targeting zone equivalent of a given bodypart. Kudos to you if you find a use for this.
+/proc/bodypart_to_zone(part)
+	var/obj/item/bodypart/B = part
+	switch(B::type)
+		if(/obj/item/bodypart/chest)
+			return BODY_ZONE_CHEST
+		if(/obj/item/bodypart/head)
+			return BODY_ZONE_HEAD
+		if(/obj/item/bodypart/l_arm)
+			return BODY_ZONE_L_ARM
+		if(/obj/item/bodypart/r_arm)
+			return BODY_ZONE_R_ARM
+		if(/obj/item/bodypart/l_leg)
+			return BODY_ZONE_L_LEG
+		if(/obj/item/bodypart/r_leg)
+			return BODY_ZONE_R_LEG
+		else
+			return BODY_ZONE_CHEST
+
 /**
   * Return the zone or randomly, another valid zone
   *
@@ -60,11 +79,10 @@
 
 ///Would this zone be above the neck
 /proc/above_neck(zone)
-	var/list/zones = list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_R_EYE, BODY_ZONE_PRECISE_L_EYE)
-	if(zones.Find(zone))
-		return 1
-	else
-		return 0
+	switch(zone)
+		if(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_R_EYE, BODY_ZONE_PRECISE_L_EYE)
+			return TRUE
+	return FALSE
 /**
   * Convert random parts of a passed in message to stars
   *
@@ -218,6 +236,60 @@
 	if(!stuttering && prob(15))
 		message = stutter(message)
 	return message
+
+/// Forces the user to speak with only the 1000 most common (English-language) words.
+/// Other words will be replaced with filler or scrambled.
+/proc/simplespeech(message)
+	var/static/list/common_words = world.file2list("strings/1000_most_common.txt")
+
+	if(message)
+		var/list/message_split = splittext(message, " ")
+		var/list/new_message = list()
+
+		for(var/word in message_split)
+			word = html_decode(word)
+
+			// Find all leading and trailing special characters - we'll re-add them to the word later.
+			// This should cover quotes, formatting, and just about any other characters.
+			var/first_letter = findtext(word, regex("\[a-zA-Z\]+"))
+			var/last_letter = findtext(word, regex("\[^a-zA-Z\]+"), first_letter) - 1
+
+			var/suffix = copytext(word, last_letter + 1)
+			var/prefix = copytext(word, 1, first_letter)
+
+			word = copytext(word, first_letter, last_letter + 1)
+
+			// Common words or words of three or fewer characters don't need replacing.
+			if((lowertext(word) in common_words) || length(word) <= 3)
+				new_message += prefix + word + suffix
+			else
+				var/chance = rand(0, 99)
+				// 25% chance to add a filler word as the character stumbles over the word
+				if(chance < 30 && message_split.len > 2)
+					new_message += pick("uh...", "um...")
+					// 1/6 chance of giving up on the sentence entirely
+					if (chance < 5)
+						break
+					else if (chance < 10) // 1/6 chance of skipping the word after stumbling
+						continue
+					// 2/3 chance of proceeding to the word (still scrambling it)
+
+				var/list/charlist = splittext(word, "")
+				// Functions like shuffle_inplace but does not touch the first or last characters.
+				// Should allow most words to still be understood (with context) while communicating the idea of struggling with them.
+				// In time, we might refine this somewhat to make words generally more pronounceable...
+				for (var/i = 2; i<charlist.len-1; ++i)
+					charlist.Swap(i,rand(i,charlist.len-1))
+
+				// If we reach this point, 50% chance of stammering a little
+				if (chance < 55)
+					new_message += prefix + charlist[1] + "-" + html_encode(jointext(charlist,"")) + suffix
+				else
+					new_message += prefix + html_encode(jointext(charlist,"")) + suffix
+
+		message = jointext(new_message, " ")
+
+	return trim(message)
 
 /**
   * Turn text into complete gibberish!
@@ -409,8 +481,8 @@
 		hud_used.action_intent.switch_intent(r_index,l_index,oactive)
 
 /mob/proc/update_a_intents()
-	possible_a_intents.Cut()
-	possible_offhand_intents.Cut()
+	QDEL_LIST(possible_a_intents)
+	QDEL_LIST(possible_offhand_intents)
 	var/list/intents = list()
 	var/obj/item/Masteritem = get_active_held_item()
 	if(Masteritem)
@@ -487,13 +559,13 @@
 				mmb_intent = null
 			else
 				mmb_intent = new INTENT_KICK(src)
-		if(QINTENT_STEAL)
-			if(mmb_intent?.type == INTENT_STEAL)
+		if(QINTENT_SPECIAL)
+			if(mmb_intent?.type == INTENT_SPECIAL)
 				qdel(mmb_intent)
 				input = null
 				mmb_intent = null
 			else
-				mmb_intent = new INTENT_STEAL(src)
+				mmb_intent = new INTENT_SPECIAL(src)
 		if(QINTENT_BITE)
 			if(mmb_intent?.type == INTENT_BITE)
 				qdel(mmb_intent)
@@ -518,7 +590,7 @@
 		if(QINTENT_SPELL)
 			if(mmb_intent)
 				qdel(mmb_intent)
-			testing("spellselect [ranged_ability]")
+
 			mmb_intent = new INTENT_SPELL(src)
 			mmb_intent.releasedrain = ranged_ability.get_fatigue_drain()
 			mmb_intent.chargedrain = ranged_ability.chargedrain
@@ -529,11 +601,14 @@
 			mmb_intent.movement_interrupt = ranged_ability.movement_interrupt
 			mmb_intent.charging_slowdown = ranged_ability.charging_slowdown
 			mmb_intent.chargedloop = ranged_ability.chargedloop
+			mmb_intent.glow_intensity = ranged_ability.glow_intensity
+			mmb_intent.glow_color = ranged_ability.glow_color
+			mmb_intent.mob_charge_effect = ranged_ability.mob_charge_effect
 			mmb_intent.update_chargeloop()
 
-	hud_used.quad_intents.switch_intent(input)
-	hud_used.give_intent.switch_intent(input)
-	givingto = null
+	if(hud_used)
+		hud_used.quad_intents?.switch_intent(input)
+		hud_used.give_intent?.switch_intent(input)
 
 /mob/verb/def_intent_change(input as num)
 	set name = "def-change"
@@ -553,6 +628,9 @@
 	set name = "cmode-change"
 	set hidden = 1
 
+	if(SSticker.current_state >= GAME_STATE_FINISHED)
+		return
+
 	var/mob/living/L
 	if(isliving(src))
 		L = src
@@ -569,30 +647,36 @@
 	if(cmode)
 		playsound_local(src, 'sound/misc/comboff.ogg', 100)
 		SSdroning.play_area_sound(get_area(src), client)
-		SSdroning.play_ambient_loop(get_area(src), client)
 		cmode = FALSE
 		if(client && HAS_TRAIT(src, TRAIT_SCREENSHAKE))
 			animate(client, pixel_y)
 	else
 		cmode = TRUE
 		playsound_local(src, 'sound/misc/combon.ogg', 100)
-		SSdroning.kill_ambient_loop(client)
-		if(L.cmode_music)
+		if(length(L.cmode_music_override))
+			SSdroning.play_combat_music(L.cmode_music_override, client)
+		else if(L.cmode_music)
 			SSdroning.play_combat_music(L.cmode_music, client)
-		if(client && HAS_TRAIT(src, TRAIT_SCHIZO_AMBIENCE))
+		if(client && HAS_TRAIT(src, TRAIT_PSYCHOSIS))
 			animate(client, pixel_y = 1, time = 1, loop = -1, flags = ANIMATION_RELATIVE)
 			animate(pixel_y = -1, time = 1, flags = ANIMATION_RELATIVE)
 	if(hud_used)
 		if(hud_used.cmode_button)
 			hud_used.cmode_button.update_icon()
+	on_cmode()
 
-	if(cmode)
-		disable_vore_mode()
+/mob/proc/on_cmode()
+	return
 
 /mob
 	var/last_aimhchange = 0
 	var/aimheight = 11
-	var/cmode_music = 'sound/music/combat.ogg'
+	var/cmode_music = list('sound/music/cmode/towner/combat_towner.ogg') //This should minimize the lag it creates by picking from multiple ones
+
+/mob/proc/cmode_change(input) // change cmode music, and shift into it immediately if we're already in cmode.
+	cmode_music = input
+	toggle_cmode()
+	toggle_cmode()
 
 /mob/proc/aimheight_change(input)
 	var/old_zone = zone_selected
@@ -629,17 +713,17 @@
 		if(8)
 			zone_selected = BODY_ZONE_R_ARM
 		if(7)
-			zone_selected = BODY_ZONE_PRECISE_R_HAND
-		if(6)
 			zone_selected = BODY_ZONE_L_ARM
+		if(6)
+			zone_selected = BODY_ZONE_PRECISE_R_HAND
 		if(5)
 			zone_selected = BODY_ZONE_PRECISE_L_HAND
 		if(4)
 			zone_selected = BODY_ZONE_R_LEG
 		if(3)
-			zone_selected = BODY_ZONE_PRECISE_R_FOOT
-		if(2)
 			zone_selected = BODY_ZONE_L_LEG
+		if(2)
+			zone_selected = BODY_ZONE_PRECISE_R_FOOT
 		if(1)
 			zone_selected = BODY_ZONE_PRECISE_L_FOOT
 
@@ -720,39 +804,7 @@
 		return FALSE
 	if(!istype(M))
 		return FALSE
-	if(issilicon(M))
-		if(iscyborg(M)) //For cyborgs, returns 1 if the cyborg has a law 0 and special_role. Returns 0 if the borg is merely slaved to an AI traitor.
-			return FALSE
-		else if(isAI(M))
-			var/mob/living/silicon/ai/A = M
-			if(A.laws && A.laws.zeroth && A.mind && A.mind.special_role)
-				return TRUE
-		return FALSE
 	if(M.mind && M.mind.special_role)//If they have a mind and special role, they are some type of traitor or antagonist.
-		switch(SSticker.mode.config_tag)
-			if("revolution")
-				if(is_revolutionary(M))
-					return 2
-			if("cult")
-				if(M.mind in SSticker.mode.cult)
-					return 2
-			if("nuclear")
-				if(M.mind.has_antag_datum(/datum/antagonist/nukeop,TRUE))
-					return 2
-			if("changeling")
-				if(M.mind.has_antag_datum(/datum/antagonist/changeling,TRUE))
-					return 2
-			if("wizard")
-				if(iswizard(M))
-					return 2
-			if("apprentice")
-				if(M.mind in SSticker.mode.apprentices)
-					return 2
-			if("monkey")
-				if(isliving(M))
-					var/mob/living/L = M
-					if(L.diseases && (locate(/datum/disease/transformation/jungle_fever) in L.diseases))
-						return 2
 		return TRUE
 	if(M.mind && LAZYLEN(M.mind.antag_datums)) //they have an antag datum!
 		return TRUE
@@ -982,9 +1034,31 @@
 		var/datum/job/J = SSjob.GetJob(job)
 		if(!J)
 			return "unknown"
-		used_title = J.title
+		used_title =  J.display_title || J.title
 		if(J.f_title && (pronouns == SHE_HER || pronouns == THEY_THEM_F))
 			used_title = J.f_title
 		if(J.advjob_examine)
 			used_title = advjob
 	return used_title
+
+///Is the passed in mob a ghost with admin powers, doesn't check for AI interact like isAdminGhost() used to
+/proc/isAdminObserver(mob/user)
+	if(!user) //Are they a mob? Auto interface updates call this with a null src
+		return
+	if(!user.client) // Do they have a client?
+		return
+	if(!isobserver(user)) // Are they a ghost?
+		return
+	if(!check_rights_for(user.client, R_ADMIN)) // Are they allowed?
+		return
+	return TRUE
+
+///Returns TRUE/FALSE on whether the mob is an Admin Ghost AI.
+///This requires this snowflake check because AI interact gives the access to the mob's client, rather
+///than the mob like everyone else, and we keep it that way so they can't accidentally give someone Admin AI access.
+/proc/isAdminGhostAI(mob/user)
+	if(!isAdminObserver(user))
+		return FALSE
+	if(!HAS_TRAIT_FROM(user.client, TRAIT_AI_ACCESS, ADMIN_TRAIT)) // Do they have it enabled?
+		return FALSE
+	return TRUE

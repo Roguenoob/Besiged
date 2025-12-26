@@ -2,7 +2,7 @@
 	abstract_type = /datum/sprite_accessory/tail
 	icon = 'icons/mob/sprite_accessory/tails/tails.dmi'
 	color_key_name = "Tail"
-	relevant_layers = list(BODY_FRONT_SECOND_LAYER, BODY_BEHIND_LAYER)
+	relevant_layers = list(BODY_FRONT_LAYER, BODY_BEHIND_LAYER)
 	var/can_wag = FALSE
 
 /datum/sprite_accessory/tail/is_visible(obj/item/organ/organ, obj/item/bodypart/bodypart, mob/living/carbon/owner)
@@ -31,7 +31,7 @@
 /datum/sprite_accessory/tail/cat
 	name = "Cat"
 	icon_state = "cat"
-	relevant_layers = list(BODY_FRONT_SECOND_LAYER)
+	relevant_layers = list(BODY_FRONT_LAYER)
 	can_wag = TRUE
 
 /datum/sprite_accessory/tail/monkey
@@ -116,6 +116,9 @@
 /datum/sprite_accessory/tail/fox2
 	name = "Fox 2"
 	icon_state = "fox2"
+	color_keys = 2
+	color_key_names = list("Tail", "Tip")
+	can_wag = TRUE
 
 /datum/sprite_accessory/tail/hawk
 	name = "Hawk"
@@ -124,6 +127,7 @@
 /datum/sprite_accessory/tail/horse
 	name = "Horse"
 	icon_state = "horse"
+	can_wag = TRUE
 
 /datum/sprite_accessory/tail/husky
 	name = "Husky"
@@ -150,6 +154,32 @@
 	name = "Lab"
 	icon_state = "lab"
 	can_wag = TRUE
+
+//Caustic Edit
+/datum/sprite_accessory/tail/large_snake
+	icon = 'modular_causticcove/icons/mob/tails/large_snake.dmi'
+	name = "Large Snake"
+	icon_state = "large_snake"
+	color_keys = 2
+	color_key_names = list("Tail", "Underbelly")
+
+/datum/sprite_accessory/tail/large_snake_plain
+	icon = 'modular_causticcove/icons/mob/tails/large_snake.dmi'
+	name = "Large Snake Plain"
+	icon_state = "large_snake_plain"	
+
+
+/datum/sprite_accessory/tail/large_tails
+	pixel_x = -16
+
+/datum/sprite_accessory/tail/large_tails/large_shark
+	icon = 'modular_causticcove/icons/mob/tails/large_shark.dmi'
+	name = "Large Shark"
+	icon_state = "large_shark"
+	color_keys = 2
+	color_key_names = list("Tail", "Underbelly")
+
+//Caustic Edit end
 
 /datum/sprite_accessory/tail/murid
 	name = "Murid"
@@ -207,6 +237,12 @@
 	color_key_names = list("Tail", "Inner")
 	can_wag = TRUE
 
+/datum/sprite_accessory/tail/jackal
+	name = "Jackal"
+	icon_state = "jackal"
+	color_keys = 3
+	color_key_names = list("Tail", "Inside", "Stripes")
+
 /datum/sprite_accessory/tail/skunk
 	name = "Skunk"
 	icon_state = "skunk"
@@ -234,6 +270,7 @@
 	icon_state = "9sune"
 	color_keys = 2
 	color_key_names = list("Tails", "Tips")
+	can_wag = TRUE
 
 /datum/sprite_accessory/tail/tentacle
 	name = "Tentacle"
@@ -342,72 +379,64 @@
 	color_key_defaults = list(KEY_SKIN_COLOR)
 	can_wag = TRUE
 
-//Additional Tails
-
-/datum/sprite_accessory/tail/largedragon
-	name = "Large Dragon"
-	icon = 'icons/mob/sprite_accessory/tails/large_dragon.dmi'
-	icon_state = "big_liz"
+/datum/sprite_accessory/tail/dullahan
+	name = "Revenant"
+	icon = 'icons/mob/sprite_accessory/tails/tiefling.dmi'
+	icon_state = "tiebtail"
 	color_key_defaults = list(KEY_SKIN_COLOR)
 	can_wag = TRUE
 
-/datum/sprite_accessory/tail/bigsnaketail
-	name = "Big Snake"
-	icon = 'icons/mob/sprite_accessory/tails/snaketail.dmi'
-	icon_state = "snaketail"
+/datum/sprite_accessory/tail/dullahan/heart
+	name = "Succubus"
+	icon = 'icons/mob/sprite_accessory/tails/tiefling.dmi'
+	icon_state = "hearttail"
 	color_key_defaults = list(KEY_SKIN_COLOR)
 	can_wag = TRUE
 
+/datum/sprite_accessory/tail/rattlesnake
+	name = "Rattlesnake"
+	icon_state = "rattlesnake"
+	color_keys = 2
+	color_key_names = list("Tail", "Tip")
+	can_wag = TRUE
 
-//TAUR BULLSHIT HELP
-/datum/sprite_accessory/tail/taur
-	relevant_layers = list(BODY_FRONT_SECOND_LAYER, BODY_BEHIND_LAYER)
+/datum/sprite_accessory/tail/lynx
+	name = "Lynx"
+	icon_state = "lynx"
+	color_keys = 2
+	color_key_names = list("Tail", "Tip")
 
-/datum/sprite_accessory/tail/taur/snake
-	name = "Snake Taur"
-	icon = 'icons/mob/sprite_accessory/tails/naga.dmi'
-	icon_state = "naga_s"
+/datum/sprite_accessory/tail/owl
+	name = "Owl"
+	icon_state = "owl"
 
-/datum/sprite_accessory/tail/taur/wolf
-	name = "Wolf Taur"
-	icon = 'icons/mob/sprite_accessory/tails/wolf.dmi'
-	icon_state = "wolf_s"
+/datum/sprite_accessory/tail/forked_long
+	name = "Forked Long"
+	icon_state = "forked_long"
 
-/datum/sprite_accessory/tail/taur/spider
-	name = "Drider"
-	icon = 'icons/mob/sprite_accessory/tails/spider.dmi'
-	icon_state = "spider_s"
+/datum/sprite_accessory/tail/haven
+	name = "Haven"
+	icon_state = "haven"
 
-/datum/sprite_accessory/tail/taur/feline
-	name = "Feline Taur"
-	icon = 'icons/mob/sprite_accessory/tails/feline.dmi'
-	icon_state = "feline_s"
+/datum/sprite_accessory/tail/swallow
+	name = "Swallow"
+	icon_state = "swallow"
 
-/datum/sprite_accessory/tail/taur/fatsnake
-	name = "Fat Snake Taur"
-	icon = 'icons/mob/sprite_accessory/tails/fatnaga.dmi'
-	icon_state = "fatnaga_s"
+/datum/sprite_accessory/tail/zorzor
+	name = "Zorgoia"
+	icon_state = "zorgoia"
+	color_keys = 3
+	color_key_names = list("Tail", "Tail Fluff", "Tail Barb")
 
-/datum/sprite_accessory/tail/taur/sect
-	name = "Bug Taur"
-	icon = 'icons/mob/sprite_accessory/tails/sectdrone.dmi'
-	icon_state = "sect_drone"
+//From Caustic Cove
+/datum/sprite_accessory/tail/large_snake
+	icon = 'modular_causticcove/icons/mob/tails/large_snake.dmi'
+	name = "Large Snake"
+	icon_state = "large_snake"
+	color_keys = 2
+	color_key_names = list("Tail", "Underbelly")
 
-/datum/sprite_accessory/tail/taur/fatsect
-	name = "Bug Taur MEGA"
-	icon = 'icons/mob/sprite_accessory/tails/fat_sect.dmi'
-	icon_state = "fat_sect_drone"
-
-/datum/sprite_accessory/tail/taur/orcamerm
-	name = "Nefarious Fish (Orca)"
-	icon = 'icons/mob/sprite_accessory/tails/orca.dmi'
-	icon_state = "orcamermaid_s"
-
-/datum/sprite_accessory/tail/taur/drake
-	name = "Drake Taur"
-	icon = 'modular_causticcove/icons/mob/sprite_accessory/tails/draketaur.dmi'
-	icon_state = "drake_s"
-
-/datum/sprite_accessory/tail/taur/adjust_appearance_list(list/appearance_list, obj/item/organ/organ, obj/item/bodypart/bodypart, mob/living/carbon/owner)
-    generic_gender_feature_adjust(appearance_list, organ, bodypart, owner, OFFSET_TAUR, OFFSET_TAUR_F)
-
+/datum/sprite_accessory/tail/large_snake_plain
+	icon = 'modular_causticcove/icons/mob/tails/large_snake.dmi'
+	name = "Large Snake Plain"
+	icon_state = "large_snake_plain"	

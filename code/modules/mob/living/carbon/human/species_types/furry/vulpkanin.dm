@@ -1,10 +1,16 @@
 /mob/living/carbon/human/species/vulpkanin
 	race = /datum/species/vulpkanin
 
-/datum/species/vulpkanin
-	name = "Vulpkian"
+/datum/species/vulpkanin		//These should technically not exist, but completely exploding people's savefiles is too high a price to pay for some minor race bloat.
+	name = "Venardine"
 	id = "vulpkanin"
-	desc = "Foxy creatures known for their cleverness and mischief. In ancient history they were Dendor's original champions, but as His madness grew the connect became frey and forgotten, leaving them to their own devices. Or, at least, that's what they say."
+	desc = "<b>Venardine</b><br>\
+	Based on the writings of the living Fietje von Zenitstadt: A subspecies of the more common \"Lupian\", found almost exclusively in thick forests.\
+	They are usually shorter and meeker, but in turn more perceptive than their Volf-like brethren. \
+	Their name is quite obvious, coming from the Venards they closely resemble. \
+	Venardines are often much more solitary than Lupians, lacking the fervent pack mentality of their parent race. \
+	To this dae, their origin is heavily disputed by few archivists across Psydonia - though the rest, perhaps for sanity's sake, consider them to be just Lupians.<br>\
+	(+1 Perception, +1 Intelligence)"
 	default_color = "444"
 	species_traits = list(
 		MUTCOLORS,
@@ -12,13 +18,20 @@
 		LIPS,
 		HAIR,
 	)
+	///Caustic edit
+	allowed_taur_types = list(
+		/obj/item/bodypart/taur/otie,
+		/obj/item/bodypart/taur/wolf,
+		/obj/item/bodypart/taur/fatwolf,
+	)
+	///Caustic edit end
 	inherent_biotypes = MOB_ORGANIC|MOB_HUMANOID
 	attack_verb = "slash"
 	liked_food = GROSS | MEAT | FRIED
-	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | ERT_SPAWN | RACE_SWAP | SLIME_EXTRACT
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | RACE_SWAP | SLIME_EXTRACT
 	possible_ages = ALL_AGES_LIST
-	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mt.dmi'
-	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fm.dmi'
+	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mta.dmi'
+	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fma.dmi'
 	dam_icon = 'icons/roguetown/mob/bodies/dam/dam_male.dmi'
 	dam_icon_f = 'icons/roguetown/mob/bodies/dam/dam_female.dmi'
 	offset_features = list(
@@ -32,8 +45,11 @@
 		OFFSET_FACE_F = list(0,-1), OFFSET_BELT_F = list(0,0), OFFSET_BACK_F = list(0,-1), \
 		OFFSET_NECK_F = list(0,-1), OFFSET_MOUTH_F = list(0,-1), OFFSET_PANTS_F = list(0,0), \
 		OFFSET_SHIRT_F = list(0,0), OFFSET_ARMOR_F = list(0,0), OFFSET_UNDIES_F = list(0,-1), \
+		//Caustic Edit
+		OFFSET_TAUR = list(-16,0), OFFSET_TAUR_F = list(-16,0), \
+		//Caustic End
 		)
-	race_bonus = list(STAT_INTELLIGENCE = 1)
+	race_bonus = list(STAT_PERCEPTION = 1, STAT_INTELLIGENCE = 1)
 	enflamed_icon = "widefire"
 	organs = list(
 		ORGAN_SLOT_BRAIN = /obj/item/organ/brain,
@@ -41,11 +57,11 @@
 		ORGAN_SLOT_LUNGS = /obj/item/organ/lungs,
 		ORGAN_SLOT_EYES = /obj/item/organ/eyes,
 		ORGAN_SLOT_EARS = /obj/item/organ/ears/vulpkanin,
-		ORGAN_SLOT_TONGUE = /obj/item/organ/tongue,
+		ORGAN_SLOT_TONGUE = /obj/item/organ/tongue/wild_tongue,
 		ORGAN_SLOT_LIVER = /obj/item/organ/liver,
 		ORGAN_SLOT_STOMACH = /obj/item/organ/stomach,
 		ORGAN_SLOT_APPENDIX = /obj/item/organ/appendix,
-		ORGAN_SLOT_TAIL = /obj/item/organ/tail/vulpkanin,
+		//ORGAN_SLOT_TAIL = /obj/item/organ/tail/vulpkanin, //caustic remove the customizer already gives the organ
 		ORGAN_SLOT_SNOUT = /obj/item/organ/snout/vulpkanin,
 		//ORGAN_SLOT_TESTICLES = /obj/item/organ/testicles,
 		//ORGAN_SLOT_PENIS = /obj/item/organ/penis/knotted,
@@ -63,15 +79,19 @@
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
 		/datum/customizer/bodypart_feature/underwear,
+		/datum/customizer/bodypart_feature/legwear,
 		/datum/customizer/organ/tail/vulpkanin,
 		/datum/customizer/organ/snout/vulpkanin,
 		/datum/customizer/organ/ears/vulpkanin,
+		/datum/customizer/organ/neck_feature/anthro,
 		/datum/customizer/organ/testicles/anthro,
 		/datum/customizer/organ/penis/anthro,
 		/datum/customizer/organ/breasts/animal,
-		/datum/customizer/organ/belly/animal,
 		/datum/customizer/organ/vagina/animal,
+		//Caustic edit
+		/datum/customizer/organ/belly/animal,
 		/datum/customizer/organ/butt/animal,
+		//Caustic edit end
 		)
 	body_marking_sets = list(
 		/datum/body_marking_set/none,
@@ -86,11 +106,18 @@
 		/datum/body_marking/bellyslim,
 		/datum/body_marking/butt,
 		/datum/body_marking/tonage,
+		/datum/body_marking/nose,
+		/datum/body_marking/harlequin,
+		/datum/body_marking/harlequinreversed,
+		/datum/body_marking/bangs,
+		/datum/body_marking/bun,
+		/datum/body_marking/gradient,
 	)
 	descriptor_choices = list(
+		/datum/descriptor_choice/trait,
+		/datum/descriptor_choice/stature,
 		/datum/descriptor_choice/height,
 		/datum/descriptor_choice/body,
-		/datum/descriptor_choice/stature,
 		/datum/descriptor_choice/face,
 		/datum/descriptor_choice/face_exp,
 		/datum/descriptor_choice/fur,
@@ -102,7 +129,6 @@
 	)
 	languages = list(
 		/datum/language/common,
-		/datum/language/canilunzt
 	)
 
 /datum/species/vulpkanin/check_roundstart_eligible()

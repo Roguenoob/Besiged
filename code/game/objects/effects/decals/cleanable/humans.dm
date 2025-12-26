@@ -10,7 +10,7 @@
 	mouse_opacity = MOUSE_OPACITY_TRANSPARENT
 	appearance_flags = NO_CLIENT_COLOR
 
-/obj/effect/decal/cleanable/coom/Initialize(mapload, list/datum/disease/diseases)
+/obj/effect/decal/cleanable/coom/Initialize(mapload)
 	. = ..()
 	pixel_x = rand(-8, 8)
 	pixel_y = rand(-8, 8)
@@ -29,8 +29,9 @@
 	appearance_flags = NO_CLIENT_COLOR
 	var/blood_timer
 
-/obj/effect/decal/cleanable/blood/Initialize(mapload, list/datum/disease/diseases)
+/obj/effect/decal/cleanable/blood/Initialize(mapload)
 	. = ..()
+	GLOB.weather_act_upon_list += src
 	if(. == INITIALIZE_HINT_QDEL)
 		return .
 	pixel_x = rand(-5,5)
@@ -54,9 +55,15 @@
 		C.color = initial(color)
 
 /obj/effect/decal/cleanable/blood/Destroy()
+	GLOB.weather_act_upon_list -= src
 	deltimer(blood_timer)
 	blood_timer = null
 	return ..()
+
+/obj/effect/decal/cleanable/blood/weather_act_on(weather_trait, severity)
+	if(weather_trait != PARTICLEWEATHER_RAIN)
+		return
+	qdel(src)
 
 /obj/effect/decal/cleanable/blood/old
 	name = "dried blood"
@@ -64,7 +71,7 @@
 	bloodiness = 0
 	icon_state = "floor1-old"
 
-/obj/effect/decal/cleanable/blood/old/Initialize(mapload, list/datum/disease/diseases)
+/obj/effect/decal/cleanable/blood/old/Initialize(mapload)
 	add_blood_DNA(list("Non-human DNA" = random_blood_type())) // Needs to happen before ..()
 	. = ..()
 	icon_state = "[icon_state]-old" //change from the normal blood icon selected from random_icon_states in the parent's Initialize to the old dried up blood.
@@ -103,16 +110,23 @@
 	appearance_flags = NO_CLIENT_COLOR
 	var/blood_timer
 
-/obj/effect/decal/cleanable/trail_holder/Initialize(mapload, list/datum/disease/diseases)
+/obj/effect/decal/cleanable/trail_holder/Initialize(mapload)
 	. = ..()
+	GLOB.weather_act_upon_list += src
 	if(. == INITIALIZE_HINT_QDEL)
 		return .
 	blood_timer = addtimer(CALLBACK(src, PROC_REF(become_dry)), rand(5 MINUTES,8 MINUTES), TIMER_STOPPABLE)
 
 /obj/effect/decal/cleanable/trail_holder/Destroy()
+	GLOB.weather_act_upon_list -= src
 	deltimer(blood_timer)
 	blood_timer = null
 	return ..()
+
+/obj/effect/decal/cleanable/trail_holder/weather_act_on(weather_trait, severity)
+	if(weather_trait != PARTICLEWEATHER_RAIN)
+		return
+	qdel(src)
 
 /obj/effect/decal/cleanable/trail_holder/proc/become_dry()
 	if(QDELETED(src))
@@ -138,7 +152,7 @@
 
 
 /obj/effect/decal/cleanable/blood/gibs/Crossed(mob/living/L)
-	if(istype(L) && has_gravity(loc))
+	if(istype(L))
 		playsound(loc, 'sound/blank.ogg', HAS_TRAIT(L, TRAIT_LIGHT_STEP) ? 20 : 50, TRUE)
 	. = ..()
 
@@ -184,7 +198,7 @@
 	bloodiness = 0
 	already_rotting = TRUE
 
-/obj/effect/decal/cleanable/blood/gibs/old/Initialize(mapload, list/datum/disease/diseases)
+/obj/effect/decal/cleanable/blood/gibs/old/Initialize(mapload)
 	. = ..()
 	setDir(pick(1,2,4,8))
 	icon_state += "-old"
@@ -200,7 +214,7 @@
 	var/blood_vol = 1
 	random_icon_states = null
 
-/obj/effect/decal/cleanable/blood/drip/Initialize(mapload, list/datum/disease/diseases)
+/obj/effect/decal/cleanable/blood/drip/Initialize(mapload)
 	. = ..()
 	if(. == INITIALIZE_HINT_QDEL)
 		return .
@@ -309,7 +323,7 @@
 	if(ishuman(O))
 		var/mob/living/carbon/human/H = O
 		var/obj/item/clothing/shoes/S = H.shoes
-		if(S && S.bloody_shoes[blood_state])
+		if(istype(S) && S.bloody_shoes[blood_state])
 			S.bloody_shoes[blood_state] = max(S.bloody_shoes[blood_state] - BLOOD_LOSS_PER_STEP, 0)
 			shoe_types |= S.type
 			if (!(entered_dirs & H.dir))
@@ -321,7 +335,7 @@
 	if(ishuman(O))
 		var/mob/living/carbon/human/H = O
 		var/obj/item/clothing/shoes/S = H.shoes
-		if(S && S.bloody_shoes[blood_state])
+		if(istype(S) && S.bloody_shoes[blood_state])
 			S.bloody_shoes[blood_state] = max(S.bloody_shoes[blood_state] - BLOOD_LOSS_PER_STEP, 0)
 			shoe_types  |= S.type
 			if (!(exited_dirs & H.dir))
@@ -370,3 +384,29 @@
 	if((blood_state != BLOOD_STATE_OIL) && (blood_state != BLOOD_STATE_NOT_BLOODY))
 		return 1
 	return 0
+
+//For fancy wall messes... 
+/obj/effect/decal/cleanable/blood/splatter/walls
+	icon_state = "splatter1"
+	plane = GAME_PLANE
+	layer = BULLET_HOLE_LAYER //For obvious reasons.
+	random_icon_states = list("splatter1", "splatter2", "splatter3", "splatter4", "splatter5", "splatter6")
+
+/obj/effect/decal/cleanable/blood/splatter/walls/Initialize(mapload)
+	. = ..()
+	auto_turn_destructive()
+	dir = GLOB.reverse_dir[dir]
+	if(dir == NORTH)
+		src.pixel_y = -32
+	if(dir == EAST)
+		src.pixel_x = -32
+	if(dir == SOUTH)
+		src.pixel_y = 32
+	if(dir == WEST)
+		src.pixel_x = 32
+	pixel_x += rand(-5,5)
+	pixel_y += rand(-5,5)
+
+/obj/effect/decal/cleanable/blood/splatter/walls/replace_decal(obj/effect/decal/cleanable/C)
+	return //We don't want to replace decals for wall turfs since these are unique. May be changed in the future if it's too much.
+	

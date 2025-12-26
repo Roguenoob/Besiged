@@ -1,5 +1,5 @@
 //////Kitchen Spike
-#define VIABLE_MOB_CHECK(X) (isliving(X) && !issilicon(X) && !isbot(X))
+#define VIABLE_MOB_CHECK(X) (isliving(X))
 
 /obj/structure/kitchenspike_frame
 	name = "meatspike frame"
@@ -10,37 +10,11 @@
 	anchored = FALSE
 	max_integrity = 200
 
-/obj/structure/kitchenspike_frame/attackby(obj/item/I, mob/user, params)
-	add_fingerprint(user)
-	if(default_unfasten_wrench(user, I))
-		return
-	else if(istype(I, /obj/item/stack/rods))
-		var/obj/item/stack/rods/R = I
-		if(R.get_amount() >= 4)
-			R.use(4)
-			to_chat(user, span_notice("I add spikes to the frame."))
-			var/obj/F = new /obj/structure/kitchenspike(src.loc)
-			transfer_fingerprints_to(F)
-			qdel(src)
-	else if(I.tool_behaviour == TOOL_WELDER)
-		if(!I.tool_start_check(user, amount=0))
-			return
-		to_chat(user, span_notice("I begin cutting \the [src] apart..."))
-		if(I.use_tool(src, user, 50, volume=50))
-			visible_message(span_notice("[user] slices apart \the [src]."),
-				span_notice("I cut \the [src] apart with \the [I]."),
-				span_hear("I hear welding."))
-			new /obj/item/stack/sheet/metal(src.loc, 4)
-			qdel(src)
-		return
-	else
-		return ..()
-
 /obj/structure/kitchenspike
 	name = "meat spike"
 	icon = 'icons/obj/kitchen.dmi'
 	icon_state = "spike"
-	desc = ""
+	desc = "A slender curved hook designed for suspending corpses. Found in kitchens, butcheries, and dungeons alike."
 	density = TRUE
 	anchored = TRUE
 	buckle_lying = 0
@@ -72,7 +46,7 @@
 			if(user.pulling != L)
 				return
 			playsound(src.loc, 'sound/blank.ogg', 25, TRUE)
-			L.visible_message(span_danger("[user] slams [L] onto the meat spike!"), span_danger("[user] slams you onto the meat spike!"), span_hear("I hear a squishy wet noise."))
+			L.visible_message(span_danger("[user] slams [L] onto the meat spike!"), span_danger("[user] slams you onto the meat spike!"), span_hear("You hear a squishy wet noise."))
 			L.forceMove(drop_location())
 			L.emote("scream")
 			L.add_splatter_floor()
@@ -109,12 +83,12 @@
 
 		else
 			M.visible_message(span_warning("[M] struggles to break free from [src]!"),\
-			span_notice("I struggle to break free from [src], exacerbating your wounds! (Stay still for two minutes.)"),\
-			span_hear("I hear a wet squishing noise.."))
+			span_notice("I struggle to break free from [src], exacerbating my wounds! (Stay still for two minutes.)"),\
+			span_hear("I hear a wet squishing noise..."))
 			M.adjustBruteLoss(30)
 			if(!do_after(M, 1200, target = src))
 				if(M && M.buckled)
-					to_chat(M, span_warning("I fail to free yourself!"))
+					to_chat(M, span_warning("I fail to free myself!"))
 				return
 		if(!M.buckled)
 			return
@@ -136,14 +110,5 @@
 		for(var/mob/living/L in buckled_mobs)
 			release_mob(L)
 	return ..()
-
-/obj/structure/kitchenspike/deconstruct(disassembled = TRUE)
-	if(disassembled)
-		var/obj/F = new /obj/structure/kitchenspike_frame(src.loc)
-		transfer_fingerprints_to(F)
-	else
-		new /obj/item/stack/sheet/metal(src.loc, 4)
-	new /obj/item/stack/rods(loc, 4)
-	qdel(src)
 
 #undef VIABLE_MOB_CHECK

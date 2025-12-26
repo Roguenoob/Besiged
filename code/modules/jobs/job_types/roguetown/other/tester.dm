@@ -10,7 +10,7 @@
 	total_positions = 0
 	spawn_positions = 0
 #endif
-	min_pq = null //no pq
+	min_pq = null //null //no pq
 	allowed_sexes = list(MALE, FEMALE)
 	allowed_races = RACES_ALL_KINDS
 	tutorial = ""
@@ -34,22 +34,21 @@
 	shirt = /obj/item/clothing/suit/roguetown/shirt/shortshirt/merc
 	pants = /obj/item/clothing/under/roguetown/trou/leather
 	neck = /obj/item/clothing/neck/roguetown/gorget
-	if(H.gender == FEMALE)
+	if(should_wear_femme_clothes(H))
 		pants = /obj/item/clothing/under/roguetown/tights/black
 		beltr = /obj/item/rogueweapon/sword/sabre
-	if(H.mind)
-		H.mind.adjust_skillrank(/datum/skill/misc/swimming, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/misc/climbing, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/misc/sneaking, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/maces, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/axes, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/bows, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/crossbows, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/wrestling, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/unarmed, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/swords, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/polearms, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/whipsflails, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/combat/knives, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/misc/reading, rand(1,5), TRUE)
-		H.change_stat("strength", 1)
+	H.adjust_skillrank(/datum/skill/misc/swimming, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/misc/climbing, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/misc/sneaking, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/maces, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/axes, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/bows, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/crossbows, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/wrestling, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/unarmed, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/swords, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/polearms, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/whipsflails, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/combat/knives, rand(1,5), TRUE)
+	H.adjust_skillrank(/datum/skill/misc/reading, rand(1,5), TRUE)
+	H.change_stat(STATKEY_STR, 1)

@@ -1,6 +1,6 @@
 /client/proc/play_sound(S as sound)
-	set category = "Fun"
-	set name = "Play Global Sound"
+	set category = "-Fun-"
+	set name = "Sound - Global"
 	if(!check_rights(R_SOUND))
 		return
 
@@ -92,21 +92,6 @@
 		prefs.save_preferences()
 
 		mob.update_channel_volume(CHANNEL_AMBIENCE, prefs.mastervol)
-
-/client/verb/change_ambient_vol()
-	set category = "Options"
-	set name = "ChangeAmbientPower"
-
-	if(prefs)
-		var/vol = input(usr, "Current volume power: [prefs.ambientvol]",, 100) as null|num
-		if(!vol)
-			if(vol != 0)
-				return
-		vol = min(vol, 100)
-		prefs.ambientvol = vol
-		prefs.save_preferences()
-
-		mob.update_channel_volume(CHANNEL_DRONING_AMBIENCE, prefs.ambientvol)
 /*
 /client/verb/help_rpguide()
 	set category = "Options"
@@ -122,8 +107,8 @@
 */
 
 /client/proc/play_local_sound(S as sound)
-	set category = "Fun"
-	set name = "Play Local Sound"
+	set category = "-Fun-"
+	set name = "Sound - Local"
 	if(!check_rights(R_SOUND))
 		return
 
@@ -132,9 +117,25 @@
 	playsound(get_turf(src.mob), S, 50, FALSE, FALSE)
 	SSblackbox.record_feedback("tally", "admin_verb", 1, "Play Local Sound") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
+/client/proc/play_local_sound_variable(S as sound)
+	set category = "-Fun-"
+	set name = "Sound - Variable Dist"
+	if(!check_rights(R_SOUND))
+		return
+
+	var/dist = input(usr, "How far do you want this sound to extend?",, 50) as null|num
+	if(!dist)
+		return
+	dist = CLAMP(dist, 1, 100)
+
+	log_admin("[key_name(src)] played a local sound [S]")
+	message_admins("[key_name_admin(src)] played a local sound [S]")
+	playsound(get_turf(src.mob), S, dist, FALSE, FALSE)
+	SSblackbox.record_feedback("tally", "admin_verb", 1, "Play Local Sound") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+
 /client/proc/play_web_sound()
-	set category = "Fun"
-	set name = "Play Internet Sound"
+	set category = "-Fun-"
+	set name = "Sound - Internet"
 	if(!check_rights(R_SOUND))
 		return
 
@@ -206,17 +207,20 @@
 			for(var/m in GLOB.player_list)
 				var/mob/M = m
 				var/client/C = M.client
-				if((C.prefs.toggles & SOUND_MIDI) && C.chatOutput && !C.chatOutput.broken && C.chatOutput.loaded)
+				if(C.prefs.toggles & SOUND_MIDI)
+					// Stops playing lobby music and admin loaded music automatically.
+					SEND_SOUND(C, sound(null, channel = CHANNEL_LOBBYMUSIC))
+					SEND_SOUND(C, sound(null, channel = CHANNEL_ADMIN))
 					if(!stop_web_sounds)
-						C.chatOutput.sendMusic(web_sound_url, music_extra_data)
+						C.tgui_panel?.play_music(web_sound_url, music_extra_data)
 					else
-						C.chatOutput.stopMusic()
+						C.tgui_panel?.stop_music()
 
 	SSblackbox.record_feedback("tally", "admin_verb", 1, "Play Internet Sound")
 
 /client/proc/set_round_end_sound(S as sound)
-	set category = "Fun"
-	set name = "Set Round End Sound"
+	set category = "-Fun-"
+	set name = "Sound - Round End"
 	if(!check_rights(R_SOUND))
 		return
 
@@ -227,8 +231,8 @@
 	SSblackbox.record_feedback("tally", "admin_verb", 1, "Set Round End Sound") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 /client/proc/stop_sounds()
-	set category = "Debug"
-	set name = "Stop All Playing Sounds"
+	set category = "-Fun-"
+	set name = "Sound - Stop All Playing"
 	if(!src.holder)
 		return
 
@@ -237,8 +241,7 @@
 	for(var/mob/M in GLOB.player_list)
 		SEND_SOUND(M, sound(null))
 		var/client/C = M.client
-		if(C && C.chatOutput && !C.chatOutput.broken && C.chatOutput.loaded)
-			C.chatOutput.stopMusic()
+		C?.tgui_panel?.stop_music()
 	SSblackbox.record_feedback("tally", "admin_verb", 1, "Stop All Playing Sounds") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 GLOBAL_LIST_INIT(ambience_files, list(
@@ -260,14 +263,5 @@ GLOBAL_LIST_INIT(ambience_files, list(
 	'sound/music/area/shop.ogg',
 	'sound/music/area/spidercave.ogg',
 	'sound/music/area/towngen.ogg',
-	'sound/music/area/townstreets.ogg',
-	'sound/music/jukeboxes/tav3.ogg'
+	'sound/music/area/townstreets.ogg'
 	))
-
-/client/verb/preload_sounds()
-	set category = "Options"
-	set name = "Preload Ambience"
-
-	for(var/music in GLOB.ambience_files)
-		mob.playsound_local(mob, music, 0.1)
-		sleep(10)

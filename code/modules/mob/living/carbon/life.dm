@@ -1,4 +1,4 @@
-/mob/living/carbon/Life()
+/mob/living/carbon/Life(seconds, times_fired)
 	set invisibility = 0
 
 	if(notransform)
@@ -8,133 +8,30 @@
 		damageoverlaytemp = 0
 		update_damage_hud()
 
-	if(!IS_IN_STASIS(src))
+	//Reagent processing needs to come before breathing, to prevent edge cases.
+	handle_organs()
 
-		//Reagent processing needs to come before breathing, to prevent edge cases.
-		handle_organs()
+	. = ..()
 
-		. = ..()
+	if (QDELETED(src))
+		return
 
-		if (QDELETED(src))
-			return
-
-		handle_wounds()
-		handle_embedded_objects()
-		handle_blood()
-		handle_roguebreath()
-		var/bprv = handle_bodyparts()
-		if(bprv & BODYPART_LIFE_UPDATE_HEALTH)
-			update_stamina() //needs to go before updatehealth to remove stamcrit
-			updatehealth()
+	handle_wounds()
+	handle_embedded_objects()
+	handle_blood()
+	handle_roguebreath()
+	var/bprv = handle_bodyparts()
+	if(bprv & BODYPART_LIFE_UPDATE_HEALTH)
+		update_stamina() //needs to go before updatehealth to remove stamcrit
+		updatehealth()
+	if (times_fired % 3 == 0) // every 3rd tick, fire stress handler. it isn't time-critical, so we don't particularly need it to go EVERY tick
 		update_stress()
-		handle_nausea()
-		if((blood_volume > BLOOD_VOLUME_SURVIVE) || HAS_TRAIT(src, TRAIT_BLOODLOSS_IMMUNE))
-			if(!heart_attacking)
-				adjustOxyLoss(-1.5)
-			else
-				if(getOxyLoss() < 20)
-					heart_attacking = FALSE
+	handle_nausea()
 
-		//Healing while sleeping in a bed
-		if(IsSleeping())
-			var/sleepy_mod = 0.5
-			var/yess = HAS_TRAIT(src, TRAIT_NOHUNGER)
-			if(buckled?.sleepy)
-				sleepy_mod = buckled.sleepy
-			else if(isturf(loc)) //No illegal tech.
-				var/obj/structure/bed/rogue/bed = locate() in loc
-				if(bed)
-					sleepy_mod = bed.sleepy
-			if(nutrition > 0 || yess)
-				rogstam_add(sleepy_mod * 15)
-			if(hydration > 0 || yess)
-				if(!bleed_rate)
-					blood_volume = min(blood_volume + (4 * sleepy_mod), BLOOD_VOLUME_NORMAL)
-				for(var/obj/item/bodypart/affecting as anything in bodyparts)
-					//for context, it takes 5 small cuts (0.2 x 5) or 3 normal cuts (0.4 x 3) for a bodypart to not be able to heal itself
-					if(affecting.get_bleed_rate() >= 1)
-						continue
-					if(affecting.heal_damage(sleepy_mod, sleepy_mod, required_status = BODYPART_ORGANIC))
-						src.update_damage_overlays()
-					for(var/datum/wound/wound as anything in affecting.wounds)
-						if(!wound.sleep_healing)
-							continue
-						wound.heal_wound(wound.sleep_healing * sleepy_mod)
-				adjustToxLoss(-sleepy_mod)
-				if(eyesclosed && !HAS_TRAIT(src, TRAIT_NOSLEEP))
-					Sleeping(300)
-		else if(!IsSleeping() && !HAS_TRAIT(src, TRAIT_NOSLEEP))
-			// Resting on a bed or something
-			var/sleepy_mod = 0
-			if(buckled?.sleepy)
-				sleepy_mod = buckled.sleepy
-			else if(isturf(loc) && !(mobility_flags & MOBILITY_STAND))
-				var/obj/structure/bed/rogue/bed = locate() in loc
-				if(bed)
-					sleepy_mod = bed.sleepy
-			if(sleepy_mod > 0)
-				if(eyesclosed)
-					var/armor_blocked
-					if(ishuman(src))
-						if(stat == CONSCIOUS)
-							var/mob/living/carbon/human/H = src
-							var/list/gear_to_check = list(H.wear_shirt, H.wear_armor, H.head)
-							for(var/obj/item/clothing/gear in gear_to_check)
-								if(gear.armor.blunt > 70)
-									armor_blocked = TRUE
-									if(!fallingas)
-										to_chat(src, span_warning("I can't sleep like this. My armor is burdening me."))
-									fallingas = TRUE
-									break
-					if(!armor_blocked)
-						if(!fallingas)
-							to_chat(src, span_warning("I'll fall asleep soon..."))
-						fallingas++
-						if(HAS_TRAIT(src, TRAIT_FASTSLEEP))
-							fallingas++
-						if(fallingas > 15)
-							Sleeping(300)
-				else
-					rogstam_add(buckled.sleepy * 10)
-					rogstam_add(sleepy_mod * 10)
-			// Resting on the ground (not sleeping or with eyes closed and about to fall asleep)
-			else if(!(mobility_flags & MOBILITY_STAND))
-				if(eyesclosed)
-					var/armor_blocked
-					if(ishuman(src))
-						if(stat == CONSCIOUS)
-							var/mob/living/carbon/human/H = src
-							var/list/gear_to_check = list(H.wear_shirt, H.wear_armor, H.head)
-							for(var/obj/item/clothing/gear in gear_to_check)
-								if(gear.armor.blunt > 70)
-									armor_blocked = TRUE
-									if(!fallingas)
-										to_chat(src, span_warning("I can't sleep like this. My armor is burdening me."))
-									fallingas = TRUE
-									break
-					if(!armor_blocked)
-						if(!fallingas)
-							to_chat(src, span_warning("I'll fall asleep soon, although a bed would be more comfortable..."))
-						fallingas++
-						if(HAS_TRAIT(src, TRAIT_FASTSLEEP))
-							fallingas++
-						if(fallingas > 25)
-							Sleeping(300)
-				else
-					rogstam_add(10)
-			else if(fallingas)
-				fallingas = 0
+	handle_sleep()
 
-		handle_brain_damage()
-
-	else
-		. = ..()
-
-
-	check_cremation()
-
-	//Updates the number of stored chemicals for powers
-//	handle_changeling()
+	if(HAS_TRAIT(src, TRAIT_IN_FRENZY))
+		handle_automated_frenzy()
 
 	if(stat != DEAD)
 		return 1
@@ -145,13 +42,12 @@
 	if(notransform)
 		return
 
-	if(!IS_IN_STASIS(src))
-		. = ..()
-		if (QDELETED(src))
-			return
-		handle_wounds()
-		//handle_embedded_objects()
-		handle_blood()
+	. = ..()
+	if (QDELETED(src))
+		return
+	handle_wounds()
+	handle_embedded_objects()
+	handle_blood()
 
 	check_cremation()
 
@@ -159,22 +55,29 @@
 	if(HAS_TRAIT(src, TRAIT_NOPAIN))
 		return
 	if(!stat)
-		var/pain_threshold = STAEND * 10
-		if(has_flaw(/datum/charflaw/masochist)) // Masochists handle pain better by about 1 endurance point
-			pain_threshold += 10
 		var/painpercent = get_complex_pain() / pain_threshold
 		painpercent = painpercent * 100
 
 		if(world.time > mob_timers["painstun"])
 			mob_timers["painstun"] = world.time + 100
-			var/probby = 40 - (STAEND * 2)
+			var/probby = 40 - (STAWIL * 2)
 			probby = max(probby, 10)
 			if(lying || IsKnockdown())
 				if(prob(3) && (painpercent >= 80) )
 					emote("painmoan")
 			else
 				if(painpercent >= 100)
-					if(prob(probby) && !HAS_TRAIT(src, TRAIT_NOPAINSTUN))
+					if(HAS_TRAIT(src, TRAIT_PSYDONIAN_GRIT) || STAWIL >= 15)
+						if(prob(25)) // PSYDONIC WEIGHTED COINFLIP. TWEAK THIS AS THOU WILT. DON'T LET THEM BE BROKEN, PSYDON WILLING. THROW CON-MAXXERS A BONE, TOO.
+							Immobilize(15) // EAT A MICROSTUN. YOU'RE AVOIDING A PAINCRIT.
+							if(HAS_TRAIT(src, TRAIT_PSYDONIAN_GRIT))
+								visible_message(span_info("[src] audibly grits their teeth. ENDURING through their pain."), span_info("Through my faith in HIM, I ENDURE."))
+							else
+								visible_message(span_info("[src] trembled for a moment, but they remain stood."), span_info("My strong constitution keeps me upright."))
+							stuttering += 5
+							emote("painmoan")
+							return
+					if(prob(probby) && !HAS_TRAIT(src, TRAIT_NOPAINSTUN) && !has_status_effect(/datum/status_effect/buff/psyhealing))
 						Immobilize(10)
 						emote("painscream")
 						stuttering += 5
@@ -200,304 +103,74 @@
 	if(HAS_TRAIT(src, TRAIT_NOBREATH))
 		return TRUE
 	if(HAS_TRAIT(src, TRAIT_HOLDBREATH))
-		adjustOxyLoss(5)
+		adjustOxyLoss(10)
 	if(istype(loc, /obj/structure/closet/dirthole))
 		adjustOxyLoss(5)
 	if(istype(loc, /obj/structure/closet/burial_shroud))
 		var/obj/O = loc
 		if(istype(O.loc, /obj/structure/closet/dirthole))
-			adjustOxyLoss(5)
+			adjustOxyLoss(10)
 	if(isopenturf(loc))
 		var/turf/open/T = loc
-		if(reagents&& T.pollutants)
-			var/obj/effect/pollutant_effect/P = T.pollutants
-			for(var/datum/pollutant/X in P.pollute_list)
-				for(var/A in X.reagents_on_breathe)
-					reagents.add_reagent(A, X.reagents_on_breathe[A])
+		if(reagents && T.pollution)
+			T.pollution.breathe_act(src)
+			if(next_smell <= world.time)
+				next_smell = world.time + 30 SECONDS
+				T.pollution.smell_act(src)
 
 /mob/living/proc/handle_inwater()
-	ExtinguishMob()
+	extinguish_mob()
 
-/mob/living/carbon/handle_inwater()
+/mob/living/carbon/handle_inwater(turf/onturf, extinguish = TRUE, force_drown = FALSE)
 	..()
-	if(!(mobility_flags & MOBILITY_STAND))
-		if(HAS_TRAIT(src, TRAIT_NOBREATH) || HAS_TRAIT(src, TRAIT_WATERBREATHING))
+	if(!(mobility_flags & MOBILITY_STAND) || force_drown)
+		if (HAS_TRAIT(src, TRAIT_NOBREATH) || HAS_TRAIT(src, TRAIT_WATERBREATHING) || HAS_TRAIT(src, TRAIT_HOLDBREATH))
 			return TRUE
-		adjustOxyLoss(5)
+		if(stat == DEAD && client)
+			record_round_statistic(STATS_PEOPLE_DROWNED)
+		var/drown_damage = has_world_trait(/datum/world_trait/abyssor_rage) ? 10 : 5
+		adjustOxyLoss(drown_damage)
 		emote("drown")
 
-/mob/living/carbon/human/handle_inwater()
+/mob/living/carbon/human/handle_inwater(turf/onturf, extinguish = TRUE, force_drown = FALSE)
 	. = ..()
-	if(!(mobility_flags & MOBILITY_STAND))
-		if(istype(loc, /turf/open/water/bath))
-			if(!wear_armor && !wear_shirt && !wear_pants)
-				add_stress(/datum/stressevent/bathwater)
+	if(istype(onturf, /turf/open/water/bath))
+		if(!wear_armor && !wear_shirt && !wear_pants)
+			add_stress(/datum/stressevent/bathwater)
+
+/mob/living/carbon/human/handle_inwater(turf/onturf, extinguish = TRUE, force_drown = FALSE)
+	. = ..()
+	if(istype(onturf, /turf/open/water/sewer))
+		if(!HAS_TRAIT(src, TRAIT_HOLDBREATH))
+			add_stress(/datum/stressevent/sewertouched)
 
 /mob/living/carbon/proc/get_complex_pain()
-	var/amt = 0
+	. = 0
 	for(var/obj/item/bodypart/limb as anything in bodyparts)
-		if(limb.status == BODYPART_ROBOTIC)
+		if(limb.status == BODYPART_ROBOTIC || limb.skeletonized)
 			continue
-		var/bodypart_pain = ((limb.brute_dam + limb.burn_dam) / limb.max_damage) * 100
+		var/bodypart_pain = ((limb.brute_dam + limb.burn_dam) / limb.max_damage) * limb.max_pain_damage
 		for(var/datum/wound/wound as anything in limb.wounds)
 			bodypart_pain += wound.woundpain
-		bodypart_pain = min(bodypart_pain, 100) //tops out at 100 per limb
-		amt += bodypart_pain
-	return amt
+		bodypart_pain = min(bodypart_pain, limb.max_pain_damage)
+		if(HAS_TRAIT(src, TRAIT_ADRENALINE_RUSH))
+			bodypart_pain = bodypart_pain * 0.5
+		. += bodypart_pain
+	.
+
+/mob/living/carbon/human/get_complex_pain()
+	. = ..()
+	if(physiology)
+		. *= physiology.pain_mod
 
 ///////////////
 // BREATHING //
 ///////////////
 
-//Start of a breath chain, calls breathe()
-/mob/living/carbon/handle_breathing(times_fired)
-	return // RTCHANGE
-
-//Second link in a breath chain, calls check_breath()
-/mob/living/carbon/proc/breathe()
-	var/obj/item/organ/lungs = getorganslot(ORGAN_SLOT_LUNGS)
-	if(reagents.has_reagent(/datum/reagent/toxin/lexorin, needs_metabolizing = TRUE))
-		return
-	if(istype(loc, /obj/machinery/atmospherics/components/unary/cryo_cell))
-		return
-
-	var/datum/gas_mixture/environment
-	if(loc)
-		environment = loc.return_air()
-
-	var/datum/gas_mixture/breath
-
-	if(!getorganslot(ORGAN_SLOT_BREATHING_TUBE))
-		if(health <= HEALTH_THRESHOLD_FULLCRIT || (pulledby && pulledby.grab_state >= GRAB_KILL) || HAS_TRAIT(src, TRAIT_MAGIC_CHOKE) || (lungs && lungs.organ_flags & ORGAN_FAILING))
-			losebreath++  //You can't breath at all when in critical or when being choked, so you're going to miss a breath
-
-		else if(health <= crit_threshold)
-			losebreath += 0.25 //You're having trouble breathing in soft crit, so you'll miss a breath one in four times
-
-	//Suffocate
-	if(losebreath >= 1) //You've missed a breath, take oxy damage
-		losebreath--
-		if(prob(10))
-			emote("gasp")
-		if(istype(loc, /obj/))
-			var/obj/loc_as_obj = loc
-			loc_as_obj.handle_internal_lifeform(src,0)
-	else
-		//Breathe from internal
-		breath = get_breath_from_internal(BREATH_VOLUME)
-
-		if(isnull(breath)) //in case of 0 pressure internals
-
-			if(isobj(loc)) //Breathe from loc as object
-				var/obj/loc_as_obj = loc
-				breath = loc_as_obj.handle_internal_lifeform(src, BREATH_VOLUME)
-
-			else if(isturf(loc)) //Breathe from loc as turf
-				var/breath_moles = 0
-				if(environment)
-					breath_moles = environment.total_moles()*BREATH_PERCENTAGE
-
-				breath = loc.remove_air(breath_moles)
-		else //Breathe from loc as obj again
-			if(istype(loc, /obj/))
-				var/obj/loc_as_obj = loc
-				loc_as_obj.handle_internal_lifeform(src,0)
-
-	check_breath(breath)
-
-	if(breath)
-		loc.assume_air(breath)
-		air_update_turf()
-
 /mob/living/carbon/proc/has_smoke_protection()
 	if(HAS_TRAIT(src, TRAIT_NOBREATH))
 		return TRUE
 	return FALSE
-
-
-//Third link in a breath chain, calls handle_breath_temperature()
-/mob/living/carbon/proc/check_breath(datum/gas_mixture/breath)
-	if(status_flags & GODMODE)
-		return
-	if(HAS_TRAIT(src, TRAIT_NOBREATH))
-		return
-
-	var/obj/item/organ/lungs = getorganslot(ORGAN_SLOT_LUNGS)
-	if(!lungs)
-		adjustOxyLoss(2)
-
-	//CRIT
-	if(!breath || (breath.total_moles() == 0) || !lungs)
-		if(reagents.has_reagent(/datum/reagent/medicine/epinephrine, needs_metabolizing = TRUE) && lungs)
-			return
-		adjustOxyLoss(1)
-
-		failed_last_breath = 1
-		throw_alert("not_enough_oxy", /atom/movable/screen/alert/not_enough_oxy)
-		return 0
-
-	var/safe_oxy_min = 16
-	var/safe_co2_max = 10
-	var/safe_tox_max = 0.05
-	var/SA_para_min = 1
-	var/SA_sleep_min = 5
-	var/oxygen_used = 0
-	var/breath_pressure = (breath.total_moles()*R_IDEAL_GAS_EQUATION*breath.temperature)/BREATH_VOLUME
-
-	var/list/breath_gases = breath.gases
-	breath.assert_gases(/datum/gas/oxygen, /datum/gas/plasma, /datum/gas/carbon_dioxide, /datum/gas/nitrous_oxide, /datum/gas/bz)
-	var/O2_partialpressure = (breath_gases[/datum/gas/oxygen][MOLES]/breath.total_moles())*breath_pressure
-	var/Toxins_partialpressure = (breath_gases[/datum/gas/plasma][MOLES]/breath.total_moles())*breath_pressure
-	var/CO2_partialpressure = (breath_gases[/datum/gas/carbon_dioxide][MOLES]/breath.total_moles())*breath_pressure
-
-
-	//OXYGEN
-	if(O2_partialpressure < safe_oxy_min) //Not enough oxygen
-		if(prob(20))
-			emote("gasp")
-		if(O2_partialpressure > 0)
-			var/ratio = 1 - O2_partialpressure/safe_oxy_min
-			adjustOxyLoss(min(5*ratio, 3))
-			failed_last_breath = 1
-			oxygen_used = breath_gases[/datum/gas/oxygen][MOLES]*ratio
-		else
-			adjustOxyLoss(3)
-			failed_last_breath = 1
-		throw_alert("not_enough_oxy", /atom/movable/screen/alert/not_enough_oxy)
-
-	else //Enough oxygen
-		failed_last_breath = 0
-		if(health >= crit_threshold)
-			adjustOxyLoss(-5)
-		oxygen_used = breath_gases[/datum/gas/oxygen][MOLES]
-		clear_alert("not_enough_oxy")
-
-	breath_gases[/datum/gas/oxygen][MOLES] -= oxygen_used
-	breath_gases[/datum/gas/carbon_dioxide][MOLES] += oxygen_used
-
-	//CARBON DIOXIDE
-	if(CO2_partialpressure > safe_co2_max)
-		if(!co2overloadtime)
-			co2overloadtime = world.time
-		else if(world.time - co2overloadtime > 120)
-			Unconscious(60)
-			adjustOxyLoss(3)
-			if(world.time - co2overloadtime > 300)
-				adjustOxyLoss(8)
-		if(prob(20))
-			emote("cough")
-
-	else
-		co2overloadtime = 0
-
-	//TOXINS/PLASMA
-	if(Toxins_partialpressure > safe_tox_max)
-		var/ratio = (breath_gases[/datum/gas/plasma][MOLES]/safe_tox_max) * 10
-		adjustToxLoss(CLAMP(ratio, MIN_TOXIC_GAS_DAMAGE, MAX_TOXIC_GAS_DAMAGE))
-		throw_alert("too_much_tox", /atom/movable/screen/alert/too_much_tox)
-	else
-		clear_alert("too_much_tox")
-
-	//NITROUS OXIDE
-	if(breath_gases[/datum/gas/nitrous_oxide])
-		var/SA_partialpressure = (breath_gases[/datum/gas/nitrous_oxide][MOLES]/breath.total_moles())*breath_pressure
-		if(SA_partialpressure > SA_para_min)
-			Unconscious(60)
-			if(SA_partialpressure > SA_sleep_min)
-				Sleeping(max(AmountSleeping() + 40, 200))
-		else if(SA_partialpressure > 0.01)
-			if(prob(20))
-				emote(pick("giggle","laugh"))
-			SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "chemical_euphoria", /datum/mood_event/chemical_euphoria)
-	else
-		SEND_SIGNAL(src, COMSIG_CLEAR_MOOD_EVENT, "chemical_euphoria")
-
-	//BZ (Facepunch port of their Agent B)
-	if(breath_gases[/datum/gas/bz])
-		var/bz_partialpressure = (breath_gases[/datum/gas/bz][MOLES]/breath.total_moles())*breath_pressure
-		if(bz_partialpressure > 1)
-			hallucination += 10
-		else if(bz_partialpressure > 0.01)
-			hallucination += 5
-
-	//TRITIUM
-	if(breath_gases[/datum/gas/tritium])
-		var/tritium_partialpressure = (breath_gases[/datum/gas/tritium][MOLES]/breath.total_moles())*breath_pressure
-		radiation += tritium_partialpressure/10
-
-	//NITRYL
-	if(breath_gases[/datum/gas/nitryl])
-		var/nitryl_partialpressure = (breath_gases[/datum/gas/nitryl][MOLES]/breath.total_moles())*breath_pressure
-		adjustFireLoss(nitryl_partialpressure/4)
-
-	//MIASMA
-	if(breath_gases[/datum/gas/miasma])
-		var/miasma_partialpressure = (breath_gases[/datum/gas/miasma][MOLES]/breath.total_moles())*breath_pressure
-
-		if(prob(1 * miasma_partialpressure))
-			var/datum/disease/advance/miasma_disease = new /datum/disease/advance/random(2,3)
-			miasma_disease.name = "Unknown"
-			ForceContractDisease(miasma_disease, TRUE, TRUE)
-
-		//Miasma side effects
-		switch(miasma_partialpressure)
-			if(0.25 to 5)
-				// At lower pp, give out a little warning
-				SEND_SIGNAL(src, COMSIG_CLEAR_MOOD_EVENT, "smell")
-				if(prob(5))
-					to_chat(src, span_notice("There is an unpleasant smell in the air."))
-			if(5 to 20)
-				//At somewhat higher pp, warning becomes more obvious
-				if(prob(15))
-					to_chat(src, span_warning("I smell something horribly decayed inside this room."))
-					SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "smell", /datum/mood_event/disgust/bad_smell)
-			if(15 to 30)
-				//Small chance to vomit. By now, people have internals on anyway
-				if(prob(5))
-					to_chat(src, span_warning("The stench of rotting carcasses is unbearable!"))
-					SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "smell", /datum/mood_event/disgust/nauseating_stench)
-					vomit()
-			if(30 to INFINITY)
-				//Higher chance to vomit. Let the horror start
-				if(prob(25))
-					to_chat(src, span_warning("The stench of rotting carcasses is unbearable!"))
-					SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "smell", /datum/mood_event/disgust/nauseating_stench)
-					vomit()
-			else
-				SEND_SIGNAL(src, COMSIG_CLEAR_MOOD_EVENT, "smell")
-
-
-	//Clear all moods if no miasma at all
-	else
-		SEND_SIGNAL(src, COMSIG_CLEAR_MOOD_EVENT, "smell")
-
-
-
-
-	breath.garbage_collect()
-
-	//BREATH TEMPERATURE
-	handle_breath_temperature(breath)
-
-	return 1
-
-//Fourth and final link in a breath chain
-/mob/living/carbon/proc/handle_breath_temperature(datum/gas_mixture/breath)
-	return
-
-/mob/living/carbon/proc/get_breath_from_internal(volume_needed)
-	if(internal)
-		if(internal.loc != src)
-			internal = null
-			update_internals_hud_icon(0)
-		else if ((!wear_mask || !(wear_mask.clothing_flags & MASKINTERNALS)) && !getorganslot(ORGAN_SLOT_BREATHING_TUBE))
-			internal = null
-			update_internals_hud_icon(0)
-		else
-			update_internals_hud_icon(1)
-			. = internal.remove_air_volume(volume_needed)
-			if(!.)
-				return FALSE //to differentiate between no internals and active, but empty internals
 
 /mob/living/carbon/proc/handle_bodyparts()
 	var/stam_regen = FALSE
@@ -519,59 +192,6 @@
 		for(var/V in internal_organs)
 			var/obj/item/organ/O = V
 			O.on_death() //Needed so organs decay while inside the body.
-
-/mob/living/carbon/handle_diseases()
-	for(var/thing in diseases)
-		var/datum/disease/D = thing
-		if(prob(D.infectivity))
-			D.spread()
-
-		if(stat != DEAD || D.process_dead)
-			D.stage_act()
-
-//todo generalize this and move hud out
-/mob/living/carbon/proc/handle_changeling()
-	if(mind && hud_used && hud_used.lingchemdisplay)
-		var/datum/antagonist/changeling/changeling = mind.has_antag_datum(/datum/antagonist/changeling)
-		if(changeling)
-			changeling.regenerate()
-			hud_used.lingchemdisplay.invisibility = 0
-			hud_used.lingchemdisplay.maptext = "<div align='center' valign='middle' style='position:relative; top:0px; left:6px'><font color='#dd66dd'>[round(changeling.chem_charges)]</font></div>"
-		else
-			hud_used.lingchemdisplay.invisibility = INVISIBILITY_ABSTRACT
-
-
-/mob/living/carbon/handle_mutations_and_radiation()
-	if(dna && dna.temporary_mutations.len)
-		for(var/mut in dna.temporary_mutations)
-			if(dna.temporary_mutations[mut] < world.time)
-				if(mut == UI_CHANGED)
-					if(dna.previous["UI"])
-						dna.uni_identity = merge_text(dna.uni_identity,dna.previous["UI"])
-						updateappearance(mutations_overlay_update=1)
-						dna.previous.Remove("UI")
-					dna.temporary_mutations.Remove(mut)
-					continue
-				if(mut == UE_CHANGED)
-					if(dna.previous["name"])
-						real_name = dna.previous["name"]
-						name = real_name
-						dna.previous.Remove("name")
-					if(dna.previous["UE"])
-						dna.unique_enzymes = dna.previous["UE"]
-						dna.previous.Remove("UE")
-					if(dna.previous["blood_type"])
-						dna.blood_type = dna.previous["blood_type"]
-						dna.previous.Remove("blood_type")
-					dna.temporary_mutations.Remove(mut)
-					continue
-		for(var/datum/mutation/human/HM in dna.mutations)
-			if(HM && HM.timed)
-				dna.remove_mutation(HM.type)
-
-	radiation -= min(radiation, RAD_LOSS_PER_TICK)
-	if(radiation > RAD_MOB_SAFE)
-		adjustToxLoss(log(radiation-RAD_MOB_SAFE)*RAD_TOX_COEFFICIENT)
 
 /mob/living/carbon/handle_embedded_objects()
 	for(var/obj/item/bodypart/bodypart as anything in bodyparts)
@@ -671,9 +291,6 @@ GLOBAL_LIST_INIT(ballmer_windows_me_msg, list("Yo man, what if, we like, uh, put
 	if(jitteriness)
 		do_jitter_animation(jitteriness)
 		jitteriness = max(jitteriness - restingpwr, 0)
-		SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "jittery", /datum/mood_event/jittery)
-	else
-		SEND_SIGNAL(src, COMSIG_CLEAR_MOOD_EVENT, "jittery")
 
 	if(stuttering)
 		stuttering = max(stuttering-1, 0)
@@ -696,7 +313,6 @@ GLOBAL_LIST_INIT(ballmer_windows_me_msg, list("Yo man, what if, we like, uh, put
 	if(drunkenness)
 		drunkenness = max(drunkenness - (drunkenness * 0.04) - 0.01, 0)
 		if(drunkenness >= 3)
-//			SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "drunk", /datum/mood_event/drunk)
 			if(prob(3))
 				slurring += 2
 			jitteriness = max(jitteriness - 3, 0)
@@ -764,27 +380,19 @@ GLOBAL_LIST_INIT(ballmer_windows_me_msg, list("Yo man, what if, we like, uh, put
 //LIVER//
 /////////
 
-///Decides if the liver is failing or not.
-/mob/living/carbon/proc/handle_liver()
-	if(!dna)
-		return
-	var/obj/item/organ/liver/liver = getorganslot(ORGAN_SLOT_LIVER)
-	if(!liver)
-		liver_failure()
-
 /mob/living/carbon/proc/undergoing_liver_failure()
 	var/obj/item/organ/liver/liver = getorganslot(ORGAN_SLOT_LIVER)
 	if(liver && (liver.organ_flags & ORGAN_FAILING))
 		return TRUE
 
 /mob/living/carbon/proc/liver_failure()
-	reagents.end_metabolization(src, keep_liverless = TRUE) //Stops trait-based effects on reagents, to prevent permanent buffs
-	reagents.metabolize(src, can_overdose=FALSE, liverless = TRUE)
+	reagents.end_metabolization(src, keep_liverless = TRUE) // Stops trait-based effects on reagents, to prevent permanent buffs
+	reagents.metabolize(src, can_overdose = FALSE, liverless = TRUE)
+	
 	if(HAS_TRAIT(src, TRAIT_STABLELIVER) || HAS_TRAIT(src, TRAIT_NOMETABOLISM))
 		return
+		
 	adjustToxLoss(4, TRUE,  TRUE)
-//	if(prob(30))
-//		to_chat(src, span_warning("I feel a stabbing pain in your abdomen!"))
 
 /////////////
 //CREMATION//
@@ -835,7 +443,7 @@ GLOBAL_LIST_INIT(ballmer_windows_me_msg, list("Yo man, what if, we like, uh, put
 			head.cremation_progress += 999
 			if(head.cremation_progress >= 20)
 				if(head.status == BODYPART_ORGANIC) //Non-organic limbs don't burn
-					limb.skeletonize()
+					head.skeletonize()
 					should_update_body = TRUE
 //					head.drop_limb()
 //					head.visible_message(span_warning("[src]'s head crumbles into ash!"))
@@ -864,15 +472,6 @@ GLOBAL_LIST_INIT(ballmer_windows_me_msg, list("Yo man, what if, we like, uh, put
 
 	if(should_update_body)
 		update_body()
-
-////////////////
-//BRAIN DAMAGE//
-////////////////
-
-/mob/living/carbon/proc/handle_brain_damage()
-	for(var/T in get_traumas())
-		var/datum/brain_trauma/BT = T
-		BT.on_life()
 
 /////////////////////////////////////
 //MONKEYS WITH TOO MUCH CHOLOESTROL//
@@ -917,3 +516,145 @@ GLOBAL_LIST_INIT(ballmer_windows_me_msg, list("Yo man, what if, we like, uh, put
 		return
 
 	heart.beating = !status
+
+/// Handles sleep. Mobs with no_sleep trait cannot sleep.
+/*
+*	The mob tries to go to sleep or IS sleeping
+*
+*	Accounts for...
+*	TRAIT_NOSLEEP
+*	CANT_SLEEP_IN
+*	Hunger and Hydration.
+*/
+
+/mob/living/carbon/proc/handle_sleep()
+	if (!client) // not really relevant to NPCs at the moment
+		return
+
+	var/datum/charflaw/sleepless/sleepless_flaw = get_flaw()
+	if(!istype(sleepless_flaw, /datum/charflaw/sleepless))
+		sleepless_flaw = null
+	if(HAS_TRAIT(src, TRAIT_NOSLEEP))
+		if(!(mobility_flags & MOBILITY_STAND))
+			energy_add(5)
+		if(mind?.has_antag_datum(/datum/antagonist/vampire))
+			if(!(mobility_flags & MOBILITY_STAND))
+				energy_add(10)
+			energy_add(4)
+	//Healing while sleeping in a bed
+	if(IsSleeping())
+		var/sleepy_mod = 0.5
+		var/doesnt_hunger = HAS_TRAIT(src, TRAIT_NOHUNGER)
+		if(HAS_TRAIT(src, TRAIT_BETTER_SLEEP))
+			energy_add(sleepy_mod * 4)
+		if(buckled?.sleepy)
+			sleepy_mod = buckled.sleepy
+		else if(isturf(loc)) //No illegal tech.
+			var/obj/structure/bed/rogue/bed = locate() in loc
+			if(bed)
+				sleepy_mod = bed.sleepy
+			else
+				if(HAS_TRAIT(src, TRAIT_OUTDOORSMAN))
+					var/obj/structure/flora/newbranch/branch = locate() in loc
+					if(branch)
+						sleepy_mod = 2 // just equivalent to a bedroll
+		if(nutrition > 0 || doesnt_hunger)
+			energy_add(sleepy_mod * 15)
+		if(hydration > 0 || doesnt_hunger)
+			if(!bleed_rate)
+				blood_volume = min(blood_volume + (4 * sleepy_mod), BLOOD_VOLUME_NORMAL)
+			for(var/obj/item/bodypart/affecting as anything in bodyparts)
+				//for context, it takes 5 small cuts (0.2 x 5) or 3 normal cuts (0.4 x 3) for a bodypart to not be able to heal itself
+				if(affecting.get_bleed_rate() >= 1)
+					continue
+				if(affecting.heal_damage(sleepy_mod, sleepy_mod, required_status = BODYPART_ORGANIC))
+					src.update_damage_overlays()
+				for(var/datum/wound/wound as anything in affecting.wounds)
+					if(!wound.sleep_healing)
+						continue
+					wound.heal_wound(wound.sleep_healing * sleepy_mod)
+			adjustToxLoss(-sleepy_mod)
+	else
+		var/sleepy_mod = 0
+		var/sleep_threshold = 30
+		var/message = "I'll fall asleep soon..."
+		var/dream_prob = 2
+		if(buckled?.sleepy)
+			sleepy_mod = buckled.sleepy
+		if(isturf(loc) && !(mobility_flags & MOBILITY_STAND))
+			var/obj/structure/bed/rogue/bed = locate() in loc
+			if(bed)
+				sleepy_mod = bed.sleepy
+			else
+				sleepy_mod = 1
+				if(HAS_TRAIT(src, TRAIT_OUTDOORSMAN))
+					var/obj/structure/flora/newbranch/branch = locate() in loc
+					if(branch)
+						sleepy_mod = 2 //Worse than a bedroll, better than nothing.
+		//Caustic edit
+		else if(istype(loc,/obj/belly))
+			sleepy_mod = 3
+		//Caustic edit end
+		if(sleepy_mod > 0)
+			if(eyesclosed)
+				if(HAS_TRAIT(src, TRAIT_NOSLEEP) && !sleepless_flaw)
+					message = "I am completely unable to sleep. I should just get up."
+					if(!fallingas)
+						to_chat(src, span_warning(message))
+					fallingas = TRUE
+					return
+				var/armor_blocked = FALSE
+				if(ishuman(src) && stat == CONSCIOUS)
+					var/mob/living/carbon/human/H = src
+					if(H.head && H.head.armor?.stab > 70)
+						armor_blocked = TRUE
+					if(H.wear_armor && (H.wear_armor.armor_class in list(ARMOR_CLASS_HEAVY, ARMOR_CLASS_MEDIUM)))
+						armor_blocked = TRUE
+					if(armor_blocked && !fallingas)
+						to_chat(src, span_warning("I can't sleep like this. My armor is burdening me."))
+						fallingas = TRUE
+				if(!armor_blocked)
+					if (sleepy_mod > 1)
+						sleep_threshold = 30
+					else
+						sleep_threshold = 45 
+						message = "I'll fall asleep soon, although a proper bed would be more comfortable..."
+					if(sleepless_flaw) 
+						if(!sleepless_flaw.drugged_up)
+							message = "I am unable to sleep. I should just get up."
+							if(!fallingas)
+								to_chat(src, span_warning(message))
+							fallingas = TRUE
+						else
+							sleep_threshold = 45
+							message = "I'll fall asleep soon, although it's still very hard for me to..."
+					if(!fallingas)
+						to_chat(src, span_warning(message))
+					fallingas += sleepy_mod
+					if(HAS_TRAIT(src, TRAIT_FASTSLEEP))
+						fallingas += sleepy_mod
+					if(fallingas >= sleep_threshold)
+						if(!is_asleep) //to not spam chat
+							to_chat(src, span_blue("I've fallen asleep."))
+							is_asleep = TRUE
+						if(sleepless_flaw) // If you're sleepless, you have a higher chance of going to a nightmare. Every time you sleep, the chance gets higher for the rest of the round.
+							teleport_to_dream(src, 10000, sleepless_flaw.dream_prob, FALSE)
+							sleepless_flaw.dream_prob += 500
+							sleepless_flaw.drugged_up = FALSE
+							Sleeping(250)
+						else 
+							teleport_to_dream(src, 10000, dream_prob)
+							Sleeping(300)
+						
+			else
+				is_asleep = FALSE
+				fallingas = FALSE
+				energy_add(sleepy_mod * 10)
+		else if(fallingas)
+			fallingas = FALSE
+
+	// Leaning against a wall: slowly regain stamina
+	if(mobility_flags & MOBILITY_STAND && wallpressed && !IsSleeping() && !buckled && !lying && !climbing)
+		energy_add(5)
+
+#undef BALLMER_POINTS

@@ -1,11 +1,11 @@
-/mob/living/carbon/human
-	var/mob/stored_mob = null
+#define TRAIT_SOURCE_WEREWOLF "werewolf_transform"
 
 /datum/antagonist/werewolf/on_life(mob/user)
 	if(!user) return
 	var/mob/living/carbon/human/H = user
 	if(H.stat == DEAD) return
 	if(H.advsetup) return
+	if(HAS_TRAIT(H, TRAIT_SILVER_BLESSED)) return
 
 	// Werewolf transforms at night AND under the sky
 	if(!transformed && !transforming)
@@ -57,7 +57,7 @@
 				to_chat(H, span_warning("Daylight shines around me... the curse begins to fade."))
 
 
-/mob/living/carbon/human/species/werewolf/death(gibbed)
+/mob/living/carbon/human/species/werewolf/death(gibbed, nocutscene = FALSE)
 	werewolf_untransform(TRUE, gibbed)
 
 /mob/living/carbon/human/proc/werewolf_transform()
@@ -73,10 +73,9 @@
 	cmode = FALSE
 	if(client)
 		SSdroning.play_area_sound(get_area(src), client)
-		SSdroning.play_ambient_loop(get_area(src), client)
 //	stop_cmusic()
 
-	src.fully_heal(FALSE)
+	fully_heal(FALSE)
 
 	var/ww_path
 	if(gender == MALE)
@@ -92,77 +91,61 @@
 	W.stored_mob = src
 	W.limb_destroyer = TRUE
 	W.ambushable = FALSE
-	W.cmode_music = 'sound/music/combat_werewolf.ogg'
-	W.skin_armor = new /obj/item/clothing/suit/roguetown/armor/skin_armor/werewolf_skin(W)
+	W.cmode_music = 'sound/music/cmode/antag/combat_darkstar.ogg'
+	W.skin_armor = new /obj/item/clothing/suit/roguetown/armor/regenerating/skin/werewolf_skin(W)
 	playsound(W.loc, pick('sound/combat/gib (1).ogg','sound/combat/gib (2).ogg'), 200, FALSE, 3)
 	W.spawn_gibs(FALSE)
-	apply_status_effect(STATUS_EFFECT_STASIS, null, TRUE)
 	src.forceMove(W)
 
 	W.after_creation()
 	W.stored_language = new
 	W.stored_language.copy_known_languages_from(src)
-	W.stored_skills = mind.known_skills.Copy()
-	W.stored_experience = mind.skill_experience.Copy()
+	W.stored_skills = ensure_skills().known_skills.Copy()
+	W.stored_experience = ensure_skills().skill_experience.Copy()
+	W.cmode_music_override = cmode_music_override
+	W.cmode_music_override_name = cmode_music_override_name
+	// CC Edit Start
+	// Transfer voregans and contents of them to the destination form
+	W.vore_organs = vore_organs.Copy()
+	W.vore_selected = vore_selected
+	for(var/obj/belly/B as anything in vore_organs)
+		B.forceMove(W)
+		B.owner = W
+	vore_organs.Cut()
+	// CC Edit End
 	mind.transfer_to(W)
-	W.mind.known_skills = list()
-	W.mind.skill_experience = list()
+	skills?.known_skills = list()
+	skills?.skill_experience = list()
 	W.grant_language(/datum/language/beast)
 
 	W.base_intents = list(INTENT_HELP, INTENT_DISARM, INTENT_GRAB)
 	W.update_a_intents()
 
+	// temporal traits so our body won't snore
+	ADD_TRAIT(src, TRAIT_NOSLEEP, TRAIT_SOURCE_WEREWOLF)
+	ADD_TRAIT(src, TRAIT_NOBREATH, TRAIT_SOURCE_WEREWOLF)
+	ADD_TRAIT(src, TRAIT_NOPAIN, TRAIT_SOURCE_WEREWOLF)
+	ADD_TRAIT(src, TRAIT_TOXIMMUNE, TRAIT_SOURCE_WEREWOLF)	
+	ADD_TRAIT(src, TRAIT_NOHUNGER, TRAIT_SOURCE_WEREWOLF)
+	ADD_TRAIT(src, TRAIT_NOMOOD, TRAIT_SOURCE_WEREWOLF)
+	ADD_TRAIT(src, TRAIT_PACIFISM, TRAIT_SOURCE_WEREWOLF)
+
 	to_chat(W, span_userdanger("I transform into a horrible beast!"))
 	W.emote("rage")
 
-	W.mind.adjust_skillrank(/datum/skill/combat/wrestling, 5, TRUE)
-	W.mind.adjust_skillrank(/datum/skill/combat/unarmed, 5, TRUE)
-	W.mind.adjust_skillrank(/datum/skill/misc/climbing, 6, TRUE)
+	W.adjust_skillrank(/datum/skill/combat/wrestling, 5, TRUE)
+	W.adjust_skillrank(/datum/skill/combat/unarmed, 5, TRUE)
+	W.adjust_skillrank(/datum/skill/misc/climbing, 6, TRUE)
 
 	W.STASTR = 20
 	W.STACON = 20
-	W.STAEND = 20
+	W.STAWIL = 20
 
 	W.AddSpell(new /obj/effect/proc_holder/spell/self/howl)
 	W.AddSpell(new /obj/effect/proc_holder/spell/self/claws)
-
-	ADD_TRAIT(src, TRAIT_NOSLEEP, TRAIT_GENERIC)
-
-	ADD_TRAIT(W, TRAIT_STRONGBITE, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_ZJUMP, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_NOFALLDAMAGE1, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_NOROGSTAM, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_BASHDOORS, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_SHOCKIMMUNE, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_STEELHEARTED, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_BREADY, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_TOXIMMUNE, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_ORGAN_EATER, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_NASTY_EATER, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_NOSTINK, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_CRITICAL_RESISTANCE, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_IGNOREDAMAGESLOWDOWN, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_IGNORESLOWDOWN, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_HARDDISMEMBER, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_PIERCEIMMUNE, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_SPELLCOCKBLOCK, TRAIT_GENERIC)
-	ADD_TRAIT(W, TRAIT_DEATHBYSNOOSNOO, TRAIT_GENERIC)
-
+	W.AddSpell(new /obj/effect/proc_holder/spell/targeted/woundlick)
+	W.AddSpell(new /obj/effect/proc_holder/spell/invoked/repulse/werewolf)
 	invisibility = oldinv
-
-	if(getorganslot(ORGAN_SLOT_PENIS))
-		W.internal_organs_slot[ORGAN_SLOT_PENIS] = /obj/item/organ/penis/internal
-	if(getorganslot(ORGAN_SLOT_TESTICLES))
-		W.internal_organs_slot[ORGAN_SLOT_TESTICLES] = /obj/item/organ/testicles
-	if(getorganslot(ORGAN_SLOT_BREASTS))
-		W.internal_organs_slot[ORGAN_SLOT_BREASTS] = /obj/item/organ/breasts/internal
-	if(getorganslot(ORGAN_SLOT_BELLY))
-		W.internal_organs_slot[ORGAN_SLOT_BELLY] = /obj/item/organ/belly/internal
-	if(getorganslot(ORGAN_SLOT_VAGINA))
-		W.internal_organs_slot[ORGAN_SLOT_VAGINA] = /obj/item/organ/vagina/internal
-		
-	W.client.prefs.sexable = client.prefs.sexable
-
 
 /mob/living/carbon/human/proc/werewolf_untransform(dead,gibbed)
 	if(!stored_mob)
@@ -177,25 +160,38 @@
 
 	var/mob/living/carbon/human/W = stored_mob
 	stored_mob = null
-	REMOVE_TRAIT(W, TRAIT_NOSLEEP, TRAIT_GENERIC)
 	if(dead)
 		W.death(gibbed)
 
 	W.forceMove(get_turf(src))
-	W.remove_status_effect(STATUS_EFFECT_STASIS)
 
-	REMOVE_TRAIT(W, TRAIT_NOMOOD, TRAIT_GENERIC)
+	REMOVE_TRAIT(W, TRAIT_NOSLEEP, TRAIT_SOURCE_WEREWOLF)
+	REMOVE_TRAIT(W, TRAIT_NOBREATH, TRAIT_SOURCE_WEREWOLF)
+	REMOVE_TRAIT(W, TRAIT_NOPAIN, TRAIT_SOURCE_WEREWOLF)
+	REMOVE_TRAIT(W, TRAIT_TOXIMMUNE, TRAIT_SOURCE_WEREWOLF)
+	REMOVE_TRAIT(W, TRAIT_NOHUNGER, TRAIT_SOURCE_WEREWOLF)
+	REMOVE_TRAIT(W, TRAIT_NOMOOD, TRAIT_SOURCE_WEREWOLF)
+	REMOVE_TRAIT(W, TRAIT_PACIFISM, TRAIT_SOURCE_WEREWOLF)
 
 	mind.transfer_to(W)
 
 	var/mob/living/carbon/human/species/werewolf/WA = src
 	W.copy_known_languages_from(WA.stored_language)
-	W.mind.known_skills = WA.stored_skills.Copy()
-	W.mind.skill_experience = WA.stored_experience.Copy()
-
+	skills?.known_skills = WA.stored_skills.Copy()
+	skills?.skill_experience = WA.stored_experience.Copy()
+	// CC Edit Start
+	// Transfer voregans and contents of them to the destination form
+	W.vore_organs = vore_organs.Copy()
+	W.vore_selected = vore_selected
+	for(var/obj/belly/B as anything in vore_organs)
+		B.forceMove(W)
+		B.owner = W
+	vore_organs.Cut()
+	// CC Edit End
 	W.RemoveSpell(new /obj/effect/proc_holder/spell/self/howl)
 	W.RemoveSpell(new /obj/effect/proc_holder/spell/self/claws)
-
+	W.RemoveSpell(new /obj/effect/proc_holder/spell/targeted/woundlick)
+	W.RemoveSpell(new /obj/effect/proc_holder/spell/invoked/repulse/werewolf)
 	W.regenerate_icons()
 
 	to_chat(W, span_userdanger("I return to my facade."))
@@ -205,3 +201,5 @@
 	W.Stun(30)
 
 	qdel(src)
+
+#undef TRAIT_SOURCE_WEREWOLF

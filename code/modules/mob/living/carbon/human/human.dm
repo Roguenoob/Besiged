@@ -24,6 +24,7 @@
 				if(do_after(user, 50, needhand = 1, target = src))
 					facial_hairstyle = "None"
 					update_hair()
+					record_round_statistic(STATS_BEARDS_SHAVED)
 					if(dna?.species)
 						if(dna.species.id == "dwarf")
 							add_stress(/datum/stressevent/dwarfshaved)
@@ -44,13 +45,20 @@
 					underwear.forceMove(get_turf(src))
 					src.put_in_hands(underwear)
 					underwear = null
+		if((user.zone_selected == BODY_ZONE_L_LEG) || (user.zone_selected == BODY_ZONE_R_LEG))
+			if(get_location_accessible(src, BODY_ZONE_PRECISE_GROIN, skipundies = TRUE))
+				if(!legwear_socks)
+					return
+				src.visible_message(span_notice("[src] begins to take off [legwear_socks]..."))
+				if(do_after(user, 30, needhand = 1, target = src))
+					var/obj/item/bodypart/chest = get_bodypart(BODY_ZONE_CHEST)
+					chest.remove_bodypart_feature(legwear_socks.legwears_feature)
+					legwear_socks.forceMove(get_turf(src))
+					src.put_in_hands(legwear_socks)
+					legwear_socks = null
 #endif
 
 /mob/living/carbon/human/Initialize()
-#ifdef MATURESERVER
-	sexcon = new /datum/sex_controller(src)
-#endif
-	verbs += /mob/living/proc/mob_sleep
 	verbs += /mob/living/proc/lay_down
 
 	icon_state = ""		//Remove the inherent human icon that is visible on the map editor. We're rendering ourselves limb by limb, having it still be there results in a bug where the basic human icon appears below as south in all directions and generally looks nasty.
@@ -78,6 +86,8 @@
 	var/obj/item/bodypart/affecting
 	var/dam = levels * rand(10,50)
 	add_stress(/datum/stressevent/felldown)
+	record_round_statistic(STATS_MOAT_FALLERS, -1)
+	record_round_statistic(STATS_ANKLES_BROKEN)
 	var/chat_message
 	switch(rand(1,4))
 		if(1)
@@ -111,37 +121,20 @@
 	randomize_human(src)
 	dna.initialize_dna()
 
-/mob/living/carbon/human/ComponentInitialize()
-	. = ..()
-	if(!CONFIG_GET(flag/disable_human_mood))
-		AddComponent(/datum/component/mood)
-
 /mob/living/carbon/human/Destroy()
-	QDEL_NULL(sexcon)
 	STOP_PROCESSING(SShumannpc, src)
 	QDEL_NULL(physiology)
-	QDEL_NULL_LIST(vore_organs) // CITADEL EDIT belly stuff
+	QDEL_NULL(sunder_light_obj)
 	GLOB.human_list -= src
 	return ..()
-
-
-/mob/living/carbon/human/prepare_data_huds()
-	//Update med hud images...
-	..()
-	//...sec hud images...
-	sec_hud_set_ID()
-	sec_hud_set_implants()
-	sec_hud_set_security_status()
-	//...and display them.
-	add_to_all_human_data_huds()
 
 /mob/living/carbon/human/Stat()
 	..()
 	if(mind)
-		var/datum/antagonist/vampirelord/VD = mind.has_antag_datum(/datum/antagonist/vampirelord)
+		var/datum/antagonist/vampire/VD = mind.has_antag_datum(/datum/antagonist/vampire)
 		if(VD)
 			if(statpanel("Stats"))
-				stat("Vitae:",VD.vitae)
+				stat("Vitae:", bloodpool)
 		if((mind.assigned_role == "Shepherd") || (mind.assigned_role == "Inquisitor"))
 			if(statpanel("Status"))
 				stat("Confessions sent: [GLOB.confessors.len]")
@@ -280,6 +273,9 @@
 #ifdef MATURESERVER
 	if(get_location_accessible(src, BODY_ZONE_PRECISE_GROIN, skipundies = TRUE))
 		dat += "<tr><td><BR><B>Underwear:</B> <A href='?src=[REF(src)];undiesthing=1'>[!underwear ? "Nothing" : "Remove"]</A></td></tr>"
+	dat += "<tr><td><hr></td></tr>"
+	if(get_location_accessible(src, BODY_ZONE_PRECISE_GROIN, skipundies = TRUE))
+		dat += "<tr><td><BR><B>Legwear:</B> <A href='?src=[REF(src)];legwearsthing=1'>[!legwear_socks ? "Nothing" : "Remove"]</A></td></tr>"
 #endif
 
 	dat += {"</table>"}
@@ -291,10 +287,6 @@
 // called when something steps onto a human
 // this could be made more general, but for now just handle mulebot
 /mob/living/carbon/human/Crossed(atom/movable/AM)
-	var/mob/living/simple_animal/bot/mulebot/MB = AM
-	if(istype(MB))
-		MB.RunOver(src)
-
 	. = ..()
 	spreadFire(AM)
 
@@ -324,78 +316,6 @@
 		// Might need re-wording.
 		to_chat(user, span_alert("There is no exposed flesh or thin material [above_neck(target_zone) ? "on [p_their()] head" : "on [p_their()] body"]."))
 
-/mob/living/carbon/human/assess_threat(judgement_criteria, lasercolor = "", datum/callback/weaponcheck=null)
-	if(judgement_criteria & JUDGE_EMAGGED)
-		return 10 //Everyone is a criminal!
-
-	var/threatcount = 0
-
-	//Lasertag bullshit
-	if(lasercolor)
-		if(lasercolor == "b")//Lasertag turrets target the opposing team, how great is that? -Sieve
-			if(istype(wear_armor, /obj/item/clothing/suit/redtag))
-				threatcount += 4
-			if(is_holding_item_of_type(/obj/item/gun/energy/laser/redtag))
-				threatcount += 4
-			if(istype(belt, /obj/item/gun/energy/laser/redtag))
-				threatcount += 2
-
-		if(lasercolor == "r")
-			if(istype(wear_armor, /obj/item/clothing/suit/bluetag))
-				threatcount += 4
-			if(is_holding_item_of_type(/obj/item/gun/energy/laser/bluetag))
-				threatcount += 4
-			if(istype(belt, /obj/item/gun/energy/laser/bluetag))
-				threatcount += 2
-
-		return threatcount
-
-	//Check for ID
-	var/obj/item/card/id/idcard = get_idcard(FALSE)
-	if( (judgement_criteria & JUDGE_IDCHECK) && !idcard && name=="Unknown")
-		threatcount += 4
-
-	//Check for weapons
-	if( (judgement_criteria & JUDGE_WEAPONCHECK) && weaponcheck)
-		if(!idcard || !(ACCESS_WEAPONS in idcard.access))
-			for(var/obj/item/I in held_items) //if they're holding a gun
-				if(weaponcheck.Invoke(I))
-					threatcount += 4
-			if(weaponcheck.Invoke(belt) || weaponcheck.Invoke(back)) //if a weapon is present in the belt or back slot
-				threatcount += 2 //not enough to trigger look_for_perp() on it's own unless they also have criminal status.
-
-	//Check for arrest warrant
-	if(judgement_criteria & JUDGE_RECORDCHECK)
-		var/perpname = get_face_name(get_id_name())
-		var/datum/data/record/R = find_record("name", perpname, GLOB.data_core.security)
-		if(R && R.fields["criminal"])
-			switch(R.fields["criminal"])
-				if("*Arrest*")
-					threatcount += 5
-				if("Incarcerated")
-					threatcount += 2
-				if("Paroled")
-					threatcount += 2
-
-	//Check for dresscode violations
-	if(istype(head, /obj/item/clothing/head/wizard) || istype(head, /obj/item/clothing/head/helmet/space/hardsuit/wizard))
-		threatcount += 2
-
-	//Check for nonhuman scum
-	if(dna && dna.species.id && dna.species.id != "human" && dna.species.id != "humen")
-		threatcount += 1
-
-	//mindshield implants imply trustworthyness
-	if(HAS_TRAIT(src, TRAIT_MINDSHIELD))
-		threatcount -= 1
-
-	//Agent cards lower threatlevel.
-	if(istype(idcard, /obj/item/card/id/syndicate))
-		threatcount -= 5
-
-	return threatcount
-
-
 //Used for new human mobs created by cloning/goleming/podding
 /mob/living/carbon/human/proc/set_cloned_appearance()
 	if(gender == MALE)
@@ -405,15 +325,6 @@
 	hairstyle = pick("Bedhead", "Bedhead 2", "Bedhead 3")
 	update_body()
 	update_hair()
-
-/mob/living/carbon/human/singularity_pull(S, current_size)
-	..()
-	if(current_size >= STAGE_THREE)
-		for(var/obj/item/hand in held_items)
-			if(prob(current_size * 5) && hand.w_class >= ((11-current_size)/2)  && dropItemToGround(hand))
-				step_towards(hand, src)
-				to_chat(src, span_warning("\The [S] pulls \the [hand] from your grip!"))
-	rad_act(current_size * 3)
 
 /mob/living/carbon/human/proc/do_cpr(mob/living/carbon/C)
 	CHECK_DNA_AND_SPECIES(C)
@@ -442,7 +353,6 @@
 			return
 
 		src.visible_message(span_notice("[src] performs CPR on [C.name]!"), span_notice("I perform CPR on [C.name]."))
-		SEND_SIGNAL(src, COMSIG_ADD_MOOD_EVENT, "perform_cpr", /datum/mood_event/perform_cpr)
 		C.cpr_time = world.time
 		log_combat(src, C, "CPRed")
 
@@ -457,13 +367,8 @@
 			to_chat(C, span_unconscious("I feel a breath of fresh air... which is a sensation you don't recognise..."))
 
 /mob/living/carbon/human/cuff_resist(obj/item/I)
-	if(dna && dna.check_mutation(HULK))
-		say(pick(";RAAAAAAAARGH!", ";HNNNNNNNNNGGGGGGH!", ";GWAAAAAAAARRRHHH!", "NNNNNNNNGGGGGGGGHH!", ";AAAAAAARRRGH!" ), forced = "hulk")
-		if(..(I, cuff_break = FAST_CUFFBREAK))
-			dropItemToGround(I, silent = FALSE)
-	else
-		if(..())
-			dropItemToGround(I)
+	if(..())
+		dropItemToGround(I)
 
 /mob/living/carbon/human/proc/clean_blood(datum/source, strength)
 	if(strength < CLEAN_STRENGTH_BLOOD)
@@ -500,9 +405,10 @@
 	if(!(mobility_flags & MOBILITY_UI))
 		to_chat(src, span_warning("I can't do that right now!"))
 		return FALSE
-	if(!Adjacent(M) && (M.loc != src))
-		if((be_close == FALSE) || (!no_tk && (dna.check_mutation(TK) && tkMaxRangeCheck(src, M))))
-			return TRUE
+	if(incapacitated())
+		to_chat(src, span_warning("I can't do that right now!"))
+		return FALSE
+	if(be_close && !in_range(M, src))
 		to_chat(src, span_warning("I am too far away!"))
 		return FALSE
 	return TRUE
@@ -522,6 +428,18 @@
 			R.fields["name"] = newname
 
 /mob/living/carbon/human/get_total_tint()
+	if(isdullahan(src))
+		var/datum/species/dullahan/species = dna.species
+		var/obj/item/bodypart/head/dullahan/user_head = species.my_head
+		if(species.headless && user_head)
+			var/obj/item/organ/dullahan_vision/vision = getorganslot(ORGAN_SLOT_HUD)
+
+			if(vision && vision.viewing_head && user_head.eyes)
+				. = user_head.eyes.tint
+			else
+				. = INFINITY
+			return
+
 	. = ..()
 	if(glasses)
 		. += glasses.tint
@@ -606,56 +524,56 @@
 			else
 				hud_used.healthdoll.icon_state = "healthdoll_DEAD"*/
 
-		if(hud_used.fats)
+		if(hud_used.stamina)
 			if(stat != DEAD)
 				. = 1
-				if(rogfat >= maxrogfat)
-					hud_used.fats.icon_state = "fat0"
-				else if(rogfat > maxrogfat*0.90)
-					hud_used.fats.icon_state = "fat10"
-				else if(rogfat > maxrogfat*0.80)
-					hud_used.fats.icon_state = "fat20"
-				else if(rogfat > maxrogfat*0.70)
-					hud_used.fats.icon_state = "fat30"
-				else if(rogfat > maxrogfat*0.60)
-					hud_used.fats.icon_state = "fat40"
-				else if(rogfat > maxrogfat*0.50)
-					hud_used.fats.icon_state = "fat50"
-				else if(rogfat > maxrogfat*0.40)
-					hud_used.fats.icon_state = "fat60"
-				else if(rogfat > maxrogfat*0.30)
-					hud_used.fats.icon_state = "fat70"
-				else if(rogfat > maxrogfat*0.20)
-					hud_used.fats.icon_state = "fat80"
-				else if(rogfat > maxrogfat*0.10)
-					hud_used.fats.icon_state = "fat90"
-				else if(rogfat >= 0)
-					hud_used.fats.icon_state = "fat100"
-		if(hud_used.stams)
+				if(stamina >= max_stamina)
+					hud_used.stamina.icon_state = "stam0"
+				else if(stamina > max_stamina*0.90)
+					hud_used.stamina.icon_state = "stam10"
+				else if(stamina > max_stamina*0.80)
+					hud_used.stamina.icon_state = "stam20"
+				else if(stamina > max_stamina*0.70)
+					hud_used.stamina.icon_state = "stam30"
+				else if(stamina > max_stamina*0.60)
+					hud_used.stamina.icon_state = "stam40"
+				else if(stamina > max_stamina*0.50)
+					hud_used.stamina.icon_state = "stam50"
+				else if(stamina > max_stamina*0.40)
+					hud_used.stamina.icon_state = "stam60"
+				else if(stamina > max_stamina*0.30)
+					hud_used.stamina.icon_state = "stam70"
+				else if(stamina > max_stamina*0.20)
+					hud_used.stamina.icon_state = "stam80"
+				else if(stamina > max_stamina*0.10)
+					hud_used.stamina.icon_state = "stam90"
+				else if(stamina >= 0)
+					hud_used.stamina.icon_state = "stam100"
+		if(hud_used.energy)
 			if(stat != DEAD)
 				. = 1
-				if(rogstam <= 0)
-					hud_used.stams.icon_state = "stam0"
-				else if(rogstam > maxrogstam*0.90)
-					hud_used.stams.icon_state = "stam100"
-				else if(rogstam > maxrogstam*0.80)
-					hud_used.stams.icon_state = "stam90"
-				else if(rogstam > maxrogstam*0.70)
-					hud_used.stams.icon_state = "stam80"
-				else if(rogstam > maxrogstam*0.60)
-					hud_used.stams.icon_state = "stam70"
-				else if(rogstam > maxrogstam*0.50)
-					hud_used.stams.icon_state = "stam60"
-				else if(rogstam > maxrogstam*0.40)
-					hud_used.stams.icon_state = "stam50"
-				else if(rogstam > maxrogstam*0.30)
-					hud_used.stams.icon_state = "stam40"
-				else if(rogstam > maxrogstam*0.20)
-					hud_used.stams.icon_state = "stam30"
-				else if(rogstam > maxrogstam*0.10)
-					hud_used.stams.icon_state = "stam20"
-				else if(rogstam > 0)
-					hud_used.stams.icon_state = "stam10"
+				if(energy <= 0)
+					hud_used.energy.icon_state = "energy0"
+				else if(energy > max_energy*0.90)
+					hud_used.energy.icon_state = "energy100"
+				else if(energy > max_energy*0.80)
+					hud_used.energy.icon_state = "energy90"
+				else if(energy > max_energy*0.70)
+					hud_used.energy.icon_state = "energy80"
+				else if(energy > max_energy*0.60)
+					hud_used.energy.icon_state = "energy70"
+				else if(energy > max_energy*0.50)
+					hud_used.energy.icon_state = "energy60"
+				else if(energy > max_energy*0.40)
+					hud_used.energy.icon_state = "energy50"
+				else if(energy > max_energy*0.30)
+					hud_used.energy.icon_state = "energy40"
+				else if(energy > max_energy*0.20)
+					hud_used.energy.icon_state = "energy30"
+				else if(energy > max_energy*0.10)
+					hud_used.energy.icon_state = "energy20"
+				else if(energy > 0)
+					hud_used.energy.icon_state = "energy10"
 
 		if(hud_used.zone_select)
 			hud_used.zone_select.update_icon()
@@ -668,9 +586,6 @@
 	spill_embedded_objects()
 	set_heartattack(FALSE)
 	drunkenness = 0
-	for(var/datum/mutation/human/HM in dna.mutations)
-		if(HM.quality != POSITIVE)
-			dna.remove_mutation(HM.name)
 	..()
 
 /mob/living/carbon/human/check_weakness(obj/item/weapon, mob/living/attacker)
@@ -680,7 +595,7 @@
 
 /mob/living/carbon/human/is_literate()
 	if(mind)
-		if(mind.get_skill_level(/datum/skill/misc/reading) > 0)
+		if(get_skill_level(/datum/skill/misc/reading) > 0)
 			return TRUE
 		else
 			return FALSE
@@ -688,11 +603,6 @@
 
 /mob/living/carbon/human/can_hold_items()
 	return TRUE
-
-/mob/living/carbon/human/update_gravity(has_gravity,override = 0)
-	if(dna && dna.species) //prevents a runtime while a human is being monkeyfied
-		override = dna.species.override_float
-	..()
 
 /mob/living/carbon/human/vomit(lost_nutrition = 10, blood = 0, stun = 1, distance = 0, message = 1, toxic = 0)
 	if(blood && (NOBLOOD in dna.species.species_traits) && !HAS_TRAIT(src, TRAIT_TOXINLOVER))
@@ -707,121 +617,85 @@
 /mob/living/carbon/human/vv_get_dropdown()
 	. = ..()
 	VV_DROPDOWN_OPTION("", "---------")
-	VV_DROPDOWN_OPTION(VV_HK_APPLY_SPECIAL, "Apply Special Trait")
 	VV_DROPDOWN_OPTION(VV_HK_REAPPLY_PREFS, "Reapply Preferences")
 	VV_DROPDOWN_OPTION(VV_HK_COPY_OUTFIT, "Copy Outfit")
-	VV_DROPDOWN_OPTION(VV_HK_MOD_MUTATIONS, "Add/Remove Mutation")
-	VV_DROPDOWN_OPTION(VV_HK_MOD_QUIRKS, "Add/Remove Quirks")
-	VV_DROPDOWN_OPTION(VV_HK_MAKE_MONKEY, "Make Monkey")
-	VV_DROPDOWN_OPTION(VV_HK_MAKE_CYBORG, "Make Cyborg")
-	VV_DROPDOWN_OPTION(VV_HK_MAKE_SLIME, "Make Slime")
-	VV_DROPDOWN_OPTION(VV_HK_MAKE_ALIEN, "Make Alien")
 	VV_DROPDOWN_OPTION(VV_HK_SET_SPECIES, "Set Species")
-	VV_DROPDOWN_OPTION(VV_HK_PURRBATION, "Toggle Purrbation")
+	VV_DROPDOWN_OPTION(VV_HK_PURGE_PARTOF_SLOT, "Purge Part of Slot")
+	VV_DROPDOWN_OPTION(VV_HK_PURGE_SLOT, "Purge Slot")
 
 /mob/living/carbon/human/vv_do_topic(list/href_list)
 	. = ..()
+	if(href_list[VV_HK_PURGE_PARTOF_SLOT])
+		if(!check_rights(R_SPAWN))
+			return
+		if(!client || !client.prefs)
+			return
+		if(alert(usr,"This will irreversibly purge an INDIVIDUAL PORTION of this slot. Is this what you want?","DON'T FATFINGER THIS","PURGE","Nevermind") == "PURGE")
+			if(alert(usr,"The next prompt will not have a Nevermind option. Are you sure you want this?","ITS NOT REVERSIBLE","Yes","Nevermind") == "Yes")
+				var/choice = alert(usr,"What would you like to purge?","ITS TOO LATE NOW","Flavor","Notes","Extra")
+				if(choice)
+					switch(choice)
+						if("Flavor")
+							flavortext = null
+							nsfwflavortext = null
+							client.prefs?.flavortext = null
+						if("Notes")
+							ooc_notes = null
+							erpprefs = null
+							client.prefs?.ooc_notes = null
+						if("Extra")
+							ooc_extra = null
+							song_artist = null
+							song_title = null
+							client.prefs?.song_artist = null
+							client.prefs?.song_title = null
+							client.prefs?.ooc_extra = null
+							img_gallery = list()
+							client.prefs?.img_gallery = list()
+						else
+							return
+					client.prefs?.save_preferences()
+					client.prefs?.save_character()
+
+	if(href_list[VV_HK_PURGE_SLOT])
+		if(!check_rights(R_SPAWN))
+			return
+		if(!client || !client.prefs)
+			return
+		if(alert(usr,"This will irreversibly purge this ENTIRE character's slot (OOC, FT, OOC Ex.)","PURGE","PURGE","Nevermind") == "PURGE")
+			if(alert(usr,"This cannot be undone. Are you sure?","DON'T FATFINGER THIS","Yes","No") == "Yes")
+				flavortext = null
+				nsfwflavortext = null
+				erpprefs = null
+				ooc_notes = null
+				ooc_extra = null
+				song_artist = null
+				song_title = null
+				img_gallery = list()
+				if(client)
+					client.prefs?.flavortext = null
+					client.prefs?.nsfwflavortext = null
+					client.prefs?.erpprefs = null
+					client.prefs?.ooc_notes = null
+					client.prefs?.ooc_extra = null
+					client.prefs?.song_artist = null
+					client.prefs?.song_title = null
+					client.prefs?.img_gallery = list()
+					client.prefs?.save_preferences()
+					client.prefs?.save_character()
+					to_chat(usr, span_warn("Slot purged successfully."))
+				else
+					to_chat(usr, span_warn("Slot purged partially. (Client inaccessible -- likely disconnected)"))
 	if(href_list[VV_HK_REAPPLY_PREFS])
 		if(!check_rights(R_SPAWN))
 			return
 		if(!client || !client.prefs)
 			return
 		client.prefs.copy_to(src, TRUE, FALSE)
-	if(href_list[VV_HK_APPLY_SPECIAL])
-		if(!check_rights(R_SPAWN))
-			return
-		var/mob/admin_user = usr
-		message_admins("Admin [key_name_admin(admin_user)] is applying a special trait to [key_name(src)].")
-		var/first_result = input(admin_user, "Chosen or random?","Apply Special") as null|anything in list("Choose", "Random")
-		if(!first_result)
-			return
-		var/trait_type
-		if(first_result == "Choose")
-			var/trait_result = input(admin_user, "Choose special to apply","Apply Special") as null|anything in GLOB.special_traits
-			if(!trait_result)
-				return
-			trait_type = trait_result
-		else
-			trait_type = get_random_special_for_char(src, src.client)
-		if(!trait_type)
-			return
-		var/silent_result = input(admin_user, "Trait: [trait_type]\nGive player the trait greet text?","Apply Special") as null|anything in list("Yes", "No", "Cancel")
-		var/silent = FALSE
-		if(!silent_result || silent_result == "Cancel")
-			return
-		if(silent_result == "No")
-			silent = TRUE
-		message_admins("Admin [key_name_admin(admin_user)] applied special [trait_type] to [key_name(src)]. [first_result == "Chosen" ? "(Chosen)" : "(Random)"][silent_result == "No" ? "(Silent)" : ""]")
-		apply_special_trait(src, trait_type, silent)
 	if(href_list[VV_HK_COPY_OUTFIT])
 		if(!check_rights(R_SPAWN))
 			return
 		copy_outfit()
-	if(href_list[VV_HK_MOD_MUTATIONS])
-		if(!check_rights(R_SPAWN))
-			return
-
-		var/list/options = list("Clear"="Clear")
-		for(var/x in subtypesof(/datum/mutation/human))
-			var/datum/mutation/human/mut = x
-			var/name = initial(mut.name)
-			options[dna.check_mutation(mut) ? "[name] (Remove)" : "[name] (Add)"] = mut
-
-		var/result = input(usr, "Choose mutation to add/remove","Mutation Mod") as null|anything in sortList(options)
-		if(result)
-			if(result == "Clear")
-				dna.remove_all_mutations()
-			else
-				var/mut = options[result]
-				if(dna.check_mutation(mut))
-					dna.remove_mutation(mut)
-				else
-					dna.add_mutation(mut)
-	if(href_list[VV_HK_MOD_QUIRKS])
-		if(!check_rights(R_SPAWN))
-			return
-
-		var/list/options = list("Clear"="Clear")
-		for(var/x in subtypesof(/datum/quirk))
-			var/datum/quirk/T = x
-			var/qname = initial(T.name)
-			options[has_quirk(T) ? "[qname] (Remove)" : "[qname] (Add)"] = T
-
-		var/result = input(usr, "Choose quirk to add/remove","Quirk Mod") as null|anything in sortList(options)
-		if(result)
-			if(result == "Clear")
-				for(var/datum/quirk/q in roundstart_quirks)
-					remove_quirk(q.type)
-			else
-				var/T = options[result]
-				if(has_quirk(T))
-					remove_quirk(T)
-				else
-					add_quirk(T,TRUE)
-	if(href_list[VV_HK_MAKE_MONKEY])
-		if(!check_rights(R_SPAWN))
-			return
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")
-			return
-		usr.client.holder.Topic("vv_override", list("monkeyone"=href_list[VV_HK_TARGET]))
-	if(href_list[VV_HK_MAKE_CYBORG])
-		if(!check_rights(R_SPAWN))
-			return
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")
-			return
-		usr.client.holder.Topic("vv_override", list("makerobot"=href_list[VV_HK_TARGET]))
-	if(href_list[VV_HK_MAKE_ALIEN])
-		if(!check_rights(R_SPAWN))
-			return
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")
-			return
-		usr.client.holder.Topic("vv_override", list("makealien"=href_list[VV_HK_TARGET]))
-	if(href_list[VV_HK_MAKE_SLIME])
-		if(!check_rights(R_SPAWN))
-			return
-		if(alert("Confirm mob type change?",,"Transform","Cancel") != "Transform")
-			return
-		usr.client.holder.Topic("vv_override", list("makeslime"=href_list[VV_HK_TARGET]))
 	if(href_list[VV_HK_SET_SPECIES])
 		if(!check_rights(R_SPAWN))
 			return
@@ -830,52 +704,68 @@
 			var/newtype = GLOB.species_list[result]
 			admin_ticket_log("[key_name_admin(usr)] has modified the bodyparts of [src] to [result]")
 			set_species(newtype)
-	if(href_list[VV_HK_PURRBATION])
-		if(!check_rights(R_SPAWN))
-			return
-		if(!ishumanbasic(src))
-			to_chat(usr, "This can only be done to the basic human species at the moment.")
-			return
-		var/success = purrbation_toggle(src)
-		if(success)
-			to_chat(usr, "Put [src] on purrbation.")
-			log_admin("[key_name(usr)] has put [key_name(src)] on purrbation.")
-			var/msg = span_notice("[key_name_admin(usr)] has put [key_name(src)] on purrbation.")
-			message_admins(msg)
-			admin_ticket_log(src, msg)
 
-		else
-			to_chat(usr, "Removed [src] from purrbation.")
-			log_admin("[key_name(usr)] has removed [key_name(src)] from purrbation.")
-			var/msg = span_notice("[key_name_admin(usr)] has removed [key_name(src)] from purrbation.")
-			message_admins(msg)
-			admin_ticket_log(src, msg)
+/mob/living/carbon/human/MouseDrop_T(atom/dragged, mob/living/user)
+	if(pulling == dragged && stat == CONSCIOUS)
+		if(isliving(dragged))
+			if(user.grab_state && user.voremode)
+				if(ismob(user.pulling))
+					vore_attackby(dragged, user)
+					user.vore_attackby(user, dragged, src) // User, Pulled, Predator target (which can be user, pulling, or src)
+					return TRUE
+			//Pick them up. Pick. Them. Up.
+			if(ishuman(dragged) && ishuman(user))
+				var/mob/living/carbon/human/userhuman = user
+				var/mob/living/carbon/human/targethuman = dragged
+				if(targethuman.small_enough(userhuman) && user.grab_state)
+					if(targethuman.attempt_scoop(userhuman))
+						return TRUE
+			//If they dragged themselves and we're currently aggressively grabbing them try to piggyback (not on cmode)
+			if(user == dragged && can_piggyback(target))
+				if(cmode)
+					to_chat(dragged, span_warning("[src] won't let you on!"))
+					return FALSE
+				piggyback(dragged)
+				return TRUE
+			//If you dragged them to you and you're aggressively grabbing try to carry them
+			else if(user != dragged && can_be_firemanned(dragged))
+				var/obj/G = get_active_held_item()
+				if(G)
+					if(istype(G, /obj/item/grabbing))
+						fireman_carry(dragged)
+						return TRUE
+		else if(istype(dragged, /obj/item/bodypart/head/dullahan/))
+			var/obj/item/bodypart/head/dullahan/item_head = dragged
+			item_head.show_inv(user)
+	. = ..()
 
-/mob/living/carbon/human/MouseDrop_T(mob/living/target, mob/living/user)
-	if(user == target)
-		return FALSE
-	//normal vore check.
-	if(user.pulling == target && user.grab_state && user.voremode)
-		if(ismob(user.pulling))
-			user.vore_attack(user, target, src) // User, Pulled, Predator target (which can be user, pulling, or src)
-			return TRUE
-	if(pulling == target && stat == CONSCIOUS)
-		//If they dragged themselves and we're currently aggressively grabbing them try to piggyback
-		if(user == target && can_piggyback(target))
+/mob/living/carbon/human/RightMouseDrop_T(atom/dragged, mob/living/user)
+	var/atom/item_in_hand = user.get_active_held_item()
+	if(!item_in_hand && isliving(dragged))
+		var/mob/living/target = dragged
+		// If the target is not grabbed, we prompt them to ask if they want to be piggybacked
+		if(stat == CONSCIOUS && can_piggyback(target))
+			// if the user dragged themselves onto the person, prompt the person
+			if(user == target)
+				to_chat(user, span_notice("You request a piggyback ride from [src]..."))
+				var/response = tgui_alert(src, "[user.name] is requesting a piggyback ride.", "Piggyback Ride", list("Yes, let them on", "No"))
+				if(response == "No")
+					to_chat(user, span_warning("[src] has denied you a piggyback ride!"))
+					return TRUE
+			// if the person dragged the user onto themselves, prompt the user
+			else
+				to_chat(src, span_notice("You offer a piggyback ride to [target]..."))
+				var/response = tgui_alert(target, "[src.name] is offering to give you a piggyback ride.", "Piggyback Ride", list("Yes, get on", "No"))
+				if(response == "No")
+					to_chat(src, span_warning("[target] has denied your piggyback ride!"))
+					return TRUE
 			piggyback(target)
 			return TRUE
-		//If you dragged them to you and you're aggressively grabbing try to carry them
-		else if(user != target && can_be_firemanned(target))
-			var/obj/G = get_active_held_item()
-			if(G)
-				if(istype(G, /obj/item/grabbing))
-					fireman_carry(target)
-					return TRUE
-	. = ..()
+	return ..()
 
 //src is the user that will be carrying, target is the mob to be carried
 /mob/living/carbon/human/proc/can_piggyback(mob/living/carbon/target)
-	return (istype(target) && target.stat == CONSCIOUS)
+	return (istype(target) && target.stat == CONSCIOUS && !cmode && !target.cmode)
 
 /mob/living/carbon/human/proc/can_be_firemanned(mob/living/carbon/target)
 	return (ishuman(target) && !(target.mobility_flags & MOBILITY_STAND))
@@ -909,7 +799,13 @@
 				if(target.incapacitated(FALSE, TRUE) || incapacitated(FALSE, TRUE))
 					to_chat(target, span_warning("I can't piggyback ride [src]."))
 					return
-				buckle_mob(target, TRUE, TRUE, FALSE, 0, 0)
+				if(buckle_mob(target, TRUE, TRUE, FALSE, 0, 0) && HAS_TRAIT(src, TRAIT_MOUNTABLE))
+					var/datum/component/riding/human/riding_datum = LoadComponent(/datum/component/riding/human)
+					riding_datum.vehicle_move_delay = 4
+					if(target.mind)
+						var/riding_skill = target.get_skill_level(/datum/skill/misc/riding)
+						if(riding_skill)
+							riding_datum.vehicle_move_delay = max(1, 3 - (riding_skill * 0.2))
 	else
 		to_chat(target, span_warning("I can't piggyback ride [src]."))
 
@@ -1000,6 +896,86 @@
 		return FALSE
 	return ..()
 
+/// copies the physical cosmetic features of another human mob.
+/mob/living/carbon/human/proc/copy_physical_features(mob/living/carbon/human/target)
+	if(!istype(target))
+		return
+
+	icon = target.icon
+
+	copy_bodyparts(target)
+
+	target.dna.transfer_identity(src)
+
+	updateappearance(mutcolor_update = TRUE)
+
+	job = target.job // NOT assigned_role
+	faction = target.faction
+	deathsound = target.deathsound
+	gender = target.gender
+	real_name = target.real_name
+	voice_color = target.voice_color
+	voice_pitch = target.voice_pitch
+	detail_color = target.detail_color
+	skin_tone = target.skin_tone
+	lip_style = target.lip_style
+	lip_color = target.lip_color
+	age = target.age
+	underwear = target.underwear
+	shavelevel = target.shavelevel
+	socks = target.socks
+	has_stubble = target.has_stubble
+	headshot_link = target.headshot_link
+	flavortext = target.flavortext
+
+	var/obj/item/bodypart/head/target_head = target.get_bodypart(BODY_ZONE_HEAD)
+	if(!isnull(target_head))
+		var/obj/item/bodypart/head/user_head = get_bodypart(BODY_ZONE_HEAD)
+		user_head.bodypart_features = target_head.bodypart_features
+
+	regenerate_icons()
+
+
+/mob/living/carbon/human/proc/copy_bodyparts(mob/living/carbon/human/target)
+	var/mob/living/carbon/human/self = src
+	var/list/target_missing = target.get_missing_limbs()
+	var/list/my_missing = self.get_missing_limbs()
+
+	// Store references to bodyparts
+	var/list/original_parts = list()
+	var/list/target_parts = list()
+
+	var/list/full = list(
+		BODY_ZONE_HEAD,
+		BODY_ZONE_CHEST,
+		BODY_ZONE_R_ARM,
+		BODY_ZONE_L_ARM,
+		BODY_ZONE_R_LEG,
+		BODY_ZONE_L_LEG,
+	)
+
+	for(var/zone in full)
+		original_parts[zone] = self.get_bodypart(zone)
+		target_parts[zone] = target.get_bodypart(zone)
+
+	bodyparts = list()
+
+	// Rebuild bodyparts list with typepaths
+	for(var/zone_2 in full)
+		var/obj/item/bodypart/target_part = target_parts[zone_2]
+		var/obj/item/bodypart/my_part = original_parts[zone_2]
+
+		if(zone_2 in my_missing)
+			continue
+		else if(zone_2 in target_missing)
+			if(my_part)
+				bodyparts += my_part.type
+		else
+			if(target_part)
+				bodyparts += target_part.type
+
+	create_bodyparts()
+
 /mob/living/carbon/human/species
 	var/race = null
 
@@ -1007,171 +983,6 @@
 	. = ..()
 	if(race)
 		set_species(race)
-
-/mob/living/carbon/human/species/abductor
-	race = /datum/species/abductor
-
-/mob/living/carbon/human/species/android
-	race = /datum/species/android
-
-/mob/living/carbon/human/species/corporate
-	race = /datum/species/corporate
-
-/mob/living/carbon/human/species/dullahan
-	race = /datum/species/dullahan
-
-/mob/living/carbon/human/species/felinid
-	race = /datum/species/human/felinid
-
-/mob/living/carbon/human/species/fly
-	race = /datum/species/fly
-
-/mob/living/carbon/human/species/golem
-	race = /datum/species/golem
-
-/mob/living/carbon/human/species/golem/random
-	race = /datum/species/golem/random
-
-/mob/living/carbon/human/species/golem/adamantine
-	race = /datum/species/golem/adamantine
-
-/mob/living/carbon/human/species/golem/plasma
-	race = /datum/species/golem/plasma
-
-/mob/living/carbon/human/species/golem/diamond
-	race = /datum/species/golem/diamond
-
-/mob/living/carbon/human/species/golem/gold
-	race = /datum/species/golem/gold
-
-/mob/living/carbon/human/species/golem/silver
-	race = /datum/species/golem/silver
-
-/mob/living/carbon/human/species/golem/plasteel
-	race = /datum/species/golem/plasteel
-
-/mob/living/carbon/human/species/golem/titanium
-	race = /datum/species/golem/titanium
-
-/mob/living/carbon/human/species/golem/plastitanium
-	race = /datum/species/golem/plastitanium
-
-/mob/living/carbon/human/species/golem/alien_alloy
-	race = /datum/species/golem/alloy
-
-/mob/living/carbon/human/species/golem/wood
-	race = /datum/species/golem/wood
-
-/mob/living/carbon/human/species/golem/uranium
-	race = /datum/species/golem/uranium
-
-/mob/living/carbon/human/species/golem/sand
-	race = /datum/species/golem/sand
-
-/mob/living/carbon/human/species/golem/glass
-	race = /datum/species/golem/glass
-
-/mob/living/carbon/human/species/golem/bluespace
-	race = /datum/species/golem/bluespace
-
-/mob/living/carbon/human/species/golem/bananium
-	race = /datum/species/golem/bananium
-
-/mob/living/carbon/human/species/golem/blood_cult
-	race = /datum/species/golem/runic
-
-/mob/living/carbon/human/species/golem/cloth
-	race = /datum/species/golem/cloth
-
-/mob/living/carbon/human/species/golem/plastic
-	race = /datum/species/golem/plastic
-
-/mob/living/carbon/human/species/golem/bronze
-	race = /datum/species/golem/bronze
-
-/mob/living/carbon/human/species/golem/cardboard
-	race = /datum/species/golem/cardboard
-
-/mob/living/carbon/human/species/golem/leather
-	race = /datum/species/golem/leather
-
-/mob/living/carbon/human/species/golem/bone
-	race = /datum/species/golem/bone
-
-/mob/living/carbon/human/species/golem/durathread
-	race = /datum/species/golem/durathread
-
-/mob/living/carbon/human/species/golem/snow
-	race = /datum/species/golem/snow
-
-/mob/living/carbon/human/species/golem/capitalist
-	race = /datum/species/golem/capitalist
-
-/mob/living/carbon/human/species/golem/soviet
-	race = /datum/species/golem/soviet
-
-/mob/living/carbon/human/species/jelly
-	race = /datum/species/jelly
-
-/mob/living/carbon/human/species/jelly/slime
-	race = /datum/species/jelly/slime
-
-/mob/living/carbon/human/species/jelly/stargazer
-	race = /datum/species/jelly/stargazer
-
-/mob/living/carbon/human/species/jelly/luminescent
-	race = /datum/species/jelly/luminescent
-
-/mob/living/carbon/human/species/lizard
-	race = /datum/species/lizard
-
-/mob/living/carbon/human/species/ethereal
-	race = /datum/species/ethereal
-
-/mob/living/carbon/human/species/lizard/ashwalker
-	race = /datum/species/lizard/ashwalker
-
-/mob/living/carbon/human/species/moth
-	race = /datum/species/moth
-
-/mob/living/carbon/human/species/mush
-	race = /datum/species/mush
-
-/mob/living/carbon/human/species/plasma
-	race = /datum/species/plasmaman
-
-/mob/living/carbon/human/species/pod
-	race = /datum/species/pod
-
-/mob/living/carbon/human/species/shadow
-	race = /datum/species/shadow
-
-/mob/living/carbon/human/species/shadow/nightmare
-	race = /datum/species/shadow/nightmare
-
-//mob/living/carbon/human/species/skeleton
-//	race = /datum/species/skeleton
-
-/mob/living/carbon/human/species/snail
-	race = /datum/species/snail
-
-/mob/living/carbon/human/species/synth
-	race = /datum/species/synth
-
-/mob/living/carbon/human/species/synth/military
-	race = /datum/species/synth/military
-
-/mob/living/carbon/human/species/vampire
-	race = /datum/species/vampire
-
-/mob/living/carbon/human/species/zombie
-	race = /datum/species/zombie
-
-/mob/living/carbon/human/species/zombie/infectious
-	race = /datum/species/zombie/infectious
-
-/mob/living/carbon/human/species/zombie/krokodil_addict
-	race = /datum/species/krokodil_addict
 
 //Vrell - Moving this here to fix load order bugs
 /mob/living/carbon/human/has_penis()
@@ -1187,12 +998,6 @@
 	RETURN_TYPE(/obj/item/organ/breasts)
 	return getorganslot(ORGAN_SLOT_BREASTS)
 
-/mob/living/carbon/human/proc/has_belly()
-	return getorganslot(ORGAN_SLOT_BELLY)
-
-/mob/living/carbon/human/proc/has_butt()
-	return getorganslot(ORGAN_SLOT_BUTT)
-
 /mob/living/carbon/human/proc/is_fertile()
 	var/obj/item/organ/vagina/vagina = getorganslot(ORGAN_SLOT_VAGINA)
 	return vagina.fertility
@@ -1200,3 +1005,30 @@
 /mob/living/carbon/human/proc/is_virile()
 	var/obj/item/organ/testicles/testicles = getorganslot(ORGAN_SLOT_TESTICLES)
 	return testicles.virility
+
+/mob/living/carbon/human/update_mobility()
+	. = ..()
+	if(!(mobility_flags & MOBILITY_CANSTAND) && mouth?.spitoutmouth)
+		visible_message(span_warning("[src] spits out [mouth]."))
+		dropItemToGround(mouth, silent = FALSE)
+
+/*/mob/living/carbon/human/proc/update_heretic_commune()
+	if(HAS_TRAIT(src, TRAIT_COMMIE) || HAS_TRAIT(src, TRAIT_CABAL) || HAS_TRAIT(src, TRAIT_HORDE) || HAS_TRAIT(src, TRAIT_DEPRAVED))
+		verbs |= /mob/living/carbon/human/verb/commune
+		verbs |= /mob/living/carbon/human/verb/show_heretics
+		verbs |= /mob/living/carbon/human/verb/bad_omen
+	else
+		verbs -= /mob/living/carbon/human/verb/commune
+		verbs -= /mob/living/carbon/human/verb/show_heretics
+		verbs -= /mob/living/carbon/human/verb/bad_omen*/
+
+/mob/living/carbon/human/Topic(href, href_list)
+	..()
+
+/mob/living/carbon/human/do_attack_animation(atom/A, visual_effect_icon, obj/item/used_item, no_effect, item_animation_override, datum/intent/used_intent, simplified)
+	update_proj_parry_timer()
+	. = ..()
+
+///This is used to allow the thrown item "deflect". Minor and mostly just for aurafarming. Hooks into do_attack_animation because it's the most reliable access to a "valid" attack.
+/mob/living/carbon/human/proc/update_proj_parry_timer()
+	projectile_parry_timer = (world.time + PROJ_PARRY_TIMER)

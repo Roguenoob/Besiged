@@ -38,7 +38,6 @@
 #define STRONG    	/datum/mutation/human/strong
 #define FIRESWEAT	/datum/mutation/human/fire
 #define THERMAL		/datum/mutation/human/thermal
-#define ANTENNA		/datum/mutation/human/antenna
 #define PARANOIA	/datum/mutation/human/paranoia
 #define MINDREAD	/datum/mutation/human/mindreader
 #define INSULATED	/datum/mutation/human/insulated
@@ -99,6 +98,8 @@
 #define TR_KEEPSTUNS	(1<<9)
 #define TR_KEEPREAGENTS	(1<<10)
 
+#define TR_KEEPAI		(1<<11)
+
 
 #define CLONER_FRESH_CLONE "fresh"
 #define CLONER_MATURE_CLONE "mature"
@@ -147,11 +148,16 @@
 #define G_FEMALE 2
 #define G_PLURAL 3
 
-#define MANDATORY_FEATURE_LIST list("mcolor" = "FFF", "mcolor2" = "FFF", "mcolor3" = "FFF", "ethcolor" = "9c3030", "legs" = "Normal Legs")
+#define MANDATORY_FEATURE_LIST list("mcolor" = "FFF", "mcolor2" = "FFF", "mcolor3" = "FFF", "ethcolor" = "9c3030", "legs" = "Normal Legs", "body_size" = BODY_SIZE_NORMAL)
+
+#define BODY_SIZE_NORMAL 1.00
+#define BODY_SIZE_MAX 1.05
+#define BODY_SIZE_MIN 0.95
 
 #define HAIR_COLOR_LIST list("#8f5a00", "#593800", "#362200", "#4e422e", "#8c8271", "#bfb7ab", "#31302e", "#f0dc48")
 #define EYE_COLOR_LIST list("#865900", "#06b400", "#312f27", "#008e83", "#002d8e", "#c16c00")
 
+//Caustic Edit
 #define MIN_PENIS_SIZE 1
 #define MAX_PENIS_SIZE 5
 #define DEFAULT_PENIS_SIZE 2
@@ -165,7 +171,6 @@
 #define PENIS_TYPE_BARBED 7
 #define PENIS_TYPE_BARBED_KNOTTED 8
 #define PENIS_TYPE_TENTACLE 9
-#define PENIS_TYPE_THICK 10
 
 #define SHEATH_TYPE_NONE 0
 #define SHEATH_TYPE_NORMAL 1
@@ -181,13 +186,6 @@
 #define DEFAULT_TESTICLES_SIZE 2
 
 #define MIN_BREASTS_SIZE 0
-#define MAX_BREASTS_SIZE 16 //
+#define MAX_BREASTS_SIZE 16
 #define DEFAULT_BREASTS_SIZE 3
-
-#define DEFAULT_BELLY_SIZE 0
-#define MIN_BELLY_SIZE 0
-#define MAX_BELLY_SIZE 10
-
-#define DEFAULT_BUTT_SIZE 0
-#define MIN_BUTT_SIZE 0
-#define MAX_BUTT_SIZE 5
+//Caustic End

@@ -13,7 +13,7 @@
 		if(move_after(user,40, target = src)) //ROGTODO make this based on farming skill and speed
 			user.visible_message(span_notice("[user] shucks [src]."), \
 								span_notice("I shuck [src]."))
-			testing("1")
+
 			var/obj/item/G = new foodextracted(get_turf(src))
 			user.put_in_active_hand(G)
 			new /obj/item/natural/fibers(get_turf(src))
@@ -26,7 +26,7 @@
 		qdel(src)
 
 /obj/item/natural/chaff/attackby(obj/item/I, mob/living/user, params)
-	testing("attackb")
+
 	if(istype(I, /obj/item/rogueweapon/pitchfork))
 		if(user.used_intent.type == DUMP_INTENT)
 			var/obj/item/rogueweapon/pitchfork/W = I
@@ -46,7 +46,7 @@
 					return
 
 	if(istype(I, /obj/item/rogueweapon/mace/woodclub))//reused some commented out code
-		var/statboost = user.STASTR*3 + (user?.mind?.get_skill_level(/datum/skill/labor/farming)*5) //a person with no skill and 10 strength will thresh about a third of the stalks on average
+		var/statboost = user.STASTR*3 + (user?.get_skill_level(/datum/skill/labor/farming)*5) //a person with no skill and 10 strength will thresh about a third of the stalks on average
 		var/threshchance = clamp(statboost, 20, 100)
 		for(var/obj/item/natural/chaff/C in get_turf(src))
 			if(C == src)//so it doesnt delete itself and stop the loop
@@ -71,3 +71,8 @@
 	name = "oat stalks"
 	icon_state = "oatchaff"
 	foodextracted = /obj/item/reagent_containers/food/snacks/grown/oat
+
+/obj/item/natural/chaff/rice
+	name = "rice stalks"
+	icon_state = "ricechaff"
+	foodextracted = /obj/item/reagent_containers/food/snacks/grown/rice

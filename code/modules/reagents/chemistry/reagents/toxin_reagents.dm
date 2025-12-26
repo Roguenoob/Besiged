@@ -13,7 +13,7 @@
 
 /datum/reagent/toxin/on_mob_life(mob/living/carbon/M)
 	if(toxpwr)
-		M.adjustToxLoss(toxpwr*REM, 0)
+		M.adjustToxLoss(toxpwr  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	return ..()
 
 /datum/reagent/toxin/amatoxin
@@ -38,10 +38,6 @@
 		return  //No robots, AIs, aliens, Ians or other mobs should be affected by this.
 	if((method==VAPOR && prob(min(33, reac_volume))) || method==INGEST || method==PATCH || method==INJECT)
 		M.randmuti()
-		if(prob(98))
-			M.easy_randmut(NEGATIVE+MINOR_NEGATIVE)
-		else
-			M.easy_randmut(POSITIVE)
 		M.updateappearance()
 		M.domutcheck()
 	..()
@@ -60,34 +56,6 @@
 	taste_mult = 1.5
 	color = "#8228A0"
 	toxpwr = 3
-
-/datum/reagent/toxin/plasma/on_mob_life(mob/living/carbon/C)
-	if(holder.has_reagent(/datum/reagent/medicine/epinephrine))
-		holder.remove_reagent(/datum/reagent/medicine/epinephrine, 2*REM)
-	C.adjustPlasma(20)
-	return ..()
-
-/datum/reagent/toxin/plasma/on_temp_change()
-	if(holder.chem_temp < LIQUID_PLASMA_BP)
-		return
-	if(holder.my_atom)
-		var/atom/A = holder.my_atom
-		A.atmos_spawn_air("plasma=[volume];TEMP=[holder.chem_temp]")
-		holder.del_reagent(type)
-
-/datum/reagent/toxin/plasma/reaction_obj(obj/O, reac_volume)
-	if((!O) || (!reac_volume))
-		return 0
-	var/temp = holder ? holder.chem_temp : T20C
-	if(temp >= LIQUID_PLASMA_BP)
-		O.atmos_spawn_air("plasma=[reac_volume];TEMP=[temp]")
-
-/datum/reagent/toxin/plasma/reaction_turf(turf/open/T, reac_volume)
-	if(!istype(T))
-		return
-	var/temp = holder ? holder.chem_temp : T20C
-	if(temp >= LIQUID_PLASMA_BP)
-		T.atmos_spawn_air("plasma=[reac_volume];TEMP=[temp]")
 
 /datum/reagent/toxin/plasma/reaction_mob(mob/living/M, method=TOUCH, reac_volume)//Splashing people with plasma is stronger than fuel!
 	if(method == TOUCH || method == VAPOR)
@@ -126,10 +94,10 @@
 /datum/reagent/toxin/slimejelly/on_mob_life(mob/living/carbon/M)
 	if(prob(10))
 		to_chat(M, span_danger("My insides are burning!"))
-		M.adjustToxLoss(rand(20,60)*REM, 0)
+		M.adjustToxLoss(rand(20,60)  * REAGENTS_EFFECT_MULTIPLIER, 0)
 		. = 1
 	else if(prob(40))
-		M.heal_bodypart_damage(5*REM)
+		M.heal_bodypart_damage(5  * REAGENTS_EFFECT_MULTIPLIER)
 		. = 1
 	..()
 
@@ -172,7 +140,7 @@
 	..()
 
 /datum/reagent/toxin/zombiepowder/reaction_mob(mob/living/L, method=TOUCH, reac_volume)
-	L.adjustOxyLoss(0.5*REM, 0)
+	L.adjustOxyLoss(0.5  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	if(method == INGEST)
 		fakedeath_active = TRUE
 		L.fakedeath(type)
@@ -209,7 +177,7 @@
 	..()
 
 /datum/reagent/toxin/ghoulpowder/on_mob_life(mob/living/carbon/M)
-	M.adjustOxyLoss(1*REM, 0)
+	M.adjustOxyLoss(1  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	..()
 	. = 1
 
@@ -232,13 +200,10 @@
 	taste_mult = 1
 
 /datum/reagent/toxin/plantbgone/reaction_obj(obj/O, reac_volume)
-	if(istype(O, /obj/structure/alien/weeds))
-		var/obj/structure/alien/weeds/alien_weeds = O
-		alien_weeds.take_damage(rand(15,35), BRUTE, 0) // Kills alien weeds pretty fast
-	else if(istype(O, /obj/structure/glowshroom)) //even a small amount is enough to kill it
+	if(istype(O, /obj/structure/glowshroom)) //even a small amount is enough to kill it
 		qdel(O)
-	else if(istype(O, /obj/structure/spacevine))
-		var/obj/structure/spacevine/SV = O
+	else if(istype(O, /obj/structure/vine))
+		var/obj/structure/vine/SV = O
 		SV.on_chem_effect(src)
 
 /datum/reagent/toxin/plantbgone/reaction_mob(mob/living/M, method=TOUCH, reac_volume)
@@ -287,7 +252,7 @@
 
 /datum/reagent/toxin/spore_burning/on_mob_life(mob/living/carbon/M)
 	M.adjust_fire_stacks(2)
-	M.IgniteMob()
+	M.ignite_mob()
 	return ..()
 
 /datum/reagent/toxin/chloralhydrate
@@ -309,7 +274,7 @@
 			. = 1
 		if(51 to INFINITY)
 			M.Sleeping(40, 0)
-			M.adjustToxLoss((current_cycle - 50)*REM, 0)
+			M.adjustToxLoss((current_cycle - 50)  * REAGENTS_EFFECT_MULTIPLIER, 0)
 			. = 1
 	..()
 
@@ -329,7 +294,7 @@
 			M.Sleeping(40, 0)
 		if(51 to INFINITY)
 			M.Sleeping(40, 0)
-			M.adjustToxLoss((current_cycle - 50)*REM, 0)
+			M.adjustToxLoss((current_cycle - 50)  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	return ..()
 
 /datum/reagent/toxin/coffeepowder
@@ -359,32 +324,6 @@
 	M.silent = max(M.silent, 3)
 	..()
 
-/datum/reagent/toxin/staminatoxin
-	name = "Tirizene"
-	description = "A nonlethal poison that causes extreme fatigue and weakness in its victim."
-	silent_toxin = TRUE
-	color = "#6E2828"
-	data = 13
-	toxpwr = 0
-
-/datum/reagent/toxin/staminatoxin/on_mob_life(mob/living/carbon/M)
-	M.adjustStaminaLoss(REM * data, 0)
-	data = max(data - 1, 3)
-	..()
-	. = 1
-
-/datum/reagent/toxin/polonium
-	name = "Polonium"
-	description = "An extremely radioactive material in liquid form. Ingestion results in fatal irradiation."
-	reagent_state = LIQUID
-	color = "#787878"
-	metabolization_rate = 0.125 * REAGENTS_METABOLISM
-	toxpwr = 0
-
-/datum/reagent/toxin/polonium/on_mob_life(mob/living/carbon/M)
-	M.radiation += 4
-	..()
-
 /datum/reagent/toxin/histamine
 	name = "Histamine"
 	description = "Histamine's effects become more dangerous depending on the dosage amount. They range from mildly annoying to incredibly lethal."
@@ -408,14 +347,14 @@
 			if(4)
 				if(prob(75))
 					to_chat(M, span_danger("I scratch at an itch."))
-					M.adjustBruteLoss(2*REM, 0)
+					M.adjustBruteLoss(2  * REAGENTS_EFFECT_MULTIPLIER, 0)
 					. = 1
 	..()
 
 /datum/reagent/toxin/histamine/overdose_process(mob/living/M)
-	M.adjustOxyLoss(2*REM, 0)
-	M.adjustBruteLoss(2*REM, FALSE, FALSE, BODYPART_ORGANIC)
-	M.adjustToxLoss(2*REM, 0)
+	M.adjustOxyLoss(2  * REAGENTS_EFFECT_MULTIPLIER, 0)
+	M.adjustBruteLoss(2  * REAGENTS_EFFECT_MULTIPLIER, FALSE, FALSE, BODYPART_ORGANIC)
+	M.adjustToxLoss(2  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	..()
 	. = 1
 
@@ -445,7 +384,7 @@
 
 /datum/reagent/toxin/venom/on_mob_life(mob/living/carbon/M)
 	toxpwr = 0.2*volume
-//	M.adjustBruteLoss((0.3*volume)*REM, 0)
+//	M.adjustBruteLoss((0.3*volume)  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	. = 1
 //	if(prob(15))
 //		M.reagents.add_reagent(/datum/reagent/toxin/histamine, pick(5,10))
@@ -463,11 +402,9 @@
 	toxpwr = 0
 
 /datum/reagent/toxin/fentanyl/on_mob_life(mob/living/carbon/M)
-	M.adjustOrganLoss(ORGAN_SLOT_BRAIN, 3*REM, 150)
+	M.adjustOrganLoss(ORGAN_SLOT_BRAIN, 3  * REAGENTS_EFFECT_MULTIPLIER, 150)
 	if(M.toxloss <= 60)
-		M.adjustToxLoss(1*REM, 0)
-	if(current_cycle >= 4)
-		SEND_SIGNAL(M, COMSIG_ADD_MOOD_EVENT, "smacked out", /datum/mood_event/narcotic_heavy, name)
+		M.adjustToxLoss(1  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	if(current_cycle >= 18)
 		M.Sleeping(40, 0)
 	..()
@@ -482,21 +419,9 @@
 	toxpwr = 0
 
 /datum/reagent/toxin/cyanide/on_mob_life(mob/living/carbon/M)
-	testing("toxin OML")
+
 	M.add_nausea(20)
 	M.adjustToxLoss(3, 0)
-	return ..()
-
-/datum/reagent/toxin/killersice
-	name = "killersice"
-	description = "killersice"
-	reagent_state = LIQUID
-	color = "#FFFFFF"
-	metabolization_rate = 0.01
-	toxpwr = 0
-
-/datum/reagent/toxin/killersice/on_mob_life(mob/living/carbon/M)
-	M.adjustToxLoss(10, 0)
 	return ..()
 
 /datum/reagent/toxin/bad_food
@@ -524,15 +449,15 @@
 /datum/reagent/toxin/itching_powder/on_mob_life(mob/living/carbon/M)
 	if(prob(15))
 		to_chat(M, span_danger("I scratch at my head."))
-		M.adjustBruteLoss(0.2*REM, 0)
+		M.adjustBruteLoss(0.2  * REAGENTS_EFFECT_MULTIPLIER, 0)
 		. = 1
 	if(prob(15))
 		to_chat(M, span_danger("I scratch at my leg."))
-		M.adjustBruteLoss(0.2*REM, 0)
+		M.adjustBruteLoss(0.2  * REAGENTS_EFFECT_MULTIPLIER, 0)
 		. = 1
 	if(prob(15))
 		to_chat(M, span_danger("I scratch at my arm."))
-		M.adjustBruteLoss(0.2*REM, 0)
+		M.adjustBruteLoss(0.2  * REAGENTS_EFFECT_MULTIPLIER, 0)
 		. = 1
 	if(prob(3))
 		M.reagents.add_reagent(/datum/reagent/toxin/histamine,rand(1,3))
@@ -601,7 +526,7 @@
 /datum/reagent/toxin/sodium_thiopental/on_mob_life(mob/living/carbon/M)
 	if(current_cycle >= 10)
 		M.Sleeping(40, 0)
-	M.adjustStaminaLoss(10*REM, 0)
+	M.adjustStaminaLoss(10  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	..()
 	return TRUE
 
@@ -629,7 +554,7 @@
 	metabolization_rate = 0.5 * REAGENTS_METABOLISM
 
 /datum/reagent/toxin/amanitin/on_mob_delete(mob/living/M)
-	var/toxdamage = current_cycle*3*REM
+	var/toxdamage = current_cycle*3  * REAGENTS_EFFECT_MULTIPLIER
 	M.log_message("has taken [toxdamage] toxin damage from amanitin toxin", LOG_ATTACK)
 	M.adjustToxLoss(toxdamage)
 	..()
@@ -646,7 +571,7 @@
 
 /datum/reagent/toxin/lipolicide/on_mob_life(mob/living/carbon/M)
 	if(M.nutrition <= NUTRITION_LEVEL_STARVING)
-		M.adjustToxLoss(1*REM, 0)
+		M.adjustToxLoss(1  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	M.adjust_nutrition(-3) // making the chef more valuable, one meme trap at a time
 	M.overeatduration = 0
 	return ..()
@@ -686,7 +611,7 @@
 	if(current_cycle >=33 && prob(15))
 		C.spew_organ()
 		C.vomit(0, TRUE, TRUE, 4)
-		to_chat(C, span_danger("I feel something lumpy come up as you vomit."))
+		to_chat(C, span_danger("I feel something lumpy come up..."))
 
 /datum/reagent/toxin/curare
 	name = "Curare"
@@ -699,7 +624,7 @@
 /datum/reagent/toxin/curare/on_mob_life(mob/living/carbon/M)
 	if(current_cycle >= 11)
 		M.Paralyze(60, 0)
-	M.adjustOxyLoss(1*REM, 0)
+	M.adjustOxyLoss(1  * REAGENTS_EFFECT_MULTIPLIER, 0)
 	. = 1
 	..()
 
@@ -758,8 +683,6 @@
 
 /datum/reagent/toxin/anacea/on_mob_life(mob/living/carbon/M)
 	var/remove_amt = 5
-	if(holder.has_reagent(/datum/reagent/medicine/calomel) || holder.has_reagent(/datum/reagent/medicine/pen_acid))
-		remove_amt = 0.5
 	for(var/datum/reagent/medicine/R in M.reagents.reagent_list)
 		M.reagents.remove_reagent(R.type,remove_amt)
 	return ..()
@@ -842,7 +765,7 @@
 /datum/reagent/toxin/delayed/on_mob_life(mob/living/carbon/M)
 	if(current_cycle > delay)
 		holder.remove_reagent(type, actual_metaboliztion_rate * M.metabolism_efficiency)
-		M.adjustToxLoss(actual_toxpwr*REM, 0)
+		M.adjustToxLoss(actual_toxpwr  * REAGENTS_EFFECT_MULTIPLIER, 0)
 		if(prob(10))
 			M.Paralyze(20, 0)
 		. = 1
@@ -917,3 +840,5 @@
 		to_chat(M, span_notice("[tox_message]"))
 	. = 1
 	..()
+
+#undef LIQUID_PLASMA_BP

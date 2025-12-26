@@ -6,15 +6,23 @@
 	icon = 'icons/roguetown/items/surgery.dmi'
 	icon_state = "leech"
 	baitpenalty = 0
-	fishloot = list(/obj/item/reagent_containers/food/snacks/fish/carp = 5,
-					/obj/item/reagent_containers/food/snacks/fish/eel = 5,
-					/obj/item/reagent_containers/food/snacks/fish/angler = 1)
+	fishingMods=list(
+		"commonFishingMod" = 0.7,
+		"rareFishingMod" = 1.3,
+		"treasureFishingMod" = 1,
+		"trashFishingMod" = 1,
+		"dangerFishingMod" = 1.1,
+		"ceruleanFishingMod" = 0, // 1 on cerulean aril, 0 on everything else
+		"cheeseFishingMod" = 0 // Just for the funny gimmick of a chance for rats and rouses.
+	)
+
 	embedding = list(
 		"embed_chance" = 100,
 		"embedded_unsafe_removal_time" = 0,
 		"embedded_pain_chance" = 0,
 		"embedded_fall_chance" = 0,
 		"embedded_bloodloss"= 0,
+		"embedded_ignore_throwspeed_threshold" = TRUE,
 	)
 	/// Consistent AKA no lore
 	var/consistent = FALSE
@@ -25,13 +33,17 @@
 	/// How much blood we suck on on_embed_life()
 	var/blood_sucking = 2
 	/// How much toxin damage we heal on on_embed_life()
-	var/toxin_healing = 2
+	var/toxin_healing = -2
 	/// Amount of blood we have stored
 	var/blood_storage = 0
 	/// Maximum amount of blood we can store
 	var/blood_maximum = BLOOD_VOLUME_SURVIVE
 	// Who are we latching onto?
 	var/mob/living/host
+	/// Multiplier for extracted blood. Mainly used by Cheeles or equivalent.
+	var/blood_multiplier = 1
+	/// Whether we can be attached to mindless mobs.
+	var/mindless_attach = TRUE
 
 /obj/item/natural/worms/leech/Initialize()
 	. = ..()
@@ -39,6 +51,10 @@
 	leech_lore()
 	if(drainage)
 		START_PROCESSING(SSobj, src)
+
+/obj/item/natural/worms/leech/update_icon()
+	. = ..()
+	icon_state = initial(icon_state)
 
 /obj/item/natural/worms/leech/process()
 	if(!drainage && !is_embedded)
@@ -49,7 +65,9 @@
 		return FALSE
 	if(!host)
 		return FALSE
-	host.adjustToxLoss(-toxin_healing)
+	if(!giving && host.stat == DEAD)
+		return FALSE
+	host.adjustToxLoss(toxin_healing)
 	var/obj/item/bodypart/bp = loc
 	if(giving)
 		var/blood_given = min(BLOOD_VOLUME_MAXIMUM - host.blood_volume, blood_storage, blood_sucking)
@@ -70,6 +88,32 @@
 				bp.remove_embedded_object(src)
 			else
 				host.simple_remove_embedded_object(src)
+			return TRUE
+	return FALSE
+
+/obj/item/natural/worms/leech/on_embed_life(mob/living/user, obj/item/bodypart/bodypart)
+	if(!user)
+		return
+	user.adjustToxLoss(toxin_healing)
+	if(giving)
+		var/blood_given = min(BLOOD_VOLUME_MAXIMUM - user.blood_volume, blood_storage, blood_sucking)
+		user.blood_volume += blood_given
+		blood_storage = max(blood_storage - blood_given, 0)
+		if((blood_storage <= 0) || (user.blood_volume >= BLOOD_VOLUME_MAXIMUM))
+			if(bodypart)
+				bodypart.remove_embedded_object(src)
+			else
+				user.simple_remove_embedded_object(src)
+			return TRUE
+	else
+		var/blood_extracted = min(blood_maximum - blood_storage, user.blood_volume, blood_sucking)
+		user.blood_volume = max(user.blood_volume - blood_extracted, 0)
+		blood_storage += blood_extracted * blood_multiplier
+		if((blood_storage >= blood_maximum) || (user.blood_volume <= 0))
+			if(bodypart)
+				bodypart.remove_embedded_object(src)
+			else
+				user.simple_remove_embedded_object(src)
 			return TRUE
 	return FALSE
 
@@ -98,6 +142,12 @@
 
 /obj/item/natural/worms/leech/attack(mob/living/M, mob/user)
 	if(ishuman(M))
+		if(!giving && M.stat == DEAD)
+			to_chat(user, span_warning("They are deceased. Only running blood may be extracted."))
+			return
+		if(!giving && !M.mind && !mindless_attach)
+			to_chat(user, span_warning("They are mindless. The [src] won't attach."))
+			return
 		var/mob/living/carbon/human/H = M
 		var/obj/item/bodypart/affecting = H.get_bodypart(check_zone(user.zone_selected))
 		if(!affecting)
@@ -105,7 +155,7 @@
 		if(!get_location_accessible(H, check_zone(user.zone_selected)))
 			to_chat(user, span_warning("Something in the way."))
 			return
-		var/used_time = (70 - (user.mind.get_skill_level(/datum/skill/misc/medicine) * 10))/2
+		var/used_time = (70 - (user.get_skill_level(/datum/skill/misc/medicine) * 10))/2
 		if(!do_mob(user, H, used_time))
 			return
 		if(!H)
@@ -185,7 +235,7 @@
 				var/picked_desc = pickweight(possible_descs)
 				possible_descs -= picked_desc
 				descs += pickweight(possible_descs)
-	toxin_healing = max(round((MAX_LEECH_EVILNESS - evilness_rating)/MAX_LEECH_EVILNESS * 2 * initial(toxin_healing), 0.1), 1)
+	toxin_healing = min(round((MAX_LEECH_EVILNESS - evilness_rating)/MAX_LEECH_EVILNESS * 2 * initial(toxin_healing), 0.1), -1)
 	blood_sucking = max(round(evilness_rating/MAX_LEECH_EVILNESS * 2 * initial(blood_sucking), 0.1), 1)
 	if(evilness_rating < 10)
 		color = pickweight(all_colors)
@@ -203,9 +253,11 @@
 	consistent = TRUE
 	drainage = 0
 	blood_sucking = 5
-	toxin_healing = 2
-	blood_storage = BLOOD_VOLUME_SURVIVE
-	blood_maximum = BLOOD_VOLUME_BAD
+	toxin_healing = -2
+	blood_multiplier = 3
+	blood_storage = BLOOD_VOLUME_BAD
+	blood_maximum = BLOOD_VOLUME_NORMAL
+	mindless_attach = FALSE
 
 /obj/item/natural/worms/leech/cheele/attack_self(mob/user)
 	. = ..()
@@ -218,3 +270,29 @@
 							span_notice("I squeeze [src]. It will now extract blood."))
 
 #undef MAX_LEECH_EVILNESS
+
+/obj/item/natural/worms/leech/attack_right(mob/user)
+	return
+
+/obj/item/natural/worms/leech/abyssoid
+	name = "abyssoid leech"
+	desc = "A holy leech sent by Abyssor himself."
+	icon_state = "leech"
+	drainage = 0
+	blood_sucking = 0
+	embedding = list(
+		"embed_chance" = 100,
+		"embedded_unsafe_removal_time" = 0,
+		"embedded_pain_chance" = 0,
+		"embedded_fall_chance" = 0,
+		"embedded_bloodloss"= 0,
+	)
+
+/obj/item/natural/worms/leech/abyssoid/on_embed_life(mob/living/user, obj/item/bodypart/bodypart)
+	. = ..()
+	if(!user)
+		return
+	if(iscarbon(user))
+		var/mob/living/carbon/V = user
+		if(prob(3))
+			V.say(pick("PRAISE ABYSSOR!", "REMEMBER ABYSSOR!", "ABYSSOR LIVES!", "GLORY TO ABYSSOR!", "ABYSSOR IS COMING!"))

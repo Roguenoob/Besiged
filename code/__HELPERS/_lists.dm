@@ -11,44 +11,108 @@
 
 #define LAZYINITLIST(L) if (!L) L = list()
 #define UNSETEMPTY(L) if (L && !length(L)) L = null
+#define ASSOC_UNSETEMPTY(L, K) if (!length(L[K])) L -= K;
 #define LAZYREMOVE(L, I) if(L) { L -= I; if(!length(L)) { L = list(); } }
 #define LAZYADD(L, I) if(!L) { L = list(); } L += I;
+///This is used to add onto lazy assoc list when the value you're adding is a /list/. This one has extra safety over lazyaddassoc because the value could be null (and thus cant be used to += objects)
+///Accesses an associative list, returns null if nothing is found
+#define LAZYACCESSASSOC(L, I, K) L ? L[I] ? L[I][K] ? L[I][K] : null : null : null
+#define LAZYADDASSOCLIST(L, K, V) if(!L) { L = list(); } L[K] += list(V);
+
+///Adds to the item K the value V, if the list is null it will initialize it
+#define LAZYADDASSOC(L, K, V) if(!L) { L = list(); } L[K] += list(V);
+
+///Removes the value V from the item K, if the item K is empty will remove it from the list, if the list is empty will set the list to null
+#define LAZYREMOVEASSOC(L, K, V) if(L) { if(L[K]) { L[K] -= V; if(!length(L[K])) L -= K; } if(!length(L)) L = null; }
+
 #define LAZYOR(L, I) if(!L) { L = list(); } L |= I;
 #define LAZYFIND(L, V) L ? L.Find(V) : 0
+#define LAZYISIN(L, V) L ? (V in L) : FALSE
 #define LAZYACCESS(L, I) (L ? (isnum(I) ? (I > 0 && I <= length(L) ? L[I] : null) : L[I]) : null)
 #define LAZYSET(L, K, V) if(!L) { L = list(); } L[K] = V;
 #define LAZYLEN(L) length(L)
 #define LAZYCLEARLIST(L) if(L) L.Cut()
+#define LAZYNULL(L) L = null
 #define SANITIZE_LIST(L) ( islist(L) ? L : list() )
 #define reverseList(L) reverseRange(L.Copy())
 
-// binary search sorted insert
-// IN: Object to be inserted
-// LIST: List to insert object into
-// TYPECONT: The typepath of the contents of the list
-// COMPARE: The variable on the objects to compare
-#define BINARY_INSERT(IN, LIST, TYPECONT, COMPARE) \
-	var/__BIN_CTTL = length(LIST);\
-	if(!__BIN_CTTL) {\
-		LIST += IN;\
-	} else {\
-		var/__BIN_LEFT = 1;\
-		var/__BIN_RIGHT = __BIN_CTTL;\
-		var/__BIN_MID = (__BIN_LEFT + __BIN_RIGHT) >> 1;\
-		var/##TYPECONT/__BIN_ITEM;\
-		while(__BIN_LEFT < __BIN_RIGHT) {\
-			__BIN_ITEM = LIST[__BIN_MID];\
-			if(__BIN_ITEM.##COMPARE <= IN.##COMPARE) {\
-				__BIN_LEFT = __BIN_MID + 1;\
-			} else {\
-				__BIN_RIGHT = __BIN_MID;\
+/// Passed into BINARY_INSERT to compare keys
+#define COMPARE_KEY __BIN_LIST[__BIN_MID]
+/// Passed into BINARY_INSERT to compare values
+#define COMPARE_VALUE __BIN_LIST[__BIN_LIST[__BIN_MID]]
+
+/****
+	* Binary search sorted insert
+	* INPUT: Object to be inserted
+	* LIST: List to insert object into
+	* TYPECONT: The typepath of the contents of the list
+	* COMPARE: The object to compare against, usualy the same as INPUT
+	* COMPARISON: The variable on the objects to compare
+	* COMPTYPE: How should the values be compared? Either COMPARE_KEY or COMPARE_VALUE.
+	*/
+#define BINARY_INSERT(INPUT, LIST, TYPECONT, COMPARE, COMPARISON, COMPTYPE) \
+	do {\
+		var/list/__BIN_LIST = LIST;\
+		var/__BIN_CTTL = length(__BIN_LIST);\
+		if(!__BIN_CTTL) {\
+			__BIN_LIST += INPUT;\
+		} else {\
+			var/__BIN_LEFT = 1;\
+			var/__BIN_RIGHT = __BIN_CTTL;\
+			var/__BIN_MID = (__BIN_LEFT + __BIN_RIGHT) >> 1;\
+			var ##TYPECONT/__BIN_ITEM;\
+			while(__BIN_LEFT < __BIN_RIGHT) {\
+				__BIN_ITEM = COMPTYPE;\
+				if(__BIN_ITEM.##COMPARISON <= COMPARE.##COMPARISON) {\
+					__BIN_LEFT = __BIN_MID + 1;\
+				} else {\
+					__BIN_RIGHT = __BIN_MID;\
+				};\
+				__BIN_MID = (__BIN_LEFT + __BIN_RIGHT) >> 1;\
 			};\
-			__BIN_MID = (__BIN_LEFT + __BIN_RIGHT) >> 1;\
+			__BIN_ITEM = COMPTYPE;\
+			__BIN_MID = __BIN_ITEM.##COMPARISON > COMPARE.##COMPARISON ? __BIN_MID : __BIN_MID + 1;\
+			__BIN_LIST.Insert(__BIN_MID, INPUT);\
 		};\
-		__BIN_ITEM = LIST[__BIN_MID];\
-		__BIN_MID = __BIN_ITEM.##COMPARE > IN.##COMPARE ? __BIN_MID : __BIN_MID + 1;\
-		LIST.Insert(__BIN_MID, IN);\
-	}
+	} while(FALSE)
+
+#define SORT_FIRST_INDEX(list) (list[1])
+#define SORT_COMPARE_DIRECTLY(thing) (thing)
+#define SORT_VAR_NO_TYPE(varname) var/varname
+/****
+	* Even more custom binary search sorted insert, using defines instead of vars
+	* INPUT: Item to be inserted
+	* LIST: List to insert INPUT into
+	* TYPECONT: A define setting the var to the typepath of the contents of the list
+	* COMPARE: The item to compare against, usualy the same as INPUT
+	* COMPARISON: A define that takes an item to compare as input, and returns their comparable value
+	* COMPTYPE: How should the list be compared? Either COMPARE_KEY or COMPARE_VALUE.
+	*/
+#define BINARY_INSERT_DEFINE(INPUT, LIST, TYPECONT, COMPARE, COMPARISON, COMPTYPE) \
+	do {\
+		var/list/__BIN_LIST = LIST;\
+		var/__BIN_CTTL = length(__BIN_LIST);\
+		if(!__BIN_CTTL) {\
+			__BIN_LIST += INPUT;\
+		} else {\
+			var/__BIN_LEFT = 1;\
+			var/__BIN_RIGHT = __BIN_CTTL;\
+			var/__BIN_MID = (__BIN_LEFT + __BIN_RIGHT) >> 1;\
+			##TYPECONT(__BIN_ITEM);\
+			while(__BIN_LEFT < __BIN_RIGHT) {\
+				__BIN_ITEM = COMPTYPE;\
+				if(##COMPARISON(__BIN_ITEM) <= ##COMPARISON(COMPARE)) {\
+					__BIN_LEFT = __BIN_MID + 1;\
+				} else {\
+					__BIN_RIGHT = __BIN_MID;\
+				};\
+				__BIN_MID = (__BIN_LEFT + __BIN_RIGHT) >> 1;\
+			};\
+			__BIN_ITEM = COMPTYPE;\
+			__BIN_MID = ##COMPARISON(__BIN_ITEM) > ##COMPARISON(COMPARE) ? __BIN_MID : __BIN_MID + 1;\
+			__BIN_LIST.Insert(__BIN_MID, INPUT);\
+		};\
+	} while(FALSE)
 
 //Returns a list in plain english as a string
 /proc/english_list(list/input, nothing_text = "nothing", and_text = " and ", comma_text = ", ", final_comma_text = "" )
@@ -221,6 +285,25 @@
 		result = first ^ second
 	return result
 
+/**
+ * Given a list, return a copy where values without defined weights are given weight 1.
+ * For example, fill_with_ones(list(A, B=2, C)) = list(A=1, B=2, C=1)
+ * Useful for weighted random choices (loot tables, syllables in languages, etc.)
+ */
+/proc/fill_with_ones(list/list_to_pad)
+	if (!islist(list_to_pad))
+		return list_to_pad
+
+	var/list/final_list = list()
+
+	for (var/key in list_to_pad)
+		if (list_to_pad[key])
+			final_list[key] = list_to_pad[key]
+		else
+			final_list[key] = 1
+
+	return final_list
+
 //Picks a random element from a list based on a weighting system:
 //1. Adds up the total of weights for each element
 //2. Gets a number between 1 and that total
@@ -265,6 +348,9 @@
 		var/picked = rand(1,L.len)
 		. = L[picked]
 		L.Cut(picked,picked+1)			//Cut is far more efficient that Remove()
+
+/// Fetch a random value from an associated list.
+#define pick_assoc(L) L[pick(L)]
 
 //Returns the top(last) element from the list and removes it from the list (typical stack function)
 /proc/pop(list/L)
@@ -350,6 +436,10 @@
 //any value in a list
 /proc/sortList(list/L, cmp=/proc/cmp_text_asc)
 	return sortTim(L.Copy(), cmp)
+
+///sort any value in a list
+/proc/sort_list(list/list_to_sort, cmp=/proc/cmp_text_asc)
+	return sortTim(list_to_sort.Copy(), cmp)
 
 //uses sortList() but uses the var's name specifically. This should probably be using mergeAtom() instead
 /proc/sortNames(list/L, order=1)
@@ -567,6 +657,12 @@
 		else
 			L1[key] = other_value
 
+/proc/counterlist_ceiling(list/L)
+	var/list/out = list()
+	for(var/key in L)
+		out[key] = ceil(L[key])
+	. = out
+
 /proc/assoc_list_strip_value(list/input)
 	var/list/ret = list()
 	for(var/key in input)
@@ -585,3 +681,141 @@
 			return FALSE
 
 	return TRUE
+
+//Scales a range (i.e 1,100) and picks an item from the list based on your passed value
+//i.e in a list with length 4, a 25 in the 1-100 range will give you the 2nd item
+//This assumes your ranges start with 1, I am not good at math and can't do linear scaling
+/proc/scale_range_pick(min,max,value,list/L)
+	if(!length(L))
+		return null
+	var/index = 1 + (value * (length(L) - 1)) / (max - min)
+	if(index > length(L))
+		index = length(L)
+	return L[index]
+
+GLOBAL_LIST_EMPTY(string_lists)
+
+/**
+ * Caches lists with non-numeric stringify-able values (text or typepath).
+ */
+/proc/string_list(list/values)
+	var/string_id = values.Join("-")
+
+	. = GLOB.string_lists[string_id]
+
+	if(.)
+		return
+
+	return GLOB.string_lists[string_id] = values
+
+// Generic listoflist safe add and removal macros:
+///If value is a list, wrap it in a list so it can be used with list add/remove operations
+#define LIST_VALUE_WRAP_LISTS(value) (islist(value) ? list(value) : value)
+///Add an untyped item to a list, taking care to handle list items by wrapping them in a list to remove the footgun
+#define UNTYPED_LIST_ADD(list, item) (list += LIST_VALUE_WRAP_LISTS(item))
+///Remove an untyped item to a list, taking care to handle list items by wrapping them in a list to remove the footgun
+#define UNTYPED_LIST_REMOVE(list, item) (list -= LIST_VALUE_WRAP_LISTS(item))
+
+/// A version of deep_copy_list that actually supports associative list nesting: list(list(list("a" = "b"))) will actually copy correctly.
+/proc/deep_copy_list_alt(list/inserted_list)
+	if(!islist(inserted_list))
+		return inserted_list
+	var/copied_list = inserted_list.Copy()
+	. = copied_list
+	for(var/key_or_value in inserted_list)
+		if(isnum(key_or_value) || !inserted_list[key_or_value])
+			continue
+		var/value = inserted_list[key_or_value]
+		var/new_value = value
+		if(islist(value))
+			new_value = deep_copy_list_alt(value)
+		copied_list[key_or_value] = new_value
+
+/**
+ * Removes any null entries from the list
+ * Returns TRUE if the list had nulls, FALSE otherwise
+**/
+/proc/list_clear_nulls(list/list_to_clear)
+	return (list_to_clear.RemoveAll(null) > 0)
+
+// Insert an object A into a sorted list using cmp_proc (/code/_helpers/cmp.dm) for comparison.
+#define ADD_SORTED(list, A, cmp_proc) if(!list.len) {list.Add(A)} else {list.Insert(FindElementIndex(A, list, cmp_proc), A)}
+
+// Return the index using dichotomic search
+/proc/FindElementIndex(atom/A, list/L, cmp)
+	var/i = 1
+	var/j = L.len
+	var/mid
+
+	while(i < j)
+		mid = round((i+j)/2)
+
+		if(call(cmp)(L[mid],A) < 0)
+			i = mid + 1
+		else
+			j = mid
+
+	if(i == 1 || i ==  L.len) // Edge cases
+		return (call(cmp)(L[i],A) > 0) ? i : i+1
+	else
+		return i
+/// Runtimes if the passed in list is not sorted
+/proc/assert_sorted(list/list, name, cmp = /proc/cmp_numeric_asc)
+	var/last_value = list[1]
+
+	for (var/index in 2 to list.len)
+		var/value = list[index]
+
+		if (call(cmp)(value, last_value) < 0)
+			stack_trace("[name] is not sorted. value at [index] ([value]) is in the wrong place compared to the previous value of [last_value] (when compared to by [cmp])")
+
+		last_value = value
+
+/**
+ * Returns a newline-separated list that counts equal-ish items, outputting count and item names, optionally with icons.
+ */
+/proc/counting_english_list(var/list/input, output_icons = TRUE, nothing_text = "nothing", line_prefix = "\t", first_item_prefix = "\n", last_item_suffix = "\n", and_text = "\n", comma_text = "\n", final_comma_text = "")
+	// Counted input items.
+	var/list/counts = list()
+	// Actual objects for later reference (for icons and formatting).
+	var/list/items = list()
+	// Count items.
+	for(var/item in input)
+		// Index items by name; usually works fairly well for loose equality.
+		var/name = "[item]"
+		if(name in counts)
+			counts[name]++
+		else
+			counts[name] = 1
+			items.Add(item)
+
+	// Assemble the output list.
+	var/list/out = list()
+	var/i = 0
+	for(var/item in items)
+		var/name = "[item]"
+		var/count = counts[name]
+		var/item_str = line_prefix
+
+		if(count > 1)
+			item_str += "[count]x&nbsp;"
+
+		// Atoms use special string conversion rules.
+		if(isatom(item))
+			// atoms/items/objects can be pretty and whatnot.
+			var/atom/A = item
+			// Mobs tend to have unusable icons.
+			if(output_icons && isicon(A.icon) && !ismob(A))
+				item_str += "[icon2html(A, viewers(get_turf(A)))]&nbsp;"
+			item_str += name
+
+		if(i == 0)
+			item_str = first_item_prefix + item_str
+		if(i == items.len - 1)
+			item_str = item_str + last_item_suffix
+
+		out.Add(item_str)
+		i++
+
+	// Finally return the list using regular english_list builder.
+	return english_list(out, nothing_text, and_text, comma_text, final_comma_text)

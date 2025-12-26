@@ -28,6 +28,9 @@
 		for(var/X in GLOB.mercenary_positions)
 			peopleiknow += X
 			peopleknowme += X
+		for(var/X in GLOB.inquisition_positions)
+			peopleiknow += X
+			peopleknowme += X
 
 /datum/outfit/job/roguetown
 	uniform = null
@@ -36,14 +39,14 @@
 	belt = null
 	back = null
 	shoes = null
+	saiga_shoes = /obj/item/clothing/shoes/roguetown/horseshoes
 	box = null
-	backpack = null
-	satchel  = null
-	duffelbag = null
 	/// List of patrons we are allowed to use
 	var/list/allowed_patrons
 	/// Default patron in case the patron is not allowed
 	var/datum/patron/default_patron
+	/// This is our bitflag for storyteller rolling.
+	var/job_bitflag = NONE
 	/// Can select equipment after you spawn in.
 	var/has_loadout = FALSE
 
@@ -74,23 +77,28 @@
 		if(H.dna)
 			if(H.dna.species)
 				if(H.dna.species.name in list("Elf", "Half-Elf"))
-					H.mind.adjust_skillrank(/datum/skill/misc/reading, 1, TRUE)
+					H.adjust_skillrank(/datum/skill/misc/reading, 1, TRUE)
+				if(H.dna.species.name in list("Metal Construct"))
+					H.adjust_skillrank(/datum/skill/craft/engineering, 2, TRUE)
 	H.update_body()
 
 /datum/outfit/job/roguetown/post_equip(mob/living/carbon/human/H, visualsOnly = FALSE)
 	. = ..()
 	if(H.mind)
 		if(H.ckey)
+			H.mind?.job_bitflag = job_bitflag
 			if(check_crownlist(H.ckey))
 				H.mind.special_items["Champion Circlet"] = /obj/item/clothing/head/roguetown/crown/sparrowcrown
 			give_special_items(H)
+		// Ensure Wretches are granted their antagonist datum at post-equip
+		if(H.mind.assigned_role == "Wretch" && !H.mind.has_antag_datum(/datum/antagonist/wretch))
+			H.mind.add_antag_datum(/datum/antagonist/wretch)
 	for(var/list_key in SStriumphs.post_equip_calls)
 		var/datum/triumph_buy/thing = SStriumphs.post_equip_calls[list_key]
 		thing.on_activate(H)
-		if(has_loadout && H.mind)
-			addtimer(CALLBACK(src, PROC_REF(choose_loadout), H), 50)
-
-
+	if(has_loadout && H.mind)
+		addtimer(CALLBACK(src, PROC_REF(choose_loadout), H), 50)
+	return
 
 /datum/outfit/job/roguetown/proc/choose_loadout(mob/living/carbon/human/H)
 	if(!has_loadout)

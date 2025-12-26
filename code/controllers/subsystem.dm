@@ -38,6 +38,8 @@
 
 	var/processing_flag = PROCESSING_DEFAULT
 
+	var/lazy_load = TRUE
+
 //Do not override
 ///datum/controller/subsystem/New()
 
@@ -46,6 +48,9 @@
 // Prefer to use Initialize if possible
 /datum/controller/subsystem/proc/PreInit()
 	return
+
+/// Called after the config has been loaded or reloaded.
+/datum/controller/subsystem/proc/OnConfigLoad()
 
 //This is used so the mc knows when the subsystem sleeps. do not override.
 /datum/controller/subsystem/proc/ignite(resumed = 0)
@@ -118,6 +123,7 @@
 		Master.queue_priority_count += SS_priority
 
 	queue_next = queue_node
+	
 	if (!queue_node)//we stopped at the end, add to tail
 		queue_prev = Master.queue_tail
 		if (Master.queue_tail)
@@ -164,7 +170,7 @@
 	initialized = TRUE
 	var/time = (REALTIMEOFDAY - start_timeofday) / 10
 	var/msg = "Initialized [name] subsystem within [time] second[time == 1 ? "" : "s"]!"
-	#ifdef TESTING
+	#ifdef LOCALTEST
 	to_chat(world, span_boldannounce("[msg]"))
 	#endif
 	log_world(msg)

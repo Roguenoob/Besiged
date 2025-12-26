@@ -10,6 +10,8 @@
 	var/paths = subtypesof(/datum/reagent)
 	GLOB.chemical_reagents_list = list()
 
+	
+
 	for(var/path in paths)
 		var/datum/reagent/D = new path()
 		GLOB.chemical_reagents_list[path] = D
@@ -49,13 +51,13 @@
 
 /datum/reagents
 	var/list/datum/reagent/reagent_list = new/list()
+	var/list/datum/reagent/addiction_list = new/list()
+	var/atom/my_atom = null
 	var/total_volume = 0
 	var/maximum_volume = 100
-	var/atom/my_atom = null
 	var/chem_temp = 150
 	var/last_tick = 1
 	var/addiction_tick = 1
-	var/list/datum/reagent/addiction_list = new/list()
 	var/flags
 
 /datum/reagents/New(maximum=100, new_flags=0)
@@ -70,16 +72,16 @@
 	flags = new_flags
 
 /datum/reagents/Destroy()
-	. = ..()
-	var/list/cached_reagents = reagent_list
-	for(var/reagent in cached_reagents)
-		var/datum/reagent/R = reagent
-		qdel(R)
-	cached_reagents.Cut()
-	cached_reagents = null
+	for(var/datum/reagent/reagent as anything in reagent_list)
+		qdel(reagent)
+	for(var/datum/reagent/reagent as anything in addiction_list)
+		qdel(reagent)
+	reagent_list = null
+	addiction_list = null
 	if(my_atom && my_atom.reagents == src)
 		my_atom.reagents = null
 	my_atom = null
+	return ..()
 
 // Used in attack logs for reagents in pills and such
 // external list is list of reagent types = amounts
@@ -102,8 +104,6 @@
 	var/list/cached_reagents = reagent_list
 	var/total_transfered = 0
 	var/current_list_element = 1
-
-	testing("removeany called")
 
 	current_list_element = rand(1, cached_reagents.len)
 
@@ -193,8 +193,6 @@
 			return
 		R = target.reagents
 		target_atom = target
-
-	testing("trans to [target_atom]")
 
 	amount = min(min(amount, src.total_volume), R.maximum_volume-R.total_volume)
 	var/trans_data = null
@@ -286,8 +284,6 @@
 	if(amount < 0)
 		return
 
-	testing("transidto")
-
 	var/datum/reagents/R = target.reagents
 	if(src.get_reagent_amount(reagent)<amount)
 		amount = src.get_reagent_amount(reagent)
@@ -333,7 +329,7 @@
 				if(can_overdose)
 					if(R.overdose_threshold)
 						if(R.volume >= R.overdose_threshold && !R.overdosed)
-							R.overdosed = TRUE
+							R.overdosed = 1
 							need_mob_update += R.overdose_start(C)
 							log_game("[key_name(C)] has started overdosing on [R.name] at [R.volume] units.")
 					if(R.addiction_threshold)
@@ -368,8 +364,6 @@
 							need_mob_update += R.addiction_act_stage4(C)
 						if(40 to INFINITY)
 							remove_addiction(R)
-						else
-							SEND_SIGNAL(C, COMSIG_CLEAR_MOOD_EVENT, "[R.type]_overdose")
 		addiction_tick++
 	if(C && need_mob_update) //some of the metabolized reagents had effects on the mob that requires some updates.
 		C.updatehealth()
@@ -378,8 +372,7 @@
 	update_total()
 
 /datum/reagents/proc/remove_addiction(datum/reagent/R)
-	to_chat(my_atom, span_notice("I feel like you've gotten over your need for [R.name]."))
-	SEND_SIGNAL(my_atom, COMSIG_CLEAR_MOOD_EVENT, "[R.type]_overdose")
+	to_chat(my_atom, "<span class='notice'>I feel like you've gotten over your need for [R.name].</span>")
 	addiction_list.Remove(R)
 	qdel(R)
 
@@ -463,11 +456,6 @@
 					if(!C.required_other)
 						matching_other = 1
 
-					else if(istype(cached_my_atom, /obj/item/slime_extract))
-						var/obj/item/slime_extract/M = cached_my_atom
-
-						if(M.Uses > 0) // added a limit to slime cores -- Muskets requested this
-							matching_other = 1
 				else
 					if(!C.required_container)
 						matching_container = 1
@@ -514,16 +502,7 @@
 
 					if(selected_reaction.mix_message)
 						for(var/mob/M in seen)
-							to_chat(M, span_notice("[iconhtml] [selected_reaction.mix_message]"))
-
-				if(istype(cached_my_atom, /obj/item/slime_extract))
-					var/obj/item/slime_extract/ME2 = my_atom
-					ME2.Uses--
-					if(ME2.Uses <= 0) // give the notification that the slime core is dead
-						for(var/mob/M in seen)
-							to_chat(M, span_notice("[iconhtml] \The [my_atom]'s power is consumed in the reaction."))
-							ME2.name = "used slime extract"
-							ME2.desc = ""
+							to_chat(M, "<span class='notice'>[iconhtml] [selected_reaction.mix_message]</span>")
 
 			my_atom?.on_reagent_change(REACT_REAGENTS)
 			selected_reaction.on_reaction(src, multiplier)
@@ -577,7 +556,6 @@
 		var/datum/reagent/R = reagent
 		del_reagent(R.type)
 	if(my_atom)
-		testing("[src]  clear reagents [my_atom]")
 		my_atom.on_reagent_change(CLEAR_REAGENTS)
 	return 0
 
@@ -834,23 +812,58 @@
 		return current_reagent.data
 
 	var/list/trans_data = current_reagent.data.Copy()
-
-	// We do this so that introducing a virus to a blood sample
-	// doesn't automagically infect all other blood samples from
-	// the same donor.
-	//
-	// Technically we should probably copy all data lists, but
-	// that could possibly eat up a lot of memory needlessly
-	// if most data lists are read-only.
-	if(trans_data["viruses"])
-		var/list/v = trans_data["viruses"]
-		trans_data["viruses"] = v.Copy()
-
 	return trans_data
 
 /datum/reagents/proc/get_reagent(type)
 	var/list/cached_reagents = reagent_list
 	. = locate(type) in cached_reagents
+
+/datum/reagents/proc/generate_scent_message(minimum_percent=15)
+	// the lower the minimum percent, the more sensitive the message is.
+	var/list/out = list()
+	var/list/scents = list() //descriptor = strength
+	if(minimum_percent <= 100)
+		for(var/datum/reagent/R in reagent_list)
+			if(!R.taste_mult)
+				continue
+			if(istype(R, /datum/reagent/consumable/nutriment))
+				var/list/scent_data = R.data
+				for(var/scent in scent_data)
+					var/ratio = scent_data[scent]
+					var/amount = ratio * R.taste_mult * R.volume
+					if(scent in scents)
+						scents[scent] += amount
+					else
+						scents[scent] = amount
+			else
+				var/scent_desc
+				if (R.scent_description != "")
+					scent_desc = R.scent_description
+				else
+					scent_desc = R.taste_description
+				var/scent_amount = R.volume * R.taste_mult
+				if(scent_desc in scents)
+					scents[scent_desc] += scent_amount
+				else
+					scents[scent_desc] = scent_amount
+		//deal with percentages
+		// TODO it would be great if we could sort these from strong to weak
+		var/total_scent = counterlist_sum(scents)
+		if(total_scent > 0)
+			for(var/scent_desc in scents)
+				var/percent = scents[scent_desc]/total_scent * 100
+				if(percent < minimum_percent)
+					continue
+				var/intensity_desc = ""
+				if(percent > minimum_percent * 2 || percent == 100)
+					intensity_desc = ""
+				else if(percent > minimum_percent * 3)
+					intensity_desc = ""
+				if(intensity_desc != "")
+					out += "[intensity_desc] [scent_desc]"
+				else
+					out += "[scent_desc]"
+	return english_list(out, "something")
 
 /datum/reagents/proc/generate_taste_message(minimum_percent=15)
 	// the lower the minimum percent, the more sensitive the message is.
@@ -870,7 +883,7 @@
 						tastes[taste] += amount
 					else
 						tastes[taste] = amount
-			else if(R.taste_description)
+			else
 				var/taste_desc = R.taste_description
 				var/taste_amount = R.volume * R.taste_mult
 				if(taste_desc in tastes)
@@ -939,3 +952,5 @@
 		var/datum/reagent/R = GLOB.chemical_reagents_list[X]
 		if(ckey(chem_name) == ckey(lowertext(R.name)))
 			return X
+
+#undef CHEMICAL_QUANTISATION_LEVEL

@@ -3,10 +3,10 @@
 	name = "Conjure Presents!"
 	desc = ""
 	school = "santa"
-	charge_max = 600
+	recharge_time = 600
 	clothes_req = FALSE
 	antimagic_allowed = TRUE
-	invocation = "HO HO HO"
+	invocations = list("HO HO HO")
 	invocation_type = "shout"
 	range = 3
 	cooldown_min = 50

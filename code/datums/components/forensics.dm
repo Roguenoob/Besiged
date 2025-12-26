@@ -71,16 +71,13 @@
 	if(!isliving(M))
 		if(!iscameramob(M))
 			return
-		if(isaicamera(M))
-			var/mob/camera/aiEye/ai_camera = M
-			if(!ai_camera.ai)
-				return
-			M = ai_camera.ai
 	add_hiddenprint(M)
 	if(ishuman(M))
 		var/mob/living/carbon/human/H = M
 		add_fibers(H)
 		if(H.gloves) //Check if the gloves (if any) hide fingerprints
+			if(!istype(H.gloves, /obj/item/clothing/gloves))
+				return
 			var/obj/item/clothing/gloves/G = H.gloves
 			if(G.transfer_prints)
 				ignoregloves = TRUE
@@ -143,11 +140,6 @@
 	if(!isliving(M))
 		if(!iscameramob(M))
 			return
-		if(isaicamera(M))
-			var/mob/camera/aiEye/ai_camera = M
-			if(!ai_camera.ai)
-				return
-			M = ai_camera.ai
 	if(!M.key)
 		return
 	var/hasgloves = ""

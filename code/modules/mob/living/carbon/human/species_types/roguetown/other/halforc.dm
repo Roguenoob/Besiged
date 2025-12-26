@@ -5,27 +5,27 @@
 	name = "Half Orc"
 	id = "halforc"
 	desc = "<b>Half Orcs</b><br>\
-	With the Ironmask clan on a centuries-long warpath to consolidate all orcs within their banner, \
-	crushed orc tribes have lost their menfolk and war-widows have been scattered to the hinterlands. \
-	Between human civilization and orc savagery, orc-women opting for exile over dishonor have become \
+	With the Ironmask clan on a centuries-long warpath to consolidate all orcs beneath their banner, \
+	crushed orc tribes have lost their menfolk, and war-widows have been scattered to the hinterlands. \
+	Between humen civilization and orc savagery, orc-women opting for exile over dishonor have become \
 	more common visitors to fur trading posts and prospecting camps, eventually leading to half-orcs \
 	being born in these rough places otherwise devoid of a fairer sex. Your mother-clan is in thrall \
-	to the Ironmask, true orcs would kill you as a mongrel dog and your father’s people cannot decide \
-	between mere distrust and disgust. Yet somehow your wandering feet came to Azure Peak, where \
-	half-orcs ply muscle and their hardiness in the rough underbelly or outer reaches of society. \
-	+1 Strength, -1 Intelligence."
+	to the Ironmask. True orcs would kill you on sight, seeing you as a mongrel dog, and non-orcish \
+	people cannot decide between regarding you with either mere distrust or outright disgust. Yet \
+	somehow your wandering feet came to Azure Peak, where half-orcs ply muscle and their hardiness \
+	in the rough underbelly or outer reaches of society.<br>\
+	(+1 Strength)"
 
 	skin_tone_wording = "Clan"
 
 	species_traits = list(EYECOLOR,HAIR,FACEHAIR,LIPS,STUBBLE,OLDGREY)
 	inherent_traits = list(TRAIT_NOMOBSWAP)
 	default_features = MANDATORY_FEATURE_LIST
-	use_skintones = 1
-	skinned_type = /obj/item/stack/sheet/animalhide/human
+	use_skintones = TRUE
 	disliked_food = NONE
 	liked_food = NONE
 	possible_ages = ALL_AGES_LIST
-	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | ERT_SPAWN | RACE_SWAP | SLIME_EXTRACT
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | RACE_SWAP | SLIME_EXTRACT
 	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mt_muscular.dmi'
 	limbs_icon_f = 'icons/roguetown/mob/bodies/f/ft_muscular.dmi'
 	dam_icon = 'icons/roguetown/mob/bodies/dam/dam_male.dmi'
@@ -43,7 +43,7 @@
 	OFFSET_FACE_F = list(0,1), OFFSET_BELT_F = list(0,1), OFFSET_BACK_F = list(0,1), \
 	OFFSET_NECK_F = list(0,1), OFFSET_MOUTH_F = list(0,1), OFFSET_PANTS_F = list(0,1), \
 	OFFSET_SHIRT_F = list(0,1), OFFSET_ARMOR_F = list(0,1), OFFSET_UNDIES_F = list(0,1))
-	race_bonus = list(STAT_STRENGTH = 1, STAT_INTELLIGENCE = -1)
+	race_bonus = list(STAT_STRENGTH = 1)
 	enflamed_icon = "widefire"
 	organs = list(
 		ORGAN_SLOT_BRAIN = /obj/item/organ/brain,
@@ -55,12 +55,19 @@
 		ORGAN_SLOT_LIVER = /obj/item/organ/liver,
 		ORGAN_SLOT_STOMACH = /obj/item/organ/stomach,
 		ORGAN_SLOT_APPENDIX = /obj/item/organ/appendix,
-		ORGAN_SLOT_HORNS = /obj/item/organ/horns/halforc,
 		//ORGAN_SLOT_TESTICLES = /obj/item/organ/testicles,
 		//ORGAN_SLOT_PENIS = /obj/item/organ/penis,
 		//ORGAN_SLOT_BREASTS = /obj/item/organ/breasts,
 		//ORGAN_SLOT_VAGINA = /obj/item/organ/vagina,
 		)
+	body_marking_sets = list(
+		/datum/body_marking_set/none,
+		/datum/body_marking_set/belly,
+		/datum/body_marking_set/bellysocks,
+		/datum/body_marking_set/tiger,
+		/datum/body_marking_set/tiger_dark,
+		/datum/body_marking_set/gradient,
+	)
 	body_markings = list(
 		/datum/body_marking/flushed_cheeks,
 		/datum/body_marking/eyeliner,
@@ -73,12 +80,17 @@
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
 		/datum/customizer/bodypart_feature/underwear,
+		/datum/customizer/bodypart_feature/legwear,
 		/datum/customizer/organ/testicles/anthro,
 		/datum/customizer/organ/penis/anthro,
 		/datum/customizer/organ/breasts/human,
+		/datum/customizer/organ/vagina/human_anthro,
+		/datum/customizer/organ/horns/tusks,
+		/datum/customizer/organ/ears/halforc,
+		//Caustic edit
 		/datum/customizer/organ/belly/human,
-		/datum/customizer/organ/vagina/human,
 		/datum/customizer/organ/butt/human,
+		//Caustic edit end
 		)
 	languages = list(
 		/datum/language/common,
@@ -110,7 +122,11 @@
 		"Crescent Fang" = SKIN_COLOR_CRESCENT_FANG,
 		"Murkwalker" = SKIN_COLOR_MURKWALKER,
 		"Shatterhorn" = SKIN_COLOR_SHATTERHORN,
-		"Spirit Crusher" = SKIN_COLOR_SPIRITCRUSHER
+		"Spirit Crusher" = SKIN_COLOR_SPIRITCRUSHER,
+		//Caustic edit
+		"Avalanche" = SKIN_COLOR_AVALANCHE,
+		"Grove-Ward" = SKIN_COLUR_GROVE_WARD
+		//Caustic edit end
 	)
 
 /datum/species/halforc/get_hairc_list()

@@ -1,14 +1,17 @@
 /obj/item/rogueweapon/flail
 	force = 25
-	possible_item_intents = list(/datum/intent/flail/strike, /datum/intent/flail/strike/smash)
+	possible_item_intents = list(/datum/intent/flail/strike, /datum/intent/mace/smash/flail)
 	name = "flail"
 	desc = "This is a swift, iron flail. Strikes hard and far."
 	icon_state = "iflail"
-	icon = 'icons/roguetown/weapons/32.dmi'
+	icon = 'icons/roguetown/weapons/blunt32.dmi'
 	sharpness = IS_BLUNT
+	drop_sound = 'sound/foley/dropsound/chain_drop.ogg'
+	pickup_sound = 'sound/foley/equip/equip_armor_chain.ogg'
+	equip_sound = 'sound/foley/equip/equip_armor_chain.ogg'
 	//dropshrink = 0.75
 	wlength = WLENGTH_NORMAL
-	w_class = WEIGHT_CLASS_BULKY
+	w_class = WEIGHT_CLASS_NORMAL
 	slot_flags = ITEM_SLOT_HIP | ITEM_SLOT_BACK
 	associated_skill = /datum/skill/combat/whipsflails
 	anvilrepair = /datum/skill/craft/weaponsmithing
@@ -18,6 +21,10 @@
 	throwforce = 5
 	wdefense = 0
 	minstr = 4
+	grid_width = 32
+	grid_height = 96
+	special = /datum/special_intent/flail_sweep
+	sellprice = 15 //Akin to blunt; Also rather even.
 
 /datum/intent/flail/strike
 	name = "strike"
@@ -25,30 +32,33 @@
 	attack_verb = list("strikes", "hits")
 	hitsound = list('sound/combat/hits/blunt/flailhit.ogg')
 	chargetime = 0
-	penfactor = 5
+	penfactor = BLUNT_DEFAULT_PENFACTOR
 	icon_state = "instrike"
-	item_d_type = "slash"
+	item_d_type = "blunt"
+	intent_intdamage_factor = BLUNT_DEFAULT_INT_DAMAGEFACTOR
+
+/datum/intent/flail/strike/matthiosflail
+	reach = 2
 
 /datum/intent/flail/strikerange
 	name = "ranged strike"
 	blade_class = BCLASS_BLUNT
 	attack_verb = list("strikes", "hits")
 	hitsound = list('sound/combat/hits/blunt/flailhit.ogg')
-	chargetime = 5
+	chargetime = 0
 	recovery = 15
-	penfactor = 5
+	damfactor = 1.2 // Extra damage. Flail babe flail.
+	penfactor = BLUNT_DEFAULT_PENFACTOR
+	clickcd = CLICK_CD_CHARGED // Higher delay for a powerful ranged attack
 	reach = 2
 	icon_state = "instrike"
-	item_d_type = "slash"
+	item_d_type = "blunt"
+	intent_intdamage_factor = BLUNT_DEFAULT_INT_DAMAGEFACTOR
 
-/datum/intent/flail/strike/smash
-	name = "smash"
-	chargetime = 5
-	no_early_release = TRUE
-	penfactor = 80
-	recovery = 10
-	swingdelay = 7
-	damfactor = 1.2
+/datum/intent/mace/smash/flail
+	name = "flail smash"
+	chargetime = 0.8 SECONDS
+	damfactor = 1.4 // Flail smash has higher damage due to a longer charge.
 	chargedloop = /datum/looping_sound/flailswing
 	keep_looping = TRUE
 	icon_state = "insmash"
@@ -57,19 +67,24 @@
 	hitsound = list('sound/combat/hits/blunt/flailhit.ogg')
 	item_d_type = "blunt"
 
-/datum/intent/flail/strike/smashrange
+/datum/intent/mace/smash/flail/matthiosflail
+	reach = 2
+
+/datum/intent/mace/smash/flail/militia
+	damfactor = 0.9
+
+/datum/intent/mace/smash/flail/golgotha
+	hitsound = list('sound/items/beartrap2.ogg')
+
+/datum/intent/mace/smash/flailrange
 	name = "ranged smash"
-	chargetime = 25
-	no_early_release = TRUE
-	penfactor = 50
+	chargetime = 1.2 SECONDS
+	chargedrain = 1
 	recovery = 30
 	damfactor = 1.5
 	reach = 2
-	swingdelay = 8
 	chargedloop = /datum/looping_sound/flailswing
 	keep_looping = TRUE
-	icon_state = "insmash"
-	blade_class = BCLASS_SMASH
 	attack_verb = list("smashes")
 	hitsound = list('sound/combat/hits/blunt/flailhit.ogg')
 	item_d_type = "blunt"
@@ -83,6 +98,23 @@
 			if("onbelt")
 				return list("shrink" = 0.3,"sx" = -2,"sy" = -5,"nx" = 4,"ny" = -5,"wx" = 0,"wy" = -5,"ex" = 2,"ey" = -5,"nturn" = 0,"sturn" = 0,"wturn" = 0,"eturn" = 0,"nflip" = 0,"sflip" = 0,"wflip" = 0,"eflip" = 0,"northabove" = 0,"southabove" = 1,"eastabove" = 1,"westabove" = 0)
 
+/obj/item/rogueweapon/flail/aflail
+	name = "decrepit flail"
+	desc = "A spiked ball of wrought bronze, chained to a rotwooden handle. The chains groan with every twirl, strained by forces it hadn't felt in millenia; swing it a bit too hard, and there's a chance that the flailhead might completely fly off."
+	icon_state = "aflail"
+	force = 22
+	max_integrity = 175
+	color = "#bb9696"
+	smeltresult = /obj/item/ingot/aaslag
+	anvilrepair = null
+	sellprice = 10
+
+/obj/item/rogueweapon/flail/sflail/paflail
+	name = "ancient flail"
+	desc = "A spiked ball of polished gilbranze, chained to a reinforced handle. They say that His children worshipped the flail above all else, for its twirls replicated the Comet Syon's blazing flights."
+	icon_state = "aflail"
+	smeltresult = /obj/item/ingot/aaslag
+	sellprice = 10
 
 /obj/item/rogueweapon/flail/sflail
 	force = 30
@@ -90,92 +122,110 @@
 	desc = "This is a swift, steel flail. Strikes hard and far."
 	smeltresult = /obj/item/ingot/steel
 	minstr = 5
+	sellprice = 30
 
+/obj/item/rogueweapon/flail/sflail/silver
+	force = 35
+	icon_state = "silverflail"
+	name = "silver morningstar"
+	possible_item_intents = list(/datum/intent/flail/strike, /datum/intent/mace/smash/flailrange)
+	desc = "A heavy, silver flail. It follows the Grenzelhoftian design of a 'morning star', utilizing a longer chain to extend its reach. While stronger than a steel flail, it requires far more strength to effectively swing."
+	smeltresult = /obj/item/ingot/silver
+	minstr = 12
+	is_silver = TRUE
+	sellprice = 80
 
-/datum/intent/whip/lash
-    name = "lash"
-    blade_class = BCLASS_BLUNT
-    attack_verb = list("lashes", "cracks")
-    hitsound = list('sound/combat/hits/blunt/flailhit.ogg')
-    chargetime = 5
-    recovery = 7
-    penfactor = 10
-    damfactor = 1.1
-    reach = 1
-    icon_state = "inlash"
-    item_d_type = "blunt"
+/obj/item/rogueweapon/flail/sflail/silver/ComponentInitialize()
+	AddComponent(\
+		/datum/component/silverbless,\
+		pre_blessed = BLESSING_NONE,\
+		silver_type = SILVER_TENNITE,\
+		added_force = 0,\
+		added_blade_int = 0,\
+		added_int = 50,\
+		added_def = 0,\
+	)
 
-/datum/intent/whip/crack
-    name = "crack"
-    blade_class = BCLASS_CUT
-    attack_verb = list("cracks", "strikes") //something something dwarf fotresss
-    hitsound = list('sound/combat/hits/blunt/flailhit.ogg')
-    chargetime = 0
-    recovery = 10
-    penfactor = 40
-    reach = 2
-    icon_state = "incrack"
-    item_d_type = "slash"
+/obj/item/rogueweapon/flail/sflail/necraflail
+	name = "swift journey"
+	desc = "The striking head is full of teeth, rattling viciously with ever strike, with every rotation. Each set coming from one the wielder has laid to rest. Carried alongside them as a great show of respect."
+	icon_state = "necraflail"
+	force = 35
+	is_silver = TRUE
+	sellprice = 40
 
-/datum/intent/whip/punish
-    name = "punish"
-    blade_class = BCLASS_CUT
-    attack_verb = list("lashes")
-    hitsound = list('sound/combat/hits/blunt/flailhit.ogg')
-    chargetime = 5
-    swingdelay = 6
-    recovery = 10
-    penfactor = 0
-    damfactor = 0.9
-    reach = 3
-    icon_state = "inpunish"
-    item_d_type = "slash"
+/obj/item/rogueweapon/flail/sflail/necraflail/ComponentInitialize()
+	AddComponent(\
+		/datum/component/silverbless,\
+		pre_blessed = BLESSING_NONE,\
+		silver_type = SILVER_TENNITE,\
+		added_force = 0,\
+		added_blade_int = 0,\
+		added_int = 50,\
+		added_def = 0,\
+	)
 
-/obj/item/rogueweapon/whip
-	force = 21
-	possible_item_intents = list(/datum/intent/whip/crack, /datum/intent/whip/lash, /datum/intent/whip/punish)
-	name = "whip"
-	desc = "A leather whip, built to last with an sharp stone for a tip"
-	icon_state = "whip"
-	icon = 'icons/roguetown/weapons/32.dmi'
-	sharpness = IS_BLUNT
-	//dropshrink = 0.75
-	wlength = WLENGTH_NORMAL
-	w_class = WEIGHT_CLASS_NORMAL
-	slot_flags = ITEM_SLOT_HIP | ITEM_SLOT_BELT
-	associated_skill = /datum/skill/combat/whipsflails
-	anvilrepair = /datum/skill/craft/tanning
-	parrysound = list('sound/combat/parry/parrygen.ogg')
-	swingsound = WHIPWOOSH
-	throwforce = 5
+/obj/item/rogueweapon/flail/sflail/psyflail
+	name = "psydonic flail"
+	desc = "An ornate flail, plated in a ceremonial veneer of silver. Its flanged head can crumple even the toughest of darksteel-maille."
+	icon_state = "psyflail"
+	force = 35
+	minstr = 10
 	wdefense = 0
-	minstr = 6
+	is_silver = TRUE
+	smeltresult = /obj/item/ingot/silverblessed
+	sellprice = 120
 
-/obj/item/rogueweapon/whip/getonmobprop(tag)
-	. = ..()
-	if(tag)
-		switch(tag)
-			if("gen")
-				return list("shrink" = 0.5,"sx" = -10,"sy" = -3,"nx" = 11,"ny" = -2,"wx" = -7,"wy" = -3,"ex" = 3,"ey" = -3,"northabove" = 0,"southabove" = 1,"eastabove" = 1,"westabove" = 0,"nturn" = 22,"sturn" = -23,"wturn" = -23,"eturn" = 29,"nflip" = 0,"sflip" = 8,"wflip" = 8,"eflip" = 0)
-			if("onbelt")
-				return list("shrink" = 0.3,"sx" = -2,"sy" = -5,"nx" = 4,"ny" = -5,"wx" = 0,"wy" = -5,"ex" = 2,"ey" = -5,"nturn" = 0,"sturn" = 0,"wturn" = 0,"eturn" = 0,"nflip" = 0,"sflip" = 0,"wflip" = 0,"eflip" = 0,"northabove" = 0,"southabove" = 1,"eastabove" = 1,"westabove" = 0)
+/obj/item/rogueweapon/flail/sflail/psyflail/ComponentInitialize()
+	AddComponent(\
+		/datum/component/silverbless,\
+		pre_blessed = BLESSING_NONE,\
+		silver_type = SILVER_PSYDONIAN,\
+		added_force = 0,\
+		added_blade_int = 0,\
+		added_int = 50,\
+		added_def = 0,\
+	)
+	
+/obj/item/rogueweapon/flail/sflail/psyflail/old
+	name = "enduring flail"
+	desc = "An ornate flail, its silver tarnished by neglect. Bring down the COMET on the unholy."
+	icon_state = "psyflail"
+	force = 30
+	minstr = 5
+	wdefense = 0
+	is_silver = FALSE
+	smeltresult = /obj/item/ingot/steel
+	color = COLOR_FLOORTILE_GRAY
+	sellprice = 100
 
+/obj/item/rogueweapon/flail/sflail/psyflail/old/ComponentInitialize()
+	return
 
-/obj/item/rogueweapon/whip/antique
-	force = 29
-	name = "Repenta En"
-	desc = "An extremely well maintained whip, with a polished steel tip and gilded handle"
-	minstr = 11
-	icon_state = "gwhip"
+/obj/item/rogueweapon/flail/sflail/psyflail/relic
+	name = "Consecratia"
+	desc = "The weight of His anguish, His pain, His hope and His love for humenkind - all hanging on the ornamental silver-steel head chained to this arm. <br><br>A declaration of love for all that Psydon lives for, and a crushing reminder to the arch-nemesis that they will not triumph as long as He endures."
+	icon_state = "psymorningstar"
+	possible_item_intents = list(/datum/intent/flail/strike, /datum/intent/mace/smash/flailrange)
 
+/obj/item/rogueweapon/flail/sflail/psyflail/relic/ComponentInitialize()
+	AddComponent(\
+		/datum/component/silverbless,\
+		pre_blessed = BLESSING_PSYDONIAN,\
+		silver_type = SILVER_PSYDONIAN,\
+		added_force = 0,\
+		added_blade_int = 100,\
+		added_int = 100,\
+		added_def = 0,\
+	)
 
 /obj/item/rogueweapon/flail/peasantwarflail
 	force = 10
 	force_wielded = 35
 	possible_item_intents = list(/datum/intent/flail/strike)
-	gripped_intents = list(/datum/intent/flail/strikerange, /datum/intent/flail/strike/smashrange)
-	name = "peasant war flail"
-	desc = "An agricultural flail turned into a weapon of war."
+	gripped_intents = list(/datum/intent/flail/strikerange, /datum/intent/mace/smash/flailrange)
+	name = "militia thresher"
+	desc = "Just like how a sling's bullet can fell a giant, so too does this great flail follow the principle of converting 'momentum' into 'plate-rupturing force'."
 	icon_state = "peasantwarflail"
 	icon = 'icons/roguetown/weapons/64.dmi'
 	pixel_y = -16
@@ -187,14 +237,15 @@
 	wlength = WLENGTH_GREAT
 	w_class = WEIGHT_CLASS_BULKY
 	slot_flags = null
-	minstr = 12
-	wbalance = -2
+	minstr = 9
+	wbalance = WBALANCE_HEAVY
 	smeltresult = /obj/item/ingot/iron
 	associated_skill = /datum/skill/combat/polearms
-	dropshrink = 0.6
-	blade_dulling = DULLING_BASHCHOP
-	wdefense = 1
+	anvilrepair = /datum/skill/craft/carpentry
+	dropshrink = 0.9
+	wdefense = 4
 	resistance_flags = FLAMMABLE
+	sellprice = 15
 
 /obj/item/rogueweapon/flail/peasantwarflail/getonmobprop(tag)
 	. = ..()
@@ -205,9 +256,29 @@
 			if("wielded")
 				return list("shrink" = 0.6,"sx" = 5,"sy" = -3,"nx" = -5,"ny" = -2,"wx" = -5,"wy" = -1,"ex" = 3,"ey" = -2,"northabove" = 0,"southabove" = 1,"eastabove" = 1,"westabove" = 0,"nturn" = 7,"sturn" = -7,"wturn" = 16,"eturn" = -22,"nflip" = 8,"sflip" = 0,"wflip" = 8,"eflip" = 0)
 
-/obj/item/rogueweapon/whip/spiderwhip
-	force = 20
-	name = "lashkiss whip"
-	desc = "A dark whip with segmented, ashen spines for a base. Claimed to be hewn from dendrified prisoners of terror."
-	icon_state = "spiderwhip"
-	minstr = 6
+/obj/item/rogueweapon/flail/peasantwarflail/matthios
+	name = "Gilded Flail"
+	desc = "Weight of wealth in a deadly striking end."
+	icon_state = "matthiosflail"
+	sellprice = 250
+	smeltresult = /obj/item/ingot/steel
+	possible_item_intents = list(/datum/intent/flail/strike/matthiosflail)
+	gripped_intents = list(/datum/intent/flail/strike/matthiosflail, /datum/intent/mace/smash/flail/matthiosflail)
+	associated_skill = /datum/skill/combat/whipsflails
+	slot_flags = ITEM_SLOT_BACK
+	anvilrepair = /datum/skill/craft/weaponsmithing
+
+
+/obj/item/rogueweapon/flail/peasantwarflail/matthios/Initialize()
+	. = ..()
+	AddComponent(/datum/component/cursed_item, TRAIT_COMMIE, "FLAIL")
+
+/obj/item/rogueweapon/flail/militia
+	name = "militia flail"
+	desc = "In another lyfe, this humble thresher was used to pound stalks into grain. Under a militiaman's grasp, however, it has found a new purpose: to humble overconfident bandits with crippling blows."
+	icon_state = "milflail"
+	possible_item_intents = list(/datum/intent/flail/strike, /datum/intent/mace/smash/flail/militia)
+	force = 27
+	wdefense = 3
+	wbalance = WBALANCE_HEAVY
+	sellprice = 15

@@ -52,6 +52,14 @@
 	if(damage > maxHealth)//cap liver damage
 		damage = maxHealth
 
+/obj/item/organ/liver/Remove(mob/living/carbon/carbon, special = FALSE, drop_if_replaced = TRUE)
+	. = ..()
+	carbon.apply_status_effect(/datum/status_effect/debuff/liver_failure)
+
+/obj/item/organ/liver/Insert(mob/living/carbon/carbon, special = FALSE, drop_if_replaced = TRUE)
+	. = ..()
+	carbon.remove_status_effect(/datum/status_effect/debuff/liver_failure)
+
 #undef HAS_SILENT_TOXIN
 #undef HAS_NO_TOXIN
 #undef HAS_PAINFUL_TOXIN
@@ -72,6 +80,10 @@
 	icon_state = "liver-p"
 	desc = ""
 
+/obj/item/organ/liver/construct
+	name = "construct decay regulator"
+	icon_state = "liver-con"
+	desc = "A construct's decay regulator. Swirling with pestran energies, it prevents corrosion and rot. Unfortunately, this makes them susceptible to toxins."
 /obj/item/organ/liver/alien
 	name = "alien liver" // doesnt matter for actual aliens because they dont take toxin damage
 	icon_state = "liver-x" // Same sprite as fly-person liver.
@@ -102,3 +114,6 @@
 	if(. & EMP_PROTECT_SELF)
 		return
 	damage += 100/severity
+
+#undef LIVER_DEFAULT_TOX_TOLERANCE
+#undef LIVER_DEFAULT_TOX_LETHALITY

@@ -7,7 +7,7 @@
 
 
 /datum/mapGenerator/roguetownfield
-	modules = list(/datum/mapGeneratorModule/ambushing,/datum/mapGeneratorModule/roguetownfield/grass,/datum/mapGeneratorModule/roguetowngrass,/datum/mapGeneratorModule/roguetownfield,/datum/mapGeneratorModule/roguetownfield/road)
+	modules = list(/datum/mapGeneratorModule/roguetownfield/grass,/datum/mapGeneratorModule/roguetowngrass,/datum/mapGeneratorModule/roguetownfield,/datum/mapGeneratorModule/roguetownfield/road)
 
 
 /datum/mapGeneratorModule/roguetownfield
@@ -22,7 +22,7 @@
 							/obj/item/natural/rock = 2,
 							/obj/item/grown/log/tree/stick = 3,
 							/obj/structure/closet/dirthole/closed/loot=3,
-							/obj/structure/flora/roguegrass/pyroclasticflowers = 1)
+							/obj/structure/flora/roguegrass/pyroclasticflowers = 3)
 	spawnableTurfs = list(/turf/open/floor/rogue/dirt/road=5)
 	allowed_areas = list(/area/rogue/outdoors/rtfield)
 
@@ -39,7 +39,7 @@
 	allowed_turfs = list(/turf/open/floor/rogue/dirt)
 	excluded_turfs = list(/turf/open/floor/rogue/dirt/road)
 	spawnableTurfs = list(/turf/open/floor/rogue/grass = 15)
-	spawnableAtoms = list()
+	spawnableAtoms = list(/obj/structure/flora/roguegrass/pumpkin = 1)
 	allowed_areas = list(/area/rogue/outdoors/rtfield)
 
 /datum/mapGeneratorModule/roguetowngrass

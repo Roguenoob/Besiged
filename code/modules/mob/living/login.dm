@@ -1,21 +1,21 @@
 /mob/living/Login()
 	login_fade()
 	..()
+	if(client)
+		client.update_ooc_verb_visibility()
+		if(stat == DEAD)
+			client.verbs.Add(GLOB.ghost_verbs)
 	//Mind updates
 	sync_mind()
 	mind.show_memory(src, 0)
 
-	//Round specific stuff
-	if(SSticker.mode)
-		switch(SSticker.mode.name)
-			if("sandbox")
-				CanBuild()
 	update_a_intents()
 	update_damage_hud()
 	update_health_hud()
 //	update_tod_hud()
 	update_spd()
 
+	update_sight()
 //	if (client && (stat == DEAD))
 //		client.ghostize()
 
@@ -28,14 +28,13 @@
 //		to_chat(src, span_notice("I can ventcrawl! Use alt+click on vents to quickly travel about the station."))
 
 	if(ranged_ability)
-		ranged_ability.add_ranged_ability(src, span_notice("I currently have <b>[ranged_ability]</b> active!"))
+		ranged_ability.deactivate()
 
-	var/datum/antagonist/changeling/changeling = mind.has_antag_datum(/datum/antagonist/changeling)
-	if(changeling)
-		changeling.regain_powers()
-	
-	if((vore_flags & VORE_INIT) && !(vore_flags & VOREPREF_INIT)) //Vore's been initialized, voreprefs haven't. If this triggers then that means that voreprefs failed to load due to the client being missing.
-		copy_from_prefs_vr()
+	set_ssd_indicator(FALSE)
+
+	//Caustic edit
+	init_vore(TRUE)
+	//Caustic edit end
 
 /mob/living/proc/login_fade()
 	set waitfor = FALSE

@@ -6,6 +6,7 @@ GLOBAL_VAR_INIT(round_timer, INITIAL_ROUND_TIMER)
 SUBSYSTEM_DEF(ticker)
 	name = "Ticker"
 	init_order = INIT_ORDER_TICKER
+	lazy_load = FALSE
 
 	priority = FIRE_PRIORITY_TICKER
 	flags = SS_KEEP_TIMING
@@ -16,9 +17,6 @@ SUBSYSTEM_DEF(ticker)
 	// If true, there is no lobby phase, the game starts immediately.
 	var/start_immediately = FALSE
 	var/setup_done = FALSE //All game setup done including mode post setup and
-
-	var/hide_mode = 0
-	var/datum/game_mode/mode = null
 
 	var/login_music							//music played in pregame lobby
 	var/round_end_sound						//music/jingle played when the world reboots
@@ -67,22 +65,30 @@ SUBSYSTEM_DEF(ticker)
 	var/end_state = "undefined"
 	var/job_change_locked = FALSE
 	var/list/royals_readied = list()
-	var/rulertype = "Grand Duke" // reports whether king or queen rules
-	var/rulermob = null // reports what the ruling mob is.
+
+	/// Realm name, the location name of the current map
+	var/realm_name = "Azure Peak"
+	/// Reports the current ruler's display name
+	var/rulertype = "Grand Duke"
+	/// The current ruling mob
+	var/rulermob = null
+	/// Current regent mob
+	var/regentmob = null
+	/// Prevent regent shuffling
+	var/regentday = -1
 	var/failedstarts = 0
 	var/list/manualmodes = list()
 
-	//**ROUNDEND STATS**
-	var/deaths = 0			//total deaths in the round
-	var/blood_lost = 0
-	var/tri_gained = 0
-	var/tri_lost = 0
-
-	var/list/cuckers = list()
-	var/cums = 0
-
+	var/gamemode_voted = FALSE
 	var/end_party = FALSE
 	var/last_lobby = 0
+	var/round_end = FALSE
+
+	var/next_lord_check = 0
+	var/missing_lord_time = 0
+
+	/// Sunsteal gamestate bool.
+	var/sunstolen = FALSE
 
 /datum/controller/subsystem/ticker/Initialize(timeofday)
 	load_mode()
@@ -142,7 +148,7 @@ SUBSYSTEM_DEF(ticker)
 	else
 		login_music = "[global.config.directory]/title_music/sounds/[pick(music)]"
 
-
+	login_music = pick('sound/music/title.ogg','sound/music/title2.ogg')
 
 	if(!GLOB.syndicate_code_phrase)
 		GLOB.syndicate_code_phrase	= generate_code_phrase(return_list=TRUE)
@@ -176,6 +182,7 @@ SUBSYSTEM_DEF(ticker)
 				window_flash(C, ignorepref = TRUE) //let them know lobby has opened up.
 //			to_chat(world, span_boldnotice("Welcome to [station_name()]!"))
 			send2chat(new /datum/tgs_message_content("New round starting on [SSmapping.config.map_name]!"), CONFIG_GET(string/chat_announce_new_game))
+			newround()
 			current_state = GAME_STATE_PREGAME
 			//Everyone who wants to be an observer is now spawned
 			create_observers()
@@ -190,6 +197,10 @@ SUBSYSTEM_DEF(ticker)
 				var/mob/dead/new_player/player = i
 				if(player.ready == PLAYER_READY_TO_PLAY)
 					++totalPlayersReady
+
+			if(!gamemode_voted)
+				SSvote.initiate_vote("storyteller", "Psydon", timeLeft/2)
+				gamemode_voted = TRUE
 
 			if(start_immediately)
 				timeLeft = 0
@@ -207,12 +218,6 @@ SUBSYSTEM_DEF(ticker)
 
 			if(timeLeft <= 0)
 				if(!checkreqroles())
-/*					if(failedstarts >= 13)
-						current_state = GAME_STATE_SETTING_UP
-						Master.SetRunLevel(RUNLEVEL_SETUP)
-						if(start_immediately)
-							fire()
-					else*/
 					current_state = GAME_STATE_STARTUP
 					start_at = world.time + 600
 					timeLeft = null
@@ -232,11 +237,12 @@ SUBSYSTEM_DEF(ticker)
 				Master.SetRunLevel(RUNLEVEL_LOBBY)
 
 		if(GAME_STATE_PLAYING)
-			mode.process(wait * 0.1)
 			check_queue()
 			check_maprotate()
 
-			if(!roundend_check_paused && mode.check_finished(force_ending) || force_ending)
+			check_for_lord()
+			if(!roundend_check_paused && SSgamemode.check_finished(force_ending) || force_ending)
+				SSgamemode.refresh_alive_stats()
 				current_state = GAME_STATE_FINISHED
 				toggle_ooc(TRUE) // Turn it on
 				toggle_dooc(TRUE)
@@ -276,11 +282,6 @@ SUBSYSTEM_DEF(ticker)
 	*/
 
 	/*
-		This prevents any gamemode from starting unless theres at least 2 players ready, but the comments say 20 or it defaults into a deathmatch mode.
-		It is commented out and just left here for posterity
-	*/
-	/*
-	var/amt_ready = 0
 	for(var/mob/dead/new_player/player in GLOB.player_list)
 		if(!player)
 			continue
@@ -314,97 +315,33 @@ SUBSYSTEM_DEF(ticker)
 /datum/controller/subsystem/ticker/proc/setup()
 	message_admins(span_boldannounce("Starting game..."))
 	var/init_start = world.timeofday
-		//Create and announce mode
-	var/list/datum/game_mode/runnable_modes
-	if(GLOB.master_mode == "random" || GLOB.master_mode == "secret")
-		runnable_modes = config.get_runnable_modes()
 
-		if(GLOB.master_mode == "secret")
-			hide_mode = 1
-			if(GLOB.secret_force_mode != "secret")
-				var/datum/game_mode/smode = config.pick_mode(GLOB.secret_force_mode)
-				if(!smode.can_start())
-					message_admins(span_notice("Unable to force secret [GLOB.secret_force_mode]. [smode.required_players] players and [smode.required_enemies] eligible antagonists needed."))
-				else
-					mode = smode
-
-		if(!mode)
-			if(!runnable_modes.len)
-				message_admins("<B>Unable to choose playable game mode.</B> Reverting to pre-game lobby.")
-				return 0
-			mode = pickweight(runnable_modes)
-			if(!mode)	//too few roundtypes all run too recently
-				mode = pick(runnable_modes)
-
-	else
-		mode = config.pick_mode(GLOB.master_mode)
-		if(!mode.can_start())
-			message_admins("<B>Unable to start [mode.name].</B> Not enough players, [mode.required_players] players and [mode.required_enemies] eligible antagonists needed. Reverting to pre-game lobby.")
-			qdel(mode)
-			mode = null
-			SSjob.ResetOccupations()
-			return 0
-
-//	if(failedstarts >= 13)
-//		qdel(mode)
-//		mode = new /datum/game_mode/roguewar
-//		if(istype(C, /datum/game_mode/chaosmode))
-//			if(isrogueworld)
-//				C.allmig = TRUE
-//		else
-//
-//			else
-//				C.roguefight = TRUE
-//				isroguefight = TRUE
-
-#ifdef ROGUEWORLD
-	if(mode)
-		if(istype(mode, /datum/game_mode/chaosmode))
-			var/datum/game_mode/chaosmode/C = mode
-			isrogueworld = TRUE
-			C.allmig = TRUE
-#endif
-
+	if(SSmapping.map_adjustment)
+		realm_name = SSmapping.map_adjustment.realm_name
 	CHECK_TICK
 	//Configure mode and assign player to special mode stuff
 	var/can_continue = 0
-	can_continue = src.mode.pre_setup()		//Choose antagonists
-	CHECK_TICK
-
-//	if(istype(mode, /datum/game_mode/roguewar))
-//		unready_all()
 
 	CHECK_TICK
 
-	can_continue = can_continue && SSjob.DivideOccupations(mode.required_jobs) 				//Distribute jobs
+	can_continue =	SSgamemode.pre_setup()
+
 	CHECK_TICK
 
-	src.mode.after_DO()
+	can_continue = can_continue && SSjob.DivideOccupations(list()) 				//Distribute jobs
 
-	if(!GLOB.Debug2)
-		if(!can_continue)
-			log_game("[mode.name] failed pre_setup, cause: [mode.setup_error]")
-			QDEL_NULL(mode)
-			message_admins("<B>Error setting up [GLOB.master_mode].</B> Reverting to pre-game lobby.")
-			SSjob.ResetOccupations()
-			return 0
-	else
-		message_admins(span_notice("DEBUG: Bypassing prestart checks..."))
+	CHECK_TICK
 
 	log_game("GAME SETUP: Divide Occupations success")
 
 	CHECK_TICK
-//	if(hide_mode)
-//		var/list/modes = new
-//		for (var/datum/game_mode/M in runnable_modes)
-//			modes += M.name
-//		modes = sortList(modes)
-//		message_admins("<b>The gamemode is: secret!\nPossibilities:</B> [english_list(modes)]")
-//	else
-//		mode.announce()
 
-	if(!CONFIG_GET(flag/ooc_during_round))
-		toggle_ooc(FALSE) // Turn it off
+	// Previously: if(!CONFIG_GET(flag/ooc_during_round)) toggle_ooc(FALSE)
+	// OOC has been repurposed to be lobby-only (non-lobby players can't see or use it),
+	// so there's no longer a gameplay reason to auto-disable it at round start.
+	// Keeping it enabled prevents admins from needing to hit the toggle every round.
+	if(!GLOB.ooc_allowed)
+		toggle_ooc(TRUE) // Ensure lobby OOC is on for the new round
 
 	CHECK_TICK
 	GLOB.start_landmarks_list = shuffle(GLOB.start_landmarks_list) //Shuffle the order of spawn points so they dont always predictably spawn bottom-up and right-to-left
@@ -455,8 +392,6 @@ SUBSYSTEM_DEF(ticker)
 
 	SSdbcore.SetRoundStart()
 
-	message_admins(span_notice("<B>Welcome to [station_name()], enjoy your stay!</B>"))
-
 	for(var/client/C in GLOB.clients)
 		if(C.mob)
 			C.mob.playsound_local(C.mob, 'sound/misc/roundstart.ogg', 100, FALSE)
@@ -475,18 +410,15 @@ SUBSYSTEM_DEF(ticker)
 */
 	PostSetup()
 	log_game("GAME SETUP: postsetup success")
-
+	newroundstarted()
 	return TRUE
 
 /datum/controller/subsystem/ticker/proc/PostSetup()
 	set waitfor = FALSE
-	mode.post_setup()
-	GLOB.start_state = new /datum/station_state()
-	GLOB.start_state.count()
 
-	var/list/adm = get_admin_counts()
-	var/list/allmins = adm["present"]
-	send2irc("Server", "Round [GLOB.round_id ? "#[GLOB.round_id]:" : "of"] [hide_mode ? "secret":"[mode.name]"] has started[allmins.len ? ".":" with no active admins online!"]")
+	SSgamemode.current_storyteller?.process(STORYTELLER_WAIT_TIME * 0.1) // we want this asap
+	SSgamemode.current_storyteller?.round_started = TRUE
+
 	setup_done = TRUE
 
 	job_change_locked = FALSE
@@ -533,13 +465,14 @@ SUBSYSTEM_DEF(ticker)
 	for(var/i in GLOB.new_player_list)
 		var/mob/dead/new_player/player = i
 		if(!player)
-			message_admins("THERES A FUCKING NULL IN THE NEW_PLAYER_LIST, REPORT IT TO BLACKEDSTONE DEVELOPMENT STAFF NOW!")
+			message_admins("THERES A FUCKING NULL IN THE NEW_PLAYER_LIST, REPORT IT TO AZURE DEVELOPMENT STAFF NOW!")
 			continue
 		if(!player.mind)
-			message_admins("THERES A MIND LACKING PLAYER IN THE NEW_PLAYER_LIST, REPORT IT TO BLACKEDSTONE DEVELOPMENT STAFF NOW!")
+			message_admins("THERES A MIND LACKING PLAYER IN THE NEW_PLAYER_LIST, REPORT IT TO AZURE DEVELOPMENT STAFF NOW!")
 			continue
 		if(player.ready == PLAYER_READY_TO_PLAY)
 			GLOB.joined_player_list += player.ckey
+			update_wretch_slots()
 			player.create_character(FALSE)
 		else
 			player.new_player_panel()
@@ -553,34 +486,23 @@ SUBSYSTEM_DEF(ticker)
 		CHECK_TICK
 
 /datum/controller/subsystem/ticker/proc/equip_characters()
-//	var/captainless=1
 	var/list/valid_characters = list()
 	for(var/mob/dead/new_player/new_player as anything in GLOB.new_player_list)
 		var/mob/living/carbon/human/player = new_player.new_character
 		if(istype(player) && player.mind?.assigned_role)
-//			if(player.mind.assigned_role == "Captain")
-//				captainless=0
 			if(player.mind.assigned_role != player.mind.special_role)
 				valid_characters[player] = new_player
 	sortTim(valid_characters, GLOBAL_PROC_REF(cmp_assignedrole_dsc))
 	for(var/mob/character as anything in valid_characters)
 		var/mob/new_player = valid_characters[character]
 		SSjob.EquipRank(new_player, character.mind.assigned_role, joined_late = FALSE)
-		if(CONFIG_GET(flag/roundstart_traits) && ishuman(character))
-			SSquirks.AssignQuirks(character, new_player.client, TRUE)
 		CHECK_TICK
-//	if(captainless)
-//		for(var/i in GLOB.new_player_list)
-//			var/mob/dead/new_player/N = i
-//			if(N.new_character)
-//				to_chat(N, span_notice("Captainship not forced on anyone."))
-//			CHECK_TICK
 
 /datum/controller/subsystem/ticker/proc/transfer_characters()
 	var/list/livings = list()
 	for(var/i in GLOB.new_player_list)
 		var/mob/dead/new_player/player = i
-		var/mob/living = player.transfer_character()
+		var/mob/living = player?.transfer_character()
 		if(living)
 			qdel(player)
 			living.notransform = TRUE
@@ -589,15 +511,18 @@ SUBSYSTEM_DEF(ticker)
 				S.Fade(TRUE)
 			livings += living
 			if(ishuman(living))
+				SSrole_class_handler.setup_class_handler(living)
 				try_apply_character_post_equipment(living)
-
+		else
+			continue
 	if(livings.len)
 		addtimer(CALLBACK(src, PROC_REF(release_characters), livings), 30, TIMER_CLIENT_TIME)
 
 /datum/controller/subsystem/ticker/proc/release_characters(list/livings)
 	for(var/I in livings)
 		var/mob/living/L = I
-		L.notransform = FALSE
+		if(L)
+			L?.notransform = FALSE
 
 /datum/controller/subsystem/ticker/proc/send_tip_of_the_round()
 	return
@@ -650,8 +575,6 @@ SUBSYSTEM_DEF(ticker)
 /datum/controller/subsystem/ticker/proc/check_maprotate()
 	if (!CONFIG_GET(flag/maprotation))
 		return
-	if (SSshuttle.emergency && SSshuttle.emergency.mode != SHUTTLE_ESCAPE || SSshuttle.canRecall())
-		return
 	if (maprotatechecked)
 		return
 
@@ -671,8 +594,6 @@ SUBSYSTEM_DEF(ticker)
 /datum/controller/subsystem/ticker/Recover()
 	current_state = SSticker.current_state
 	force_ending = SSticker.force_ending
-	hide_mode = SSticker.hide_mode
-	mode = SSticker.mode
 
 	login_music = SSticker.login_music
 	round_end_sound = SSticker.round_end_sound
@@ -841,8 +762,84 @@ SUBSYSTEM_DEF(ticker)
 		world.Reboot()
 
 /datum/controller/subsystem/ticker/Shutdown()
-	gather_newscaster() //called here so we ensure the log is created even upon admin reboot
 	save_admin_data()
 	update_everything_flag_in_db()
 
 	text2file(login_music, "data/last_round_lobby_music.txt")
+
+/// Wrapper for setting rulermob and rulertype
+/datum/controller/subsystem/ticker/proc/set_ruler_mob(mob/newruler)
+	rulermob = newruler
+	var/datum/job/lord_job = SSjob.GetJob("Grand Duke")
+	if(should_wear_femme_clothes(rulermob))
+		SSticker.rulertype = lord_job?.f_title || lord_job.title
+	else
+		SSticker.rulertype = lord_job?.display_title || lord_job?.title
+	SEND_GLOBAL_SIGNAL(COMSIG_TICKER_RULERMOB_SET, rulermob)
+
+/// Wrapper for sunsteal proc
+/datum/controller/subsystem/ticker/proc/sunsteal(mob/living/sunstealer)
+	ASSERT(sunstealer)
+	RegisterSignal(sunstealer, list(COMSIG_QDELETING, COMSIG_MOB_DEATH), PROC_REF(on_sunstealer_death))
+	INVOKE_ASYNC(src, PROC_REF(on_sunsteal)) // Invoke async since on_sunsteal() sleeps in CHECK_TICK
+
+/// Proc called when the sunstealer successfully steals the sun, causing world-wide effects
+/datum/controller/subsystem/ticker/proc/on_sunsteal()
+	GLOB.todoverride = "night"
+	settod()
+	priority_announce("The Sun is torn from the sky!", "Terrible Omen", 'sound/misc/astratascream.ogg')
+	addomen(OMEN_SUNSTEAL)
+	SSParticleWeather.run_weather(/datum/particle_weather/fog/blood, TRUE)
+	for(var/mob/living/carbon/human/astrater as anything in GLOB.human_list)
+		if(!istype(astrater.patron, /datum/patron/divine/astrata))
+			continue
+		to_chat(astrater, span_userdanger("You feel the pain of [astrater.patron]!"))
+		astrater.emote("painscream", intentional = FALSE)
+
+	for(var/turf/open/water/W in world)
+		W.water_reagent = /datum/reagent/blood
+		W.water_color = "#C80000"
+		W.mapped = FALSE
+		W.update_icon()
+		CHECK_TICK
+
+	for(var/obj/machinery/light/light in GLOB.machines)
+		if(prob(40))
+			light.extinguish()
+		else
+			light.flicker(rand(2, 5))
+		CHECK_TICK
+
+	for(var/obj/item/flashlight/flare/torch/torch in GLOB.weather_act_upon_list)
+		torch.turn_off()
+		CHECK_TICK
+
+	for(var/obj/structure/soil/soil in GLOB.soil_list)
+		soil.plant_dead = TRUE
+		soil.produce_ready = FALSE
+		soil.update_icon()
+		CHECK_TICK
+
+	for(var/mob/living/carbon/human in GLOB.human_list)
+		if(human.clan)
+			continue
+
+		human.stress_freakout()
+
+	var/list/spawn_locs = GLOB.hauntstart.Copy()
+	if(LAZYLEN(GLOB.hauntstart))
+		for(var/i in 1 to 20)
+			var/obj/effect/landmark/events/haunts/_T = pick_n_take(spawn_locs)
+			if(_T)
+				_T = get_turf(_T)
+				if(isfloorturf(_T))
+					new /mob/living/carbon/human/species/skeleton/npc(_T)
+
+/// Returns universe state to normal after the sunstealer has been slain
+/datum/controller/subsystem/ticker/proc/on_sunstealer_death()
+	GLOB.todoverride = null
+	sunstolen = FALSE
+	settod()
+	SSParticleWeather.run_weather(/datum/particle_weather/rain_gentle, TRUE)
+
+#undef ROUND_START_MUSIC_LIST

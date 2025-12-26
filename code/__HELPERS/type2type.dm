@@ -298,56 +298,117 @@
 
 //Turns a Body_parts_covered bitfield into a list of organ/limb names.
 //(I challenge you to find a use for this)
-/proc/body_parts_covered2organ_names(bpc)
+//^ I did.
+//verbose = TRUE will include BOTH flags like "ARMS" and individual flags like "L ARM"
+//precise = TRUE will EXCLUDE combined flags like "ARMS" or "LEGS" and only include "L ARM" / "R ARM" etc
+//leaving both FALSE will include combined flags where appropriate.
+/proc/body_parts_covered2organ_names(bpc, verbose = FALSE, precise = FALSE)
 	var/list/covered_parts = list()
 
 	if(!bpc)
 		return 0
 
-	if(bpc & FULL_BODY)
-		covered_parts |= list(BODY_ZONE_L_ARM,BODY_ZONE_R_ARM,BODY_ZONE_HEAD,BODY_ZONE_CHEST,BODY_ZONE_L_LEG,BODY_ZONE_R_LEG)
+	if(bpc & HEAD)
+		covered_parts |= list(READABLE_ZONE_HEAD)
+	if(bpc & HAIR)
+		covered_parts |= list(READABLE_ZONE_SKULL)
+	if(bpc & NECK)
+		covered_parts |= list(READABLE_ZONE_NECK)
+	if(bpc & FACE && !precise)
+		covered_parts |= list(READABLE_ZONE_FACE)
+	if(verbose || precise || !(bpc & FACE))
+		if(bpc & MOUTH)
+			covered_parts |= list(READABLE_ZONE_MOUTH)
+		if(bpc & NOSE)
+			covered_parts |= list(READABLE_ZONE_NOSE)
+		if(bpc & EYES)
+			covered_parts |= list(READABLE_ZONE_EYES)
+		if(bpc & EARS)
+			covered_parts |= list(READABLE_ZONE_EARS)
 
-	else
-		if(bpc & HEAD)
-			covered_parts |= list(BODY_ZONE_HEAD)
-		if(bpc & CHEST)
-			covered_parts |= list(BODY_ZONE_CHEST)
-		if(bpc & GROIN)
-			covered_parts |= list(BODY_ZONE_CHEST)
+	if(bpc & CHEST)
+		covered_parts |= list(READABLE_ZONE_CHEST)
+	if(bpc & VITALS)
+		covered_parts |= list(READABLE_ZONE_VITALS)
+	if(bpc & GROIN)
+		covered_parts |= list(READABLE_ZONE_GROIN)
 
-		if(bpc & ARMS)
-			covered_parts |= list(BODY_ZONE_L_ARM,BODY_ZONE_R_ARM)
-		else
-			if(bpc & ARM_LEFT)
-				covered_parts |= list(BODY_ZONE_L_ARM)
-			if(bpc & ARM_RIGHT)
-				covered_parts |= list(BODY_ZONE_R_ARM)
+	if(bpc & ARMS && !precise)
+		covered_parts |= list(READABLE_ZONE_ARMS)
+	if(verbose || precise || !(bpc & ARMS))
+		if(bpc & ARM_LEFT)
+			covered_parts |= list(READABLE_ZONE_L_ARM)
+		if(bpc & ARM_RIGHT)
+			covered_parts |= list(READABLE_ZONE_R_ARM)
 
-		if(bpc & HANDS)
-			covered_parts |= list(BODY_ZONE_L_ARM,BODY_ZONE_R_ARM)
-		else
-			if(bpc & HAND_LEFT)
-				covered_parts |= list(BODY_ZONE_L_ARM)
-			if(bpc & HAND_RIGHT)
-				covered_parts |= list(BODY_ZONE_R_ARM)
+	if(bpc & HANDS && !precise)
+		covered_parts |= list(READABLE_ZONE_HANDS)
+	if(verbose || precise || !(bpc & HANDS))
+		if(bpc & HAND_LEFT)
+			covered_parts |= list(READABLE_ZONE_L_HAND)
+		if(bpc & HAND_RIGHT)
+			covered_parts |= list(READABLE_ZONE_R_HAND)
 
-		if(bpc & LEGS)
-			covered_parts |= list(BODY_ZONE_L_LEG,BODY_ZONE_R_LEG)
-		else
-			if(bpc & LEG_LEFT)
-				covered_parts |= list(BODY_ZONE_L_LEG)
-			if(bpc & LEG_RIGHT)
-				covered_parts |= list(BODY_ZONE_R_LEG)
+	if(bpc & LEGS && !precise)
+		covered_parts |= list(READABLE_ZONE_LEGS)
+	if(verbose || precise || !(bpc & LEGS))
+		if(bpc & LEG_LEFT)
+			covered_parts |= list(READABLE_ZONE_L_LEG)
+		if(bpc & LEG_RIGHT)
+			covered_parts |= list(READABLE_ZONE_R_LEG)
 
-		if(bpc & FEET)
-			covered_parts |= list(BODY_ZONE_L_LEG,BODY_ZONE_R_LEG)
-		else
-			if(bpc & FOOT_LEFT)
-				covered_parts |= list(BODY_ZONE_L_LEG)
-			if(bpc & FOOT_RIGHT)
-				covered_parts |= list(BODY_ZONE_R_LEG)
+
+	if(bpc & FEET && !precise)
+		covered_parts |= list(READABLE_ZONE_FEET)
+	if(verbose || precise || !(bpc & FEET))
+		if(bpc & FOOT_LEFT)
+			covered_parts |= list(READABLE_ZONE_L_FOOT)
+		if(bpc & FOOT_RIGHT)
+			covered_parts |= list(READABLE_ZONE_R_FOOT)
 
 	return covered_parts
+
+
+/// Takes a user-targeted zone and returns a readable version of it.
+/proc/bodyzone2readablezone(zone)
+	switch(zone)
+		if(BODY_ZONE_HEAD)
+			return READABLE_ZONE_HEAD
+		if(BODY_ZONE_PRECISE_EARS)
+			return READABLE_ZONE_EARS
+		if(BODY_ZONE_PRECISE_L_EYE, BODY_ZONE_PRECISE_R_EYE)
+			return READABLE_ZONE_EYES
+		if(BODY_ZONE_PRECISE_MOUTH)
+			return READABLE_ZONE_MOUTH
+		if(BODY_ZONE_PRECISE_NOSE)
+			return READABLE_ZONE_NOSE
+		if(BODY_ZONE_PRECISE_NECK)
+			return READABLE_ZONE_NECK
+		if(BODY_ZONE_PRECISE_SKULL)
+			return READABLE_ZONE_SKULL
+		if(BODY_ZONE_CHEST)
+			return READABLE_ZONE_CHEST
+		if(BODY_ZONE_PRECISE_STOMACH)
+			return READABLE_ZONE_VITALS
+		if(BODY_ZONE_PRECISE_GROIN)
+			return READABLE_ZONE_GROIN
+		if(BODY_ZONE_L_ARM)
+			return READABLE_ZONE_L_ARM
+		if(BODY_ZONE_PRECISE_L_HAND)
+			return READABLE_ZONE_L_HAND
+		if(BODY_ZONE_R_ARM)
+			return READABLE_ZONE_R_ARM
+		if(BODY_ZONE_PRECISE_R_HAND)
+			return READABLE_ZONE_R_HAND
+		if(BODY_ZONE_L_LEG)
+			return READABLE_ZONE_L_LEG
+		if(BODY_ZONE_PRECISE_L_FOOT)
+			return READABLE_ZONE_L_FOOT
+		if(BODY_ZONE_R_LEG)
+			return READABLE_ZONE_R_LEG
+		if(BODY_ZONE_PRECISE_R_FOOT)
+			return READABLE_ZONE_R_FOOT
+		
 
 /proc/slot2body_zone(slot)
 	switch(slot)
@@ -574,3 +635,30 @@
 			return null
 		r += ascii2text(c)
 	return r
+
+/// Returns a list(x, y), being the change in position required to step in the passed in direction
+/proc/dir2offset(dir)
+	switch(dir)
+		if(NORTH)
+			return list(0, 1)
+		if(SOUTH)
+			return list(0, -1)
+		if(EAST)
+			return list(1, 0)
+		if(WEST)
+			return list(-1, 0)
+		if(NORTHEAST)
+			return list(1, 1)
+		if(SOUTHEAST)
+			return list(1, -1)
+		if(NORTHWEST)
+			return list(-1, 1)
+		if(SOUTHWEST)
+			return list(-1, -1)
+		else
+			return list(0, 0)
+
+/// Return html to load a url.
+/// for use inside of browse() calls to html assets that might be loaded on a cdn.
+/proc/url2htmlloader(url)
+	return {"<html><head><meta http-equiv="refresh" content="0;URL='[url]'"/></head><body onLoad="parent.location='[url]'"></body></html>"}

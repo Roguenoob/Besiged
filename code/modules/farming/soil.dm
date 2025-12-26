@@ -4,6 +4,8 @@
 #define MAX_PLANT_WEEDS 100
 #define SOIL_DECAY_TIME 10 MINUTES
 
+GLOBAL_LIST_EMPTY(soil_list)
+
 /obj/structure/soil
 	name = "soil"
 	desc = "Dirt, ready to give life like a womb."
@@ -36,10 +38,20 @@
 	var/tilled_time = 0
 	/// The time remaining in which the soil was blessed and will help the plant grow, and make weeds decay
 	var/blessed_time = 0
+	/// The time remaining in which the soil is pollinated.
+	var/pollination_time = 0
 	/// Time remaining for the soil to decay and destroy itself, only applicable when its out of water and nutriments and has no plant
 	var/soil_decay_time = SOIL_DECAY_TIME
 	///The time remaining in which the soil was given special fertilizer, effect is similar to being blessed but with less beneficial effects
 	var/fertilized_time = 0
+
+/obj/structure/soil/Initialize()
+	. = ..()
+	GLOB.soil_list += src
+
+/obj/structure/soil/Destroy()
+	GLOB.soil_list -= src
+	return ..()
 
 /obj/structure/soil/Crossed(atom/movable/AM)
 	. = ..()
@@ -52,7 +64,7 @@
 	apply_farming_fatigue(user, 5)
 	add_sleep_experience(user, /datum/skill/labor/farming, user.STAINT * 2)
 
-	var/farming_skill = user.mind.get_skill_level(/datum/skill/labor/farming)
+	var/farming_skill = user.get_skill_level(/datum/skill/labor/farming)
 	var/is_legendary = FALSE
 	if(farming_skill == SKILL_LEVEL_LEGENDARY) //check if the user has legendary farming skill
 		is_legendary = TRUE //we do
@@ -72,6 +84,12 @@
 		feedback = "I harvest the produce well."
 		modifier += 1
 
+	if(has_world_trait(/datum/world_trait/dendor_fertility))
+		feedback = "Praise Dendor for our harvest is bountiful."
+		modifier += 3
+
+	record_featured_stat(FEATURED_STATS_FARMERS, user)
+	record_round_statistic(STATS_PLANTS_HARVESTED)
 	to_chat(user, span_notice(feedback))
 	yield_produce(modifier, is_legendary)
 
@@ -106,7 +124,7 @@
 /obj/structure/soil/proc/try_handle_tilling(obj/item/attacking_item, mob/user, params)
 	if(istype(attacking_item, /obj/item/rogueweapon/hoe))
 		var/is_legendary = FALSE
-		if(user.mind.get_skill_level(/datum/skill/labor/farming) == SKILL_LEVEL_LEGENDARY)
+		if(user.get_skill_level(/datum/skill/labor/farming) == SKILL_LEVEL_LEGENDARY)
 			is_legendary = TRUE
 		var/work_time = 4 SECONDS
 		if(is_legendary)
@@ -314,10 +332,12 @@
 
 /obj/structure/soil/Initialize()
 	START_PROCESSING(SSprocessing, src)
+	GLOB.weather_act_upon_list += src
 	. = ..()
 
 /obj/structure/soil/Destroy()
 	STOP_PROCESSING(SSprocessing, src)
+	GLOB.weather_act_upon_list -= src
 	. = ..()
 
 /obj/structure/soil/process()
@@ -328,6 +348,11 @@
 	update_icon()
 	if(soil_decay_time <= 0)
 		decay_soil()
+
+/obj/structure/soil/weather_act_on(weather_trait, severity)
+	if(weather_trait != PARTICLEWEATHER_RAIN)
+		return
+	water = min(MAX_PLANT_WATER, water + min(5, severity / 4))
 
 /obj/structure/soil/update_icon()
 	. = ..()
@@ -431,7 +456,9 @@
 	if(blessed_time > 0)
 		. += span_good("The soil seems blessed.")
 	if(fertilized_time > 0)
-		. += span_good("The soil has special fertilzier mixed in.")
+		. += span_good("The soil has special fertilizer mixed in.")
+	if(pollination_time > 0)
+		. += span_good("The soil has been pollinated.")
 
 #define BLESSING_WEED_DECAY_RATE 10 / (1 MINUTES)
 #define WEED_GROWTH_RATE 3 / (1 MINUTES)
@@ -515,6 +542,21 @@
 	if(blessed_time > 0 || fertilized_time > 0)
 		growth_multiplier *= 2.0
 		nutriment_eat_mutliplier *= 0.4
+
+	if(pollination_time > 0)
+		growth_multiplier *= 1.75
+		nutriment_eat_mutliplier *= 0.6
+
+	if(has_world_trait(/datum/world_trait/dendor_fertility))
+		growth_multiplier *= 2.0
+		nutriment_eat_mutliplier *= 0.4
+
+	if(has_world_trait(/datum/world_trait/fertility))
+		growth_multiplier *= 1.5
+
+	if(has_world_trait(/datum/world_trait/dendor_drought))
+		growth_multiplier *= 0.4
+		nutriment_eat_mutliplier *= 2
 	// If there's too many weeds, they hamper the growth of the plant
 	if(weeds >= MAX_PLANT_WEEDS * 0.3)
 		growth_multiplier *= 0.75
@@ -570,6 +612,7 @@
 		nutrition = 100
 	tilled_time = max(tilled_time - dt, 0)
 	blessed_time = max(blessed_time - dt, 0)
+	pollination_time = max(pollination_time - dt, 0)
 
 /obj/structure/soil/proc/decay_soil()
 	uproot()
@@ -624,3 +667,21 @@
 	produce_ready = FALSE
 	plant_dead = FALSE
 	update_icon()
+
+#undef MAX_PLANT_HEALTH
+#undef MAX_PLANT_WATER
+#undef MAX_PLANT_NUTRITION
+#undef MAX_PLANT_WEEDS
+#undef SOIL_DECAY_TIME
+#undef BLESSING_WEED_DECAY_RATE
+#undef WEED_GROWTH_RATE
+#undef WEED_DECAY_RATE
+#undef WEED_RESISTANCE_DECAY_RATE
+#undef WEED_WATER_CONSUMPTION_RATE
+#undef WEED_NUTRITION_CONSUMPTION_RATE
+#undef PLANT_REGENERATION_RATE
+#undef PLANT_DECAY_RATE
+#undef PLANT_BLESS_HEAL_RATE
+#undef PLANT_WEEDS_HARM_RATE
+#undef SOIL_WATER_DECAY_RATE
+#undef SOIL_NUTRIMENT_DECAY_RATE

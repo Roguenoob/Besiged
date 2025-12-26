@@ -5,11 +5,13 @@
 	slot_flags = ITEM_SLOT_HIP
 	var/base_icon_state = "basic_book"
 	unique = TRUE
-	firefuel = 2 MINUTES
+	firefuel = 5 MINUTES
 	dropshrink = 0.6
 	drop_sound = 'sound/foley/dropsound/book_drop.ogg'
 	force = 5
 	associated_skill = /datum/skill/misc/reading
+	grid_width = 32
+	grid_height = 32
 
 /obj/item/book/rogue/getonmobprop(tag)
 	. = ..()
@@ -120,26 +122,21 @@
 		if(C.orders.len > 4)
 			to_chat(user, span_warning("Too much order."))
 			return
-		var/picked_cat = input(user, "Categories", "Shipping Ledger") as null|anything in sortList(SSshuttle.supply_cats)
+		var/picked_cat = input(user, "Categories", "Shipping Ledger") as null|anything in sortList(SSmerchant.supply_cats)
 		if(!picked_cat)
-			testing("yeye")
+
 			return
 		var/list/pax = list()
-		for(var/pack in SSshuttle.supply_packs)
-			var/datum/supply_pack/PA = SSshuttle.supply_packs[pack]
+		for(var/pack in SSmerchant.supply_packs)
+			var/datum/supply_pack/PA = SSmerchant.supply_packs[pack]
 			if(PA.group == picked_cat)
 				pax += PA
-		var/picked_pack = input(user, "Shipments", "Shipping Ledger") as null|anything in sortList(pax)
+
+		var/datum/supply_pack/picked_pack = input(user, "Shipments", "Shipping Ledger") as null|anything in sortList(pax)
 		if(!picked_pack)
 			return
-		var/namer = user.name
-		var/rankr = "None"
-		if(ishuman(user))
-			var/mob/living/carbon/human/H = user
-			namer = H.get_authentification_name()
-			rankr = H.get_assignment(hand_first = TRUE)
-		var/datum/supply_order/SO = new (picked_pack, namer, rankr, user.ckey, "None", SSeconomy.get_dep_account(ACCOUNT_CAR))
-		C.orders += SO
+
+		C.orders += picked_pack
 		C.rebuild_info()
 		return
 	if(istype(I, /obj/item/paper/scroll))
@@ -150,26 +147,20 @@
 		if(P.info)
 			to_chat(user, span_warning("Something is written here already."))
 			return
-		var/picked_cat = input(user, "Categories", "Shipping Ledger") as null|anything in sortList(SSshuttle.supply_cats)
+		var/picked_cat = input(user, "Categories", "Shipping Ledger") as null|anything in sortList(SSmerchant.supply_cats)
 		if(!picked_cat)
 			return
 		var/list/pax = list()
-		for(var/pack in SSshuttle.supply_packs)
-			var/datum/supply_pack/PA = SSshuttle.supply_packs[pack]
+		for(var/pack in SSmerchant.supply_packs)
+			var/datum/supply_pack/PA = SSmerchant.supply_packs[pack]
 			if(PA.group == picked_cat)
 				pax += PA
-		var/picked_pack = input(user, "Shipments", "Shipping Ledger") as null|anything in sortList(pax)
+		var/datum/supply_pack/picked_pack = input(user, "Shipments", "Shipping Ledger") as null|anything in sortList(pax)
 		if(!picked_pack)
 			return
 		var/obj/item/paper/scroll/cargo/C = new(user.loc)
-		var/namer = user.name
-		var/rankr = "None"
-		if(ishuman(user))
-			var/mob/living/carbon/human/H = user
-			namer = H.get_authentification_name()
-			rankr = H.get_assignment(hand_first = TRUE)
-		var/datum/supply_order/SO = new (picked_pack, namer, rankr, user.ckey, "None", SSeconomy.get_dep_account(ACCOUNT_CAR))
-		C.orders += SO
+
+		C.orders += picked_pack
 		C.rebuild_info()
 		user.dropItemToGround(P)
 		qdel(P)
@@ -177,11 +168,16 @@
 	..()
 
 /obj/item/book/rogue/bibble
-	name = "The Book"
+	name = "The Verses and Acts of the Ten"
+	desc = "The collected verses and acts of the DIVINE PANTHEON. Split into three parts.</br>VISAGE - The OLD, THE FIRST ACTS OF THE TEN UPON PSYDONIA, BEFORE THE COMET SYON </br>DECANOMICON - THE ERA OF GLEAM, THE HOLY CELESTIAL EMPIRE - </br>NEW DAWN - Modern Era, the foundation of the HOLY SEE and ONWARDS."
 	icon_state = "bibble_0"
 	base_icon_state = "bibble"
-	title = "bible"
+	title = "The Verses and Acts of the Ten"
 	dat = "gott.json"
+	possible_item_intents = list(
+		/datum/intent/use, 
+		/datum/intent/bless,
+	)
 
 /obj/item/book/rogue/bibble/read(mob/user)
 	if(!open)
@@ -195,27 +191,104 @@
 		return
 	if(in_range(user, src) || isobserver(user))
 		user.changeNext_move(CLICK_CD_MELEE)
+		var/list/choices = list("Visage", "Decanomicon", "New Dawn")
+		var/section_choice = input(user,"Which section shall I read from?", "DIVINE ENLIGHTENMENT") as anything in choices
+		var/chosentxt
+		switch(section_choice)
+			if("Visage")
+				chosentxt = 'strings/visage.txt'
+			if("Decanomicon")
+				chosentxt = 'strings/decanomicon.txt'
+			if("New Dawn")
+				chosentxt = 'strings/newdawn.txt'
 		var/m
-		var/list/verses = world.file2list("strings/bibble.txt")
+		var/list/verses = world.file2list(chosentxt)
 		m = pick(verses)
 		if(m)
 			user.say(m)
 
-/obj/item/book/rogue/bibble/attack(mob/living/M, mob/user)
-	if(user.mind && user.mind.assigned_role == "Priest")
+/obj/item/book/rogue/bibble/attack(atom/M, mob/user)
+	if(user.mind?.assigned_role == "Bishop" && user.used_intent?.type == /datum/intent/bless && isliving(M))
 		if(!user.can_read(src))
 			to_chat(user, span_warning("I don't understand these scribbly black lines."))
 			return
-		M.apply_status_effect(/datum/status_effect/buff/blessed)
-		M.add_stress(/datum/stressevent/blessed)
+		var/mob/living/to_bless = M
+		to_bless.apply_status_effect(/datum/status_effect/buff/blessed)
+		to_bless.add_stress(/datum/stressevent/blessed)
 		user.visible_message(span_notice("[user] blesses [M]."))
 		playsound(user, 'sound/magic/bless.ogg', 100, FALSE)
 		return
 
+/obj/item/book/rogue/bibble/afterattack(atom/target, mob/user, proximity_flag, click_parameters)
+	. = ..()
+	if(user.mind?.assigned_role == "Bishop" && isitem(target) && user.used_intent?.type == /datum/intent/bless)
+		var/datum/component/silverbless/CP = target.GetComponent(/datum/component/silverbless)
+		if(!CP)
+			to_chat(user, span_info("\The [target] can not be blessed."))
+			return
+		else if(!CP.is_blessed && (CP.silver_type & SILVER_TENNITE))
+			playsound(user, 'sound/magic/censercharging.ogg', 100)
+			user.visible_message(span_info("[user] holds \the [src] over \the [target]..."))
+			if(do_after(user, 5 SECONDS, target = target))
+				CP.try_bless(BLESSING_TENNITE)
+				new /obj/effect/temp_visual/censer_dust(get_turf(target))
+			return
+		else
+			to_chat(user, span_info("It has already been blessed."))
+			return
+
+/obj/item/book/rogue/bibble/psy
+	name = "Tome of Psydon"
+	desc = "'And HE WEEPS. Not for you, not for me, but for it all.' </br>A leatherbound tome, chronicling the beliefs held by the Orthodoxy; the largest Psydonic denomination in the world. The 'Harlaus Press', a recent invention by Otava's clergymen, has ensured that no corner of Psydonia would remain unlit by His teachings. Inside are three seperate testaments, each marked with a velvet strap.. </br>PSALMS - TESTAMENTS OF CLERICAL WISDOM, COMMANDING INTERPRETATION. </br>GENESIS - TESTAMENTS OF PSYDONIA'S CREATION, FOR WHAT ONCE WAS. </br>INVOCATIONS - TESTAMENTS OF WILL, TO EXORCISE AND CHANT."
+	icon_state = "psyble_0"
+	base_icon_state = "psyble"
+	title = "psyble"
+	dat = "gott.json"
+	var/sect = "sect1"
+
+/obj/item/book/rogue/bibble/psy/attack(mob/living/M, mob/user)
+	return
+
+/obj/item/book/rogue/bibble/psy/read(mob/living/carbon/human/user)
+	if(!open)
+		to_chat(user, span_info("Open it first."))
+		return FALSE
+	if(!user.client || !user.hud_used)
+		return
+	if(!user.hud_used.reads)
+		return
+	if(!user.can_read(src))
+		return
+	if(in_range(user, src) || isobserver(user))
+		user.changeNext_move(CLICK_CD_MELEE)
+		var/m
+		if(sect)
+			var/list/verses = world.file2list("strings/psy[sect].txt")
+			m = pick(verses)
+			if(m)
+				if(prob(1) && sect == "sect1")
+					user.playsound_local(user, 'sound/misc/psydong.ogg', 100, FALSE)
+					user.say("PSY 23:4... And so, ZEZUS wept; for he had been struck down by the silvered javelin of JVDAS, PSYDON's most devout.")
+					user.psydo_nyte()
+				else
+					user.say(m)
+
+/obj/item/book/rogue/bibble/psy/MiddleClick(mob/user, params)
+	. = ..()
+	var/sects = list("PSALMS", "GENESIS", "INVOCATIONS")
+	var/sect_choice = input(user, "SELECT YOUR TESTAMENT", "OF PSYDONIA") as anything in sects
+	switch(sect_choice)
+		if("PSALMS")
+			sect = "sect1"
+		if("GENESIS")
+			sect = "sect2"
+		if("INVOCATIONS")
+			sect = "sect3"
+
 /datum/status_effect/buff/blessed
 	id = "blessed"
 	alert_type = /atom/movable/screen/alert/status_effect/buff/blessed
-	effectedstats = list("fortune" = 1)
+	effectedstats = list(STATKEY_LCK = 1)
 	duration = 20 MINUTES
 
 /atom/movable/screen/alert/status_effect/buff/blessed
@@ -226,7 +299,7 @@
 
 /obj/item/book/rogue/law
 	name = "Tome of Justice"
-	desc = "The Tome of laws as passed by the Holy See to its many Ten-worshipping communities."
+	desc = "The Tome of Laws, as passed from the Holy See to its many Ten-worshipping communities."
 	icon_state ="lawtome_0"
 	base_icon_state = "lawtome"
 	bookfile = "law_2.json"
@@ -245,6 +318,7 @@
 	icon_state ="book5_0"
 	base_icon_state = "book5"
 	bookfile = "knowledge.json"
+
 
 /obj/item/book/rogue/secret/xylix
 	name = "Book of Gold"
@@ -403,6 +477,7 @@
 	base_icon_state = "book6"
 	bookfile = "naledi4.json"
 
+
 /obj/item/book/rogue/playerbook
 	var/player_book_text
 	var/player_book_title
@@ -421,7 +496,7 @@
 	"Brown with embossed gold" = "book1",
 	"Brown without embossed material" = "basic_book")
 	name = "unknown title"
-	desc = "by an unknown author"
+	desc = "Penned by an unknown author."
 	icon_state = "basic_book_0"
 	base_icon_state = "basic_book"
 	override_find_book = TRUE
@@ -470,17 +545,72 @@
 	base_icon_state = "[player_book_icon]"
 	pages = list("<b3><h3>Title: [player_book_title]<br>Author: [player_book_author]</b><h3>[player_book_text]")
 
+
+/obj/item/book/rogue/loadoutbook
+	name = "book"
+	desc = "A bound book. Use in hand to edit name, description and sprite."
+	var/stage = 0
+
+/obj/item/book/rogue/loadoutbook/attack_self(mob/user)
+	if(stage == 0)
+		var/name_input = stripped_input(user, "Name your book - Leave empty for default.", "Book", max_length = MAX_NAME_LEN)
+		if(name_input)
+			name = name_input
+		stage++
+
+	if(stage == 1)
+		var/desc_input = stripped_input(user, "Describe your book - Leave empty for default.", "Book", max_length = MAX_BROADCAST_LEN)
+		if(desc_input)
+			desc = desc_input
+		stage++
+
+	if(stage == 2)
+		var/icon/J = new('icons/roguetown/items/books.dmi')
+		var/list/istates = J.IconStates()
+		var/list/icon_choice = list()
+		for(var/icon_s in istates)
+			if(icon_s == icon_state)
+				continue
+			if(!findtext(icon_s, "book", 1, 5))
+				continue
+			if(findtext(icon_s, "_1"))
+				continue
+			icon_choice += list(
+				"[icon_s]" = icon(icon = 'icons/roguetown/items/books.dmi', icon_state = icon_s)
+			)
+
+		var/icon_input = show_radial_menu(user, src, icon_choice, require_near = TRUE, tooltips = FALSE)
+		if(icon_input)
+			icon_state = icon_input
+			base_icon_state = replacetextEx(icon_input, regex(@"_[0-1]"), "")
+			if(alert(user, "Are you happy with this?", "Book Cover", "Yes", "No") != "Yes")
+				icon_state = initial(icon_state)
+				base_icon_state = initial(base_icon_state)
+				return
+		stage++
+		return
+
+	if(stage > 2)
+		..()
+
+
 /obj/item/manuscript
 	name = "2 page manuscript"
-	desc = "A 2 page written piece, with aspirations of becoming a book."
+	desc = "A 2 page written piece aspiring to one dae become a book."
 	icon = 'icons/roguetown/items/misc.dmi'
 	icon_state = "manuscript"
 	dir = 2
 	resistance_flags = FLAMMABLE
+	grid_width = 32
+	grid_height = 64
 	var/number_of_pages = 2
 	var/compiled_pages = null
 	var/list/page_texts = list()
 	var/qdel_source = FALSE
+
+/obj/item/manuscript/examine()
+	. = ..()
+	. += span_info("It has [number_of_pages] pages. Use paper to add more. Finish the book with a book crafting kit.")
 
 /obj/item/manuscript/attackby(obj/item/I, mob/living/user)
 	// why is a book crafting kit using the craft system, but crafting a book isn't? Well the crafting system for *some reason* is made in such a way as to make reworking it to allow you to put reqs vars in the crafted item near *impossible.*
@@ -504,7 +634,7 @@
 
 	++number_of_pages
 	name = "[number_of_pages] page manuscript"
-	desc = "A [number_of_pages] page written piece, with aspirations of becoming a book."
+	desc = "A [number_of_pages] page written piece aspiring to one dae become a book."
 	page_texts += P.info
 	compiled_pages += "<p>[P.info]</p>"
 	qdel(P)
@@ -607,14 +737,13 @@
 		else
 			update_icon()
 			name = "[number_of_pages] page manuscript"
-			desc = "A [number_of_pages] page written piece, with aspirations of becoming a book."
+			desc = "A [number_of_pages] page written piece aspiring to one dae become a book."
 			return
 
 	. = ..()
 
 /obj/item/book_crafting_kit
 	name = "book crafting kit"
-	desc = "Apply on a written manuscript to create a book"
+	desc = "Apply on a written manuscript to create a book."
 	icon = 'icons/roguetown/items/misc.dmi'
 	icon_state = "book_crafting_kit"
-

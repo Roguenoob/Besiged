@@ -1,5 +1,3 @@
-#define EXPLOSION_THROW_SPEED 4
-
 GLOBAL_LIST_EMPTY(explosions)
 //Against my better judgement, I will return the explosion datum
 //If I see any GC errors for it I will find you
@@ -116,7 +114,7 @@ GLOBAL_LIST_EMPTY(explosions)
 			// Double check for client
 			var/turf/M_turf = get_turf(M)
 			var/turf/E_turf = get_turf(epicenter)
-			if(is_in_zweb(M_turf, E_turf))
+			if(is_in_zweb(M_turf.z,E_turf.z))
 				var/dist = get_dist(M_turf, epicenter)
 				var/baseshakeamount
 				if(orig_max_distance - dist > 0)
@@ -171,7 +169,7 @@ GLOBAL_LIST_EMPTY(explosions)
 
 	var/iteration = 0
 	var/affTurfLen = affected_turfs.len
-	var/expBlockLen = cached_exp_block.len
+	var/expBlockLen = cached_exp_block?.len
 	for(var/TI in affected_turfs)
 		var/turf/T = TI
 		++iteration
@@ -185,7 +183,7 @@ GLOBAL_LIST_EMPTY(explosions)
 				dist += cached_exp_block[Trajectory]
 
 		var/flame_dist = dist < flame_range
-		var/throw_dist = dist
+		//var/throw_dist = dist
 
 		if(dist < devastation_range)
 			dist = EXPLODE_DEVASTATE
@@ -209,24 +207,28 @@ GLOBAL_LIST_EMPTY(explosions)
 				if(!QDELETED(A))
 					A.ex_act(dist)
 
-		if(flame_dist && !isspaceturf(T))
+		if(flame_dist && !istransparentturf(T))
 			new /obj/effect/hotspot(T) //Mostly for ambience!
 
 		if(dist > EXPLODE_NONE)
 			T.explosion_level = max(T.explosion_level, dist)	//let the bigger one have it
 			T.explosion_id = id
-			T.ex_act(dist)
+			if(istype(T, /turf/closed/wall))
+				var/turf/closed/wall/W = T
+				W.ex_act(dist, epicenter, epicenter, devastation_range, heavy_impact_range, light_impact_range, flame_range)
+			else
+				T.ex_act(dist)
 			exploded_this_tick += T
 
 		//--- THROW STUFF AROUND ---
-
+/*
 		var/throw_dir = get_dir(epicenter,T)
 		for(var/atom/movable/A in T)
 			if(!A.anchored)
 				var/throw_range = rand(throw_dist, max_range)
 				var/turf/throw_at = get_ranged_target_turf(A, throw_dir, throw_range)
 				A.throw_at(throw_at, throw_range, EXPLOSION_THROW_SPEED)
-
+*/
 		//wait for the lists to repop
 		var/break_condition
 		if(reactionary)
@@ -244,7 +246,7 @@ GLOBAL_LIST_EMPTY(explosions)
 
 			//update the trackers
 			affTurfLen = affected_turfs.len
-			expBlockLen = cached_exp_block.len
+			expBlockLen = cached_exp_block?.len
 
 			if(break_condition)
 				if(reactionary)
@@ -281,12 +283,6 @@ GLOBAL_LIST_EMPTY(explosions)
 	//You need to press the DebugGame verb to see these now....they were getting annoying and we've collected a fair bit of data. Just -test- changes to explosion code using this please so we can compare
 	if(GLOB.Debug2)
 		log_world("## DEBUG: Explosion([x0],[y0],[z0])(d[devastation_range],h[heavy_impact_range],l[light_impact_range]): Took [took] seconds.")
-
-	if(running)	//if we aren't in a hurry
-		//Machines which report explosions.
-		for(var/array in GLOB.doppler_arrays)
-			var/obj/machinery/doppler_array/A = array
-			A.sense_explosion(epicenter, devastation_range, heavy_impact_range, light_impact_range, took,orig_dev_range, orig_heavy_range, orig_light_range)
 
 	++stopped
 	qdel(src)

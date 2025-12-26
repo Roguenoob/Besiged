@@ -77,7 +77,7 @@ GLOBAL_VAR(moneymaster)
 
 /obj/structure/roguemachine/money/attack_hand(mob/living/user)
 	. = ..()
-	user.changeNext_move(CLICK_CD_MELEE)
+	user.changeNext_move(CLICK_CD_INTENTCAP)
 	to_chat(user, span_info("I rub the machine clockwise."))
 	if(budget > 0)
 		say("[budget] MAMMON ARE MINE...")
@@ -89,7 +89,7 @@ GLOBAL_VAR(moneymaster)
 	. = ..()
 	if(.)
 		return
-	user.changeNext_move(CLICK_CD_MELEE)
+	user.changeNext_move(CLICK_CD_INTENTCAP)
 	var/inputt = alert(user,"Gold, Silver, or Bronze?",,"BRONZE","SILVER","GOLD")
 	if(inputt && Adjacent(user))
 		to_chat(user, span_info("I pull on the [inputt] tongue."))
@@ -143,6 +143,9 @@ GLOBAL_VAR(moneymaster)
 			if("BRONZE")
 				zenars_to_put = budget
 				type_to_put = /obj/item/roguecoin/copper
+			if("MARQUE")
+				zenars_to_put = budget
+				type_to_put = /obj/item/roguecoin/inqcoin
 	else
 		var/highest_found = FALSE
 		var/zenars = floor(budget/10)
@@ -159,18 +162,34 @@ GLOBAL_VAR(moneymaster)
 				type_to_put = /obj/item/roguecoin/silver
 				zenars_to_put = zenars
 			else
-				new /obj/item/roguecoin/silver(T, zenars)
+				// Create multiple stacks if needed
+				while(zenars > 0)
+					var/stack_size = min(zenars, 20)
+					var/obj/item/roguecoin/silver_stack = new /obj/item/roguecoin/silver(T, stack_size)
+					if(user && zenars == stack_size) // Only put first stack in hands
+						user.put_in_hands(silver_stack)
+					zenars -= stack_size
 		if(budget >= 1)
 			if(!highest_found)
 				type_to_put = /obj/item/roguecoin/copper
 				zenars_to_put = budget
 			else
-				new /obj/item/roguecoin/copper(T, budget)
+				// Create multiple stacks if needed
+				while(budget > 0)
+					var/stack_size = min(budget, 20)
+					var/obj/item/roguecoin/copper_stack = new /obj/item/roguecoin/copper(T, stack_size)
+					if(user && budget == stack_size) // Only put first stack in hands
+						user.put_in_hands(copper_stack)
+					budget -= stack_size
 	if(!type_to_put || zenars_to_put < 1)
 		return
-	var/obj/item/roguecoin/G = new type_to_put(T, floor(zenars_to_put))
-	if(user)
-		user.put_in_hands(G)
+	// Create multiple stacks if needed for the main type
+	while(zenars_to_put > 0)
+		var/stack_size = min(zenars_to_put, 20)
+		var/obj/item/roguecoin/G = new type_to_put(T, stack_size)
+		if(user && zenars_to_put == stack_size) // Only put first stack in hands
+			user.put_in_hands(G)
+		zenars_to_put -= stack_size
 	playsound(T, 'sound/misc/coindispense.ogg', 100, FALSE, -1)
 /*
 /obj/structure/roguemachine/money/attack_right(mob/user)
@@ -194,7 +213,7 @@ GLOBAL_VAR(moneymaster)
 	if(obj_broken)
 		set_light(0)
 		return
-	set_light(1, 1, "#1b7bf1")
+	set_light(1, 1, 1, l_color = "#1b7bf1")
 
 /obj/structure/roguemachine/money/Destroy()
 	set_light(0)
@@ -231,4 +250,4 @@ GLOBAL_VAR(moneymaster)
 		add_overlay(mutable_appearance(icon, "[icon_state]-e"))
 	else
 		add_overlay(mutable_appearance(icon, "[icon_state]-b"))
-	set_light(1, 1, "#1b7bf1")
+	set_light(1, 1, 1, l_color = "#1b7bf1")

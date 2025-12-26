@@ -4,6 +4,7 @@ $include game_options.txt
 $include dbconfig.txt
 $include comms.txt
 $include antag_rep.txt
+$include discord.txt
 
 # You can use the @ character at the beginning of a config option to lock it from being edited in-game
 # Example usage:
@@ -14,7 +15,7 @@ $include antag_rep.txt
 # There are various options which are hard-locked for security reasons.
 
 ## Server name: This appears at the top of the screen in-game and in the BYOND hub. Uncomment and replace 'tgstation' with the name of your choice.
-SERVERNAME Besiged
+SERVERNAME CausticCove
 
 ## Server tagline: This will appear right below the server's title.
 # SERVERTAGLINE A generic TG-based server
@@ -23,7 +24,7 @@ SERVERNAME Besiged
 # SERVERSQLNAME tgstation
 
 ## Station name: The name of the station as it is referred to in-game. If commented out, the game will generate a random name instead.
-STATIONNAME Besiged
+STATIONNAME Caustic Cove
 
 ## Put on byond hub: Uncomment this to put your server on the byond hub.
 #HUB
@@ -238,16 +239,16 @@ USEBLACKLIST
 # SERVER ss13.example.com:2506
 
 ## Discod address
-DISCORDURL https://discord.gg/bx9c7ha5Qk
+# DISCORDURL https://discord.gg/bx9c7ha5Qk
 
 ## Wiki address
-WIKIURL https://wiki.moviesfreepremium.xyz/blackstone
+# WIKIURL https://wiki.moviesfreepremium.xyz/blackstone
 
 ## Rules address
-RULESURL https://wiki.moviesfreepremium.xyz/blackstone/rules
+# RULESURL https://wiki.moviesfreepremium.xyz/blackstone/rules
 
 ## Github address
-GITHUBURL https://github.com/Blackstone-SS13/BLACKSTONE
+GITHUBURL https://github.com/wewman222/CC
 
 ## Round specific stats address
 ## Link to round specific parsed logs; IE statbus. It is appended with the RoundID automatically by ticker/Reboot()
@@ -274,7 +275,7 @@ GITHUBURL https://github.com/Blackstone-SS13/BLACKSTONE
 ## from https://github.com/rg3/youtube-dl/releases
 ## or your package manager
 ## The default value assumes youtube-dl is in your system PATH
-#INVOKE_YOUTUBEDL yt-dlp
+# INVOKE_YOUTUBEDL youtube-dl
 
 ## In-game features
 ##Toggle for having jobs load up from the .txt

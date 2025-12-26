@@ -4,6 +4,8 @@
 	icon_state = "dragon"
 	icon_living = "dragon"
 	icon_dead = "dragon_dead"
+	pixel_x = -32
+	pixel_y = -16
 	footstep_type = FOOTSTEP_MOB_HEAVY
 	gender = MALE
 	emote_hear = null
@@ -13,24 +15,39 @@
 	speak_emote = list("growls")
 	see_in_dark = 6
 	move_to_delay = 3
-	base_intents = list(/datum/intent/simple/bite)
+	base_intents = list(/datum/intent/simple/bite/dragon_bite)
 	minbodytemp = 0
 	maxbodytemp = INFINITY
 	damage_coeff = list(BRUTE = 1, BURN = 0.2, TOX = 1, CLONE = 1, STAMINA = 0, OXY = 1)
-	butcher_results = list(/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 20,
-						/obj/item/natural/hide = 10, /obj/item/natural/bundle/bone/full = 4)
+	botched_butcher_results = list(
+		/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 2,
+		/obj/item/natural/hide = 2, 
+		/obj/item/natural/bundle/bone/full = 4)
+	butcher_results = list(
+		/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 4,
+		/obj/item/natural/hide = 4, 
+		/obj/item/natural/bundle/bone/full = 4,
+		/obj/item/natural/head/dragon = 1)
+	perfect_butcher_results = list(
+		/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 7, // More than troll. They are more difficult
+		/obj/item/natural/hide = 7, 
+		/obj/item/natural/bundle/bone/full = 4,
+		/obj/item/natural/head/dragon = 1)
 	mob_biotypes = MOB_ORGANIC|MOB_BEAST
-	health = 800
-	maxHealth = 800
-	melee_damage_lower = 45
+	health = DRAGON_HEALTH
+	maxHealth = DRAGON_HEALTH
+	melee_damage_lower = 50
 	melee_damage_upper = 70
 	vision_range = 7
 	aggro_vision_range = 9
-	environment_smash = ENVIRONMENT_SMASH_NONE
+	environment_smash = ENVIRONMENT_SMASH_STRUCTURES //Why didn't we destroy structures before?? Dunno.
 	retreat_distance = 0
 	minimum_distance = 0
 	milkies = FALSE
-	food_type = list(/obj/item/reagent_containers/food/snacks/rogue/meat, /obj/item/bodypart, /obj/item/organ)
+	food_type = list(/obj/item/reagent_containers/food/snacks/rogue/meat, 
+					/obj/item/bodypart, 
+					/obj/item/organ
+					)
 	footstep_type = FOOTSTEP_MOB_HEAVY
 	pooptype = null
 	STACON = 20
@@ -38,13 +55,18 @@
 	STASPD = 13
 	deaggroprob = 0
 	defprob = 40
-	defdrain = 10
 	del_on_deaggro = 9999 SECONDS
 	retreat_health = 0.3
 	food = 0
 	attack_sound = list('sound/combat/hits/blunt/genblunt (1).ogg','sound/combat/hits/blunt/genblunt (2).ogg','sound/combat/hits/blunt/genblunt (3).ogg','sound/combat/hits/blunt/flailhit.ogg')
 	dodgetime = 30
 	aggressive = 1
+
+	AIStatus = AI_OFF
+	can_have_ai = FALSE
+	ai_controller = /datum/ai_controller/dragon
+
+	limb_destroyer = TRUE
 //	stat_attack = UNCONSCIOUS
 
 /mob/living/simple_animal/hostile/retaliate/rogue/dragon/Initialize()
@@ -54,7 +76,7 @@
 		gender = FEMALE
 	update_icon()
 	ADD_TRAIT(src, TRAIT_NOMOOD, TRAIT_GENERIC)
-	ADD_TRAIT(src, TRAIT_NOROGSTAM, TRAIT_GENERIC)
+	ADD_TRAIT(src, TRAIT_INFINITE_STAMINA, TRAIT_GENERIC)
 	ADD_TRAIT(src, TRAIT_NOHUNGER, TRAIT_GENERIC)
 	ADD_TRAIT(src, TRAIT_NOBREATH, TRAIT_GENERIC)
 	ADD_TRAIT(src, TRAIT_NOPAIN, TRAIT_GENERIC)
@@ -71,8 +93,19 @@
 	ADD_TRAIT(src, TRAIT_NOFALLDAMAGE1, TRAIT_GENERIC)
 	ADD_TRAIT(src, TRAIT_BREADY, TRAIT_GENERIC)
 
+	var/datum/action/cooldown/mob_cooldown/dragon_leap/leap = new(src)
+
+	leap.Grant(src)
+
+	AddElement(/datum/element/ai_retaliate)
+
+	ai_controller.set_blackboard_key(BB_TARGETED_ACTION, leap)
+	
+	//ADD_TRAIT(src, TRAIT_NOPAINSTUN, TRAIT_GENERIC) // Need a weakness
+
 /mob/living/simple_animal/hostile/retaliate/rogue/dragon/death(gibbed)
 	..()
+
 	update_icon()
 
 /* Eyes that glow in the dark. They float over kybraxor pits at the moment.
@@ -152,6 +185,12 @@
 			return "foreleg"
 	return ..()
 
+/datum/intent/simple/bite/dragon_bite //the model/hitbox is too big so it never got to attack. Increase reach
+	reach = 2
+	swingdelay = 2
+	clickcd = DRAGON_ATTACK_SPEED //It is a dragon so it bites slightly faster
+	penfactor = 60 // It is a dragon so it bites hard
+
 /obj/projectile/magic/aoe/dragon_breath
     name = "fire hairball"
     icon_state = "fireball"
@@ -159,7 +198,7 @@
     damage_type = BRUTE
     nodamage = FALSE
     light_color = "#f8af07"
-    light_range = 2
+    light_outer_range = 2
     damage = 40
     flag = "magic"
     hitsound = 'sound/blank.ogg'
@@ -171,30 +210,33 @@
     var/exp_fire = 3
 
 
-
-/obj/projectile/magic/aoe/dragon_breath/on_hit(target)
-    . = ..()
-    if(ismob(target))
-        var/mob/living/M = target
-        if(exp_fire)
-            M.adjust_fire_stacks(exp_fire*3)
-    var/turf/T
-    if(isturf(target))
-        T = target
-    else
-        T = get_turf(target)
-    explosion(T, -1, exp_heavy, exp_light, exp_flash, 0, flame_range = exp_fire, soundin = explode_sound)
-    if(ismob(target))
-        var/mob/living/M = target
-        var/atom/throw_target = get_edge_target_turf(M, angle2dir(Angle))
-        M.throw_at(throw_target, exp_light, EXPLOSION_THROW_SPEED)
-    
 /mob/living/simple_animal/hostile/retaliate/rogue/dragon/broodmother
-	health = 1600
-	maxHealth = 1600
+	health = DRAGON_BROODMOTHER_HEALTH
+	maxHealth = DRAGON_BROODMOTHER_HEALTH
 	name = "dragon broodmother"
-	projectiletype = /obj/projectile/magic/aoe/dragon_breath
-	projectilesound = 'sound/blank.ogg'
-	ranged = 1
-	ranged_message = "breathes fire"
 	ranged_cooldown_time = 20 SECONDS
+	var/datum/action/cooldown/mob_cooldown/fire_breath/cone/fire_breath
+	butcher_results = list(
+		/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 4,
+		/obj/item/natural/hide = 4, 
+		/obj/item/natural/bundle/bone/full = 4,
+		/obj/item/natural/head/dragon/broodmother = 1)
+	perfect_butcher_results = list(
+		/obj/item/reagent_containers/food/snacks/rogue/meat/steak = 7, // More than troll. They are more difficult
+		/obj/item/natural/hide = 7, 
+		/obj/item/natural/bundle/bone/full = 4,
+		/obj/item/natural/head/dragon/broodmother = 1)
+
+
+/mob/living/simple_animal/hostile/retaliate/rogue/dragon/broodmother/Initialize()
+	. = ..()
+
+	fire_breath = new(src)
+	fire_breath.Grant(src)
+
+	ai_controller.set_blackboard_key(BB_TARGETED_ACTION, fire_breath)
+
+/mob/living/simple_animal/hostile/retaliate/rogue/dragon/broodmother/Destroy()
+	fire_breath.Remove(src)
+	QDEL_NULL(fire_breath)
+	return ..()

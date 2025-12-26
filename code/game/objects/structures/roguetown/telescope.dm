@@ -20,7 +20,10 @@
 			to_chat(H, span_warning("The blinding light causes you intense pain!"))
 			if(affecting && affecting.receive_damage(0, 5))
 				H.update_damage_overlays()
-
+	if(random_message == "You can see Noc rotating!")
+		if(do_after(H, 2.5 SECONDS, target = src))
+			to_chat(H, span_warning("Noc's glow seems to help clear your thoughts."))
+			H.apply_status_effect(/datum/status_effect/buff/nocblessing)
 
 /obj/structure/globe
 	name = "globe"
@@ -35,5 +38,5 @@
 		return
 
 	var/mob/living/carbon/human/H = user
-	var/random_message = pick("you spin the globe!", "You land on Azure Peak!", "You land on Zybantine!", "You land on port Ice cube!.", "You land on port Thornvale!", "You land on grenzelhoft!")
+	var/random_message = pick("you spin the globe!", "You land on Azure Peak!", "You land on Raneshen!", "You land on port Ice cube!.", "You land on port Thornvale!", "You land on grenzelhoft!")
 	to_chat(H, span_notice("[random_message]"))

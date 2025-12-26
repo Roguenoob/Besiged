@@ -5,14 +5,22 @@
 	name = "Dark Elf"
 	id = "elfd"
 	desc = "<b>Dark Elf</b><br>\
-	Elves, are a generic term for tall, pointy-eared humanoids\
-    Of whom trace their original heritage to the ancient mysterious Snow Elves. \
-	These ones are of a dark complexion and originate mostly from the underdark. \
-    Their culture and entire lives normally involve serving the evil gods of the inhumen pantheon. \
-    Previously rare but in recent times, more and more dark elfs can be seen on the surface. \
-    The ones who aren't overtly cruel and bloodthirsty, tend to flee to the surface lest they get culled by their own society, \
-    while some more sinister ones abandon their cities in search of new and greater power. \
-	+1 Perception"
+	\"Elf\" is a catch-all term used for tall, pointy-eared humanoids who can trace their \
+	heritage to the ancient and mysterious Snow Elves. This species of elf, less frequently \
+	seen, are also referred to by some as \"drow,\" and have several key differences \
+	that set them apart from their more well-known and surface-dwelling kin. Chief among these \
+	differences are their dark complexions and origins from the Underdark; a massive subterranean \
+	landscape made up of a vast network of interconnected caves, caverns and tunnels. In this world \
+	hidden deep beneath the soil are several dark elven cities who exist and function far from the \
+	reaches of the rest of the surface-dwelling societies. These are a large part of what has earned \
+	the dark elves their notoriety, for in these cities the worship of the ascendant pantheon is \
+	normalized, and their cruel and bloodthirsty culture reflects this. It was rare to see dark \
+	elves outside of their underground homes, but in recent years, more and more of them have fled \
+	to the surface. The reasons for each dark elf fleeing the Underdark vary depending on the \
+	individual, such as a kinder heart fleeing from a brutal society that scorns them for their \
+	less cruel nature. However, not every dark elf seen on the surface can be safely assumed as \
+	kind, for some leave the Underdark simply to find their own greater heights of power.<br>\
+	(+1 Intellect, +1 Perception)"
 
 /*
 	Former RT Desc: These guys were undead which doesn't really fit considering now you have a ton of them walking around.
@@ -30,15 +38,19 @@
 	They typically trace their beginnings to how their progenator died before being raised."
 */
 	skin_tone_wording = "Origin City-State"
+	max_age = 850
 
 	species_traits = list(EYECOLOR,HAIR,FACEHAIR,LIPS,OLDGREY)
+	allowed_taur_types = list(
+		/obj/item/bodypart/taur/spider,
+		/obj/item/bodypart/taur/wasp,
+	)
 	default_features = MANDATORY_FEATURE_LIST
-	use_skintones = 1
-	skinned_type = /obj/item/stack/sheet/animalhide/human
+	use_skintones = TRUE
 	disliked_food = NONE
 	liked_food = NONE
 	possible_ages = ALL_AGES_LIST
-	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | ERT_SPAWN | RACE_SWAP | SLIME_EXTRACT
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | RACE_SWAP | SLIME_EXTRACT
 	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mem.dmi'
 	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fm.dmi'
 	dam_icon = 'icons/roguetown/mob/bodies/dam/dam_male.dmi'
@@ -58,7 +70,7 @@
 		OFFSET_NECK_F = list(0,-1), OFFSET_MOUTH_F = list(0,-1), OFFSET_PANTS_F = list(0,0), \
 		OFFSET_SHIRT_F = list(0,0), OFFSET_ARMOR_F = list(0,0), OFFSET_UNDIES_F = list(0,-1), \
 		)
-	race_bonus = list(STAT_PERCEPTION = 1)
+	race_bonus = list(STAT_PERCEPTION = 1, STAT_INTELLIGENCE = 1)
 	enflamed_icon = "widefire"
 	organs = list(
 		ORGAN_SLOT_BRAIN = /obj/item/organ/brain,
@@ -82,20 +94,41 @@
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
 		/datum/customizer/bodypart_feature/underwear,
+		/datum/customizer/bodypart_feature/legwear,
+		/datum/customizer/organ/ears/elf,
 		/datum/customizer/organ/testicles/anthro,
 		/datum/customizer/organ/penis/anthro,
 		/datum/customizer/organ/breasts/human,
-		/datum/customizer/organ/vagina/human,
+		/datum/customizer/organ/vagina/human_anthro,
+		//Caustic edit
 		/datum/customizer/organ/belly/human,
 		/datum/customizer/organ/butt/human,
+		//Caustic edit end
 		)
+	body_marking_sets = list(
+		/datum/body_marking_set/none,
+		/datum/body_marking_set/belly,
+		/datum/body_marking_set/bellysocks,
+		/datum/body_marking_set/tiger,
+		/datum/body_marking_set/tiger_dark,
+		/datum/body_marking_set/gradient,
+	)
 	body_markings = list(
+		/datum/body_marking/flushed_cheeks,
+		/datum/body_marking/eyeliner,
+		/datum/body_marking/tonage,
+		/datum/body_marking/nose,
+		/datum/body_marking/bangs,
+		/datum/body_marking/bun,
 	)
 
 
 	gender_swapping = TRUE
 	stress_examine = TRUE
 	stress_desc = span_red("A loathesome dark elf.")
+
+/datum/species/elf/dark/after_creation(mob/living/carbon/C)
+	C.faction += "spider_lowers"
 
 /datum/species/elf/dark/get_span_language(datum/language/message_language)
 	if(!message_language)
@@ -113,6 +146,10 @@
 		"Llurth Dreir" = SKIN_COLOR_LLURTH_DREIR,
 		"Tafravma" = SKIN_COLOR_TAFRAVMA,
 		"Yuethindrynn" = SKIN_COLOR_YUETHINDRYNN,
+		"Koredynn" = SKIN_COLOR_KOREDYNN,
+		"Aiseedrynn" = SKIN_COLOR_AISEEDRYNN,
+		"Grenduskra" = SKIN_COLOR_GRENDUSKRA,
+		"Hun'sek" = SKIN_COLOR_HUNSEK
 	)
 
 /datum/species/elf/dark/get_hairc_list()

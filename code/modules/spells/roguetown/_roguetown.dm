@@ -3,10 +3,10 @@
 
 /obj/effect/proc_holder/spell/invoked
 	name = "invoked spell"
-	range = -1
+	range = 7
 	selection_type = "range"
 	no_early_release = TRUE
-	charge_max = 30
+	recharge_time = 30
 	charge_type = "recharge"
 	invocation_type = "shout"
 	var/active_sound
@@ -39,7 +39,7 @@
 	update_icon()
 	start_recharge()
 
-/obj/effect/proc_holder/spell/invoked/deactivate(mob/living/user)
+/obj/effect/proc_holder/spell/invoked/deactivate(mob/living/user) //Deactivates the currently active spell (icon click)
 	..()
 	active = FALSE
 	remove_ranged_ability(null)
@@ -51,12 +51,21 @@
 /obj/effect/proc_holder/spell/invoked/proc/on_deactivation(mob/user)
 	return
 
-/obj/effect/proc_holder/spell/invoked/InterceptClickOn(mob/living/caller, params, atom/target)
+/obj/effect/proc_holder/spell/invoked/InterceptClickOn(mob/living/caller, params, atom/target) 
 	. = ..()
 	if(.)
 		return FALSE
 	if(!can_cast(caller) || !cast_check(FALSE, ranged_ability_user))
 		return FALSE
+	var/client/client = caller.client
+	var/percentage_progress = client?.chargedprog
+	var/charge_progress = client?.progress // This is in seconds, same unit as chargetime
+	var/goal = src.get_chargetime() //if we have no chargetime then we can freely cast (and no early release flag was not set)
+	if(src.no_early_release) //This is to stop half-channeled spells from casting as the repeated-casts somehow bypass into this function.
+		if(percentage_progress < 100 && charge_progress < goal)//Conditions for failure: a) not 100% progress, b) charge progress less than goal
+			to_chat(usr, span_warning("[src.name] was not finished charging! It fizzles."))
+			src.revert_cast()
+			return FALSE
 	if(perform(list(target), TRUE, user = ranged_ability_user))
 		return TRUE
 
@@ -66,6 +75,7 @@
 	var/projectile_amount = 1	//Projectiles per cast.
 	var/current_amount = 0	//How many projectiles left.
 	var/projectiles_per_fire = 1		//Projectiles per fire. Probably not a good thing to use unless you override ready_projectile().
+	gesture_required = TRUE // All projectiles are offensive and should be locked to not handcuff
 
 /obj/effect/proc_holder/spell/invoked/projectile/proc/ready_projectile(obj/projectile/P, atom/target, mob/user, iteration)
 	return
@@ -78,7 +88,6 @@
 	if(!isturf(U) || !isturf(T))
 		return FALSE
 	fire_projectile(user, target)
-	user.newtonian_move(get_dir(U, T))
 	update_icon()
 	start_recharge()
 	return TRUE
@@ -90,6 +99,12 @@
 		if(istype(P, /obj/projectile/magic/bloodsteal))
 			var/obj/projectile/magic/bloodsteal/B = P
 			B.sender = user
+		P.def_zone = user.zone_selected
+		// Accuracy modification code, same as bow rebalance PR
+		P.accuracy += (user.STAINT - 9) * 4
+		P.bonus_accuracy += (user.STAINT - 8) * 3
+		if(user.mind)
+			P.bonus_accuracy += (user.get_skill_level(associated_skill) * 5) // +5% per level
 		P.firer = user
 		P.preparePixelProjectile(target, user)
 		for(var/V in projectile_var_overrides)

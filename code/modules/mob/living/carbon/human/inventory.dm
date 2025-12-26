@@ -119,7 +119,6 @@
 			update_inv_belt()
 		if(SLOT_RING)
 			wear_ring = I
-			sec_hud_set_ID()
 			update_inv_wear_id()
 		if(SLOT_WRISTS)
 
@@ -162,7 +161,6 @@
 		if(SLOT_PANTS)
 
 			wear_pants = I
-			update_suit_sensors()
 			update_inv_pants()
 		if(SLOT_SHIRT)
 
@@ -202,15 +200,15 @@
 		if(SLOT_IN_BACKPACK)
 			not_handled = TRUE
 			if(beltr)
-				testing("insert1")
+
 				if(SEND_SIGNAL(beltr, COMSIG_TRY_STORAGE_INSERT, I, src, TRUE))
 					not_handled = FALSE
 			if(beltl && not_handled)
-				testing("insert2")
+
 				if(SEND_SIGNAL(beltl, COMSIG_TRY_STORAGE_INSERT, I, src, TRUE))
 					not_handled = FALSE
 			if(belt && not_handled)
-				testing("insert3")
+
 				if(SEND_SIGNAL(belt, COMSIG_TRY_STORAGE_INSERT, I, src, TRUE))
 					not_handled = FALSE
 		else
@@ -221,7 +219,6 @@
 	//Item is handled and in slot, valid to call callback, for this proc should always be true
 	if(!not_handled)
 		I.equipped(src, slot, initial)
-
 
 	if(hud_used)
 		hud_used.throw_icon?.update_icon()
@@ -240,6 +237,8 @@
 	. = ..() //See mob.dm for an explanation on this and some rage about people copypasting instead of calling ..() like they should.
 	if(!. || !I)
 		return
+	if(IS_WEAKREF_OF(I, offered_item_ref))
+		stop_offering_item()
 	if(index && !QDELETED(src) && dna.species.mutanthands) //hand freed, fill with claws, skip if we're getting deleted.
 		put_in_hand(new dna.species.mutanthands(), index)
 	if(I == wear_armor)
@@ -264,7 +263,6 @@
 //			if(belt)
 //				dropItemToGround(belt)
 		wear_pants = null
-		update_suit_sensors()
 		if(!QDELETED(src))
 			update_inv_pants()
 	else if(I == gloves)
@@ -302,7 +300,6 @@
 			update_inv_belt()
 	else if(I == wear_ring)
 		wear_ring = null
-		sec_hud_set_ID()
 		if(!QDELETED(src))
 			update_inv_wear_id()
 	else if(I == wear_wrists)
@@ -360,12 +357,8 @@
 /mob/living/carbon/human/wear_mask_update(obj/item/I, toggle_off = 1)
 	if((I.flags_inv & (HIDEHAIR|HIDEFACIALHAIR)) || (initial(I.flags_inv) & (HIDEHAIR|HIDEFACIALHAIR)))
 		update_hair()
-	if(toggle_off && internal && !getorganslot(ORGAN_SLOT_BREATHING_TUBE))
-		update_internals_hud_icon(0)
-		internal = null
 	if(I.flags_inv & HIDEEYES)
 		update_inv_glasses()
-	sec_hud_set_security_status()
 	..()
 
 /mob/living/carbon/human/head_update(obj/item/I, forced)
@@ -379,7 +372,6 @@
 		update_inv_glasses()
 	if(I.flags_inv & HIDEEARS || forced)
 		update_body()
-	sec_hud_set_security_status()
 	..()
 
 /mob/living/carbon/human/proc/equipOutfit(outfit, visualsOnly = FALSE)
@@ -404,16 +396,18 @@
 	for(var/obj/item/I in held_items)
 		qdel(I)
 
-/mob/living/carbon/human/proc/smart_equipbag() // take most recent item out of bag or place held item in bag
+/mob/living/carbon/human/proc/smart_equipbag(slot_id) // take most recent item out of bag or place held item in bag
 	if(incapacitated())
 		return
 	var/obj/item/thing = get_active_held_item()
-	var/obj/item/equipped_back = get_item_by_slot(SLOT_BACK)
+	var/obj/item/equipped_back = get_item_by_slot(slot_id)
+	if(equip_scabbard(thing, equipped_back, slot_id))
+		return
 	if(!equipped_back) // We also let you equip a backpack like this
 		if(!thing)
 			to_chat(src, span_warning("I have no backpack to take something out of!"))
 			return
-		if(equip_to_slot_if_possible(thing, SLOT_BACK))
+		if(equip_to_slot_if_possible(thing, slot_id))
 			update_inv_hands()
 		return
 	if(!SEND_SIGNAL(equipped_back, COMSIG_CONTAINS_STORAGE)) // not a storage item
@@ -423,6 +417,9 @@
 			to_chat(src, span_warning("I can't fit anything in!"))
 		return
 	if(thing) // put thing in backpack
+		if(thing.inv_storage_delay)
+			if(!move_after(src, thing.inv_storage_delay, target = thing, progress = TRUE))
+				return
 		if(!SEND_SIGNAL(equipped_back, COMSIG_TRY_STORAGE_INSERT, thing, src))
 			to_chat(src, span_warning("I can't fit anything in!"))
 		return
@@ -440,6 +437,8 @@
 		return
 	var/obj/item/thing = get_active_held_item()
 	var/obj/item/equipped_belt = get_item_by_slot(SLOT_BELT)
+	if(equip_scabbard(thing, equipped_belt, SLOT_BELT))
+		return
 	if(!equipped_belt) // We also let you equip a belt like this
 		if(!thing)
 			to_chat(src, span_warning("I have no belt to take something out of!"))
@@ -454,6 +453,9 @@
 			to_chat(src, span_warning("I can't fit anything in!"))
 		return
 	if(thing) // put thing in belt
+		if(thing.inv_storage_delay)
+			if(!move_after(src, thing.inv_storage_delay, target = thing, progress = TRUE))
+				return
 		if(!SEND_SIGNAL(equipped_belt, COMSIG_TRY_STORAGE_INSERT, thing, src))
 			to_chat(src, span_warning("I can't fit anything in!"))
 		return
@@ -465,3 +467,31 @@
 		return
 	stored.attack_hand(src) // take out thing from belt
 	return
+
+/mob/living/carbon/human/proc/equip_scabbard(var/obj/item/thing, var/obj/item/equipped, slot_id)
+	var/obj/item/use_thing = null
+
+	if(!equipped)
+		return FALSE
+	if(!istype(equipped, /obj/item/rogueweapon/scabbard))
+		if(SEND_SIGNAL(equipped, COMSIG_CONTAINS_STORAGE))
+			if(!equipped.contents.len)
+				return FALSE
+			var/obj/item/stored = equipped.contents[equipped.contents.len]
+			if(!stored || stored.on_found(src))
+				return FALSE
+			if(!istype(stored, /obj/item/rogueweapon/scabbard))
+				return FALSE
+			use_thing = stored
+
+	var/obj/item/rogueweapon/scabbard/scab = use_thing ? use_thing : equipped
+	if(!istype(scab))
+		return FALSE
+	if(!thing)
+		if(!scab.sheathed)
+			return FALSE
+		return scab.attack_hand(src)
+	if(!istype(thing, scab.valid_blade))
+		return FALSE
+	return scab.attackby(thing, src)
+

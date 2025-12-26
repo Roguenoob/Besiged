@@ -17,6 +17,10 @@
 	  */
 	var/gc_destroyed
 
+	/// Open uis owned by this datum
+	/// Lazy, since this case is semi rare
+	var/list/open_uis
+
 	/// Active timers with this datum as the target
 	var/list/active_timers
 	/// Status traits attached to this datum
@@ -112,6 +116,14 @@
 			qdel(C, FALSE, TRUE)
 		dc.Cut()
 
+	clear_signal_refs()
+	//END: ECS SHIT
+
+	return QDEL_HINT_QUEUE
+
+///Only override this if you know what you're doing. You do not know what you're doing
+///This is a threat
+/datum/proc/clear_signal_refs()
 	var/list/lookup = comp_lookup
 	if(lookup)
 		for(var/sig in lookup)
@@ -127,9 +139,6 @@
 
 	for(var/target in signal_procs)
 		UnregisterSignal(target, signal_procs[target])
-	//END: ECS SHIT
-
-	return QDEL_HINT_QUEUE
 
 #ifdef DATUMVAR_DEBUGGING_MODE
 /datum/proc/save_vars()

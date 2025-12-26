@@ -28,6 +28,14 @@
 	var/shared_wave_type = null
 	/// Whether we want to spawn people on the rolled location, this may not be desired for bandits or other things that set the location
 	var/spawn_on_location = TRUE
+	/// Triumph contributions for this wave type (ckey -> amount)
+	var/list/triumph_contributions = list()
+	/// Total triumph invested in this wave
+	var/triumph_total = 0
+	/// Threshold at which this wave is guaranteed to be next
+	var/triumph_threshold = 25
+	/// Whether triumph contributions reset after wave spawns
+	var/reset_contributions_on_spawn = TRUE
 
 /datum/migrant_wave/proc/get_roles_amount()
 	var/amount = 0
@@ -102,10 +110,11 @@
 		/datum/migrant_role/adventurer = 1,
 	)
 	greet_text = "Together with a party of trusted friends we decided to venture out, seeking thrills, glory and treasure, ending up in the misty and damp bog underneath Azure Peak, perhaps getting ourselves into more than what we bargained for."
-/*
+
 /datum/migrant_wave/bandit
 	name = "Bandit Raid"
 	downgrade_wave = /datum/migrant_wave/bandit_down_one
+	can_roll = FALSE
 	weight = 16
 	spawn_landmark = "Bandit"
 	roles = list(
@@ -137,4 +146,12 @@
 	roles = list(
 		/datum/migrant_role/bandit = 1,
 	)
-*/
+
+/datum/migrant_wave/assassin
+	name = "Assassin Hit"
+	downgrade_wave = /datum/migrant_wave/assassin
+	can_roll = FALSE
+	weight = 12
+	roles = list(
+		/datum/migrant_role/assassin = 4,
+	)

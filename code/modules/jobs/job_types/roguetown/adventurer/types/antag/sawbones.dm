@@ -6,6 +6,33 @@
 	outfit = /datum/outfit/job/roguetown/bandit/sawbones
 	category_tags = list(CTAG_BANDIT)
 	cmode_music = 'sound/music/combat_physician.ogg'
+	traits_applied = list(TRAIT_MEDICINE_EXPERT, TRAIT_NOSTINK, TRAIT_EMPATH, TRAIT_DODGEEXPERT, TRAIT_DECEIVING_MEEKNESS, TRAIT_ALCHEMY_EXPERT)
+	subclass_stats = list(
+		//Caustic edit
+		STATKEY_INT = 3,
+		STATKEY_PER = 1,
+		STATKEY_SPD = 2,
+		STATKEY_LCK = 1
+		//Caustic edit end
+	)
+	subclass_skills = list(
+		/datum/skill/combat/knives = SKILL_LEVEL_JOURNEYMAN,
+		//Caustic edit
+		/datum/skill/combat/swords = SKILL_LEVEL_JOURNEYMAN,
+		//Caustic edit end
+		/datum/skill/combat/wrestling = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/craft/crafting = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/craft/carpentry = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/labor/lumberjacking = SKILL_LEVEL_NOVICE,
+		/datum/skill/misc/athletics = SKILL_LEVEL_EXPERT,
+		/datum/skill/misc/reading = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/misc/climbing = SKILL_LEVEL_JOURNEYMAN, //needed for getting into hideout
+		/datum/skill/misc/sneaking = SKILL_LEVEL_NOVICE,
+		/datum/skill/misc/medicine = SKILL_LEVEL_LEGENDARY,
+		/datum/skill/craft/sewing = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/craft/alchemy = SKILL_LEVEL_JOURNEYMAN,
+		/datum/skill/misc/swimming = SKILL_LEVEL_APPRENTICE,
+	)
 
 /datum/outfit/job/roguetown/bandit/sawbones/pre_equip(mob/living/carbon/human/H)
 	..()
@@ -14,32 +41,28 @@
 	armor = /obj/item/clothing/suit/roguetown/armor/leather/vest
 	shirt = /obj/item/clothing/suit/roguetown/shirt/shortshirt
 	belt = /obj/item/storage/belt/rogue/leather
-	beltl = /obj/item/storage/belt/rogue/surgery_bag/full
-	beltr = /obj/item/rogueweapon/sword/rapier
+	beltl = /obj/item/storage/belt/rogue/surgery_bag/full/physician
+	l_hand = /obj/item/rogueweapon/sword/rapier
+	beltr = /obj/item/rogueweapon/scabbard/sword
 	pants = /obj/item/clothing/under/roguetown/trou
 	shoes = /obj/item/clothing/shoes/roguetown/simpleshoes
 	backr = /obj/item/storage/backpack/rogue/satchel
 	id = /obj/item/mattcoin
-	backpack_contents = list(		/obj/item/natural/worms/leech/cheele = 1, /obj/item/natural/cloth = 2,)
-	H.mind.adjust_skillrank(/datum/skill/combat/knives, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/combat/swords, 4, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/combat/wrestling, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/craft/crafting, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/craft/carpentry, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/labor/lumberjacking, 1, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/athletics, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/reading, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/climbing, 3, TRUE) //needed for getting into hideout
-	H.mind.adjust_skillrank(/datum/skill/misc/sneaking, 1, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/medicine, 5, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/sewing, 3, TRUE)
-	H.mind.adjust_skillrank(/datum/skill/misc/alchemy, 3, TRUE)
-	ADD_TRAIT(H, TRAIT_DODGEEXPERT, TRAIT_GENERIC)
-	H.change_stat("speed", 3)
-	H.change_stat("intelligence", 4)
-	H.change_stat("fortune", 3)
+	backpack_contents = list(
+					/obj/item/natural/worms/leech/cheele = 1,
+					/obj/item/natural/cloth = 2,
+					/obj/item/flashlight/flare/torch = 1,
+					/obj/item/bedroll = 1,
+					)
 	if(H.age == AGE_OLD)
-		H.change_stat("speed", -1)
-		H.change_stat("intelligence", 1)
-		H.change_stat("perception", 1)
-	H.mind.AddSpell(new /obj/effect/proc_holder/spell/invoked/diagnose/secular)
+		H.change_stat(STATKEY_SPD, -1)
+		H.change_stat(STATKEY_INT, 1)
+		H.change_stat(STATKEY_PER, 1)
+	if(H.mind)
+		H.mind.AddSpell(new /obj/effect/proc_holder/spell/invoked/diagnose/secular)
+
+	if(!istype(H.patron, /datum/patron/inhumen/matthios))
+		var/inputty = input(H, "Would you like to change your patron to Matthios?", "The Transactor calls", "No") as anything in list("Yes", "No")
+		if(inputty == "Yes")
+			to_chat(H, span_warning("My former deity has abandoned me.. Matthios is my new master."))
+			H.set_patron(/datum/patron/inhumen/matthios)

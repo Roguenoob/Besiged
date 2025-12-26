@@ -40,7 +40,7 @@
 #define ITEM_SLOT_DENYPOCKET	(1<<22) // this is to deny items with a w_class of WEIGHT_CLASS_SMALL or WEIGHT_CLASS_TINY to fit in pockets.
 #define ITEM_SLOT_BACKPACK		(1<<23)
 
-#define ITEM_SLOT_BACK			ITEM_SLOT_BACK_L | ITEM_SLOT_BACK_R
+#define ITEM_SLOT_BACK			(ITEM_SLOT_BACK_L | ITEM_SLOT_BACK_R)
 
 //SLOTS
 
@@ -159,13 +159,14 @@
 #define HIDEEYES		(1<<6)	// Whether eyes and glasses are hidden
 #define HIDEFACE		(1<<7)	// Whether we appear as unknown.
 #define HIDEHAIR		(1<<8)
+#define HIDE_HEADTOP	(HIDEEARS | HIDEHAIR)
 #define HIDEFACIALHAIR	(1<<9)
 #define HIDENECK		(1<<10)
 #define HIDEBOOB		(1<<11)
 #define HIDEBELT		(1<<12)
 #define HIDECROTCH		(1<<13)
 #define HIDETAIL		(1<<14)
-#define HIDEBUTT		(1<<15)
+#define HIDESNOUT		(1<<15)
 
 //blocking_behavior var on clothing items
 #define BLOCKBOOTS		(1<<0)
@@ -202,7 +203,7 @@
 #define LEFT_EYE	(1<<18)
 #define HAIR		(1<<19)
 #define EYES		(LEFT_EYE | RIGHT_EYE)
-#define FACE		(MOUTH | NOSE | EYES)
+#define FACE		(MOUTH | NOSE | EYES | EARS)
 #define FULL_HEAD	(HEAD | MOUTH | NOSE | EYES | EARS | HAIR)
 #define BELOW_HEAD	(CHEST | GROIN | VITALS | ARMS | HANDS | LEGS | FEET)
 #define BELOW_CHEST	(GROIN | VITALS | LEGS | FEET) //for water
@@ -251,73 +252,3 @@
 #define CAN_CADJUST 1
 #define CADJUSTED 2
 #define CADJUSTED_MORE 3
-
-//Allowed equipment lists for security vests and hardsuits.
-
-GLOBAL_LIST_INIT(advanced_hardsuit_allowed, typecacheof(list(
-	/obj/item/ammo_box,
-	/obj/item/ammo_casing,
-	/obj/item/flashlight,
-	/obj/item/gun,
-	/obj/item/melee/baton,
-	/obj/item/reagent_containers/spray/pepper,
-	/obj/item/restraints/handcuffs,
-	/obj/item/tank/internals)))
-
-GLOBAL_LIST_INIT(security_hardsuit_allowed, typecacheof(list(
-	/obj/item/ammo_box,
-	/obj/item/ammo_casing,
-	/obj/item/flashlight,
-	/obj/item/gun/ballistic,
-	/obj/item/gun/energy,
-	/obj/item/melee/baton,
-	/obj/item/reagent_containers/spray/pepper,
-	/obj/item/restraints/handcuffs,
-	/obj/item/tank/internals)))
-
-GLOBAL_LIST_INIT(detective_vest_allowed, typecacheof(list(
-	/obj/item/ammo_box,
-	/obj/item/ammo_casing,
-	/obj/item/detective_scanner,
-	/obj/item/flashlight,
-	/obj/item/taperecorder,
-	/obj/item/gun/ballistic,
-	/obj/item/gun/energy,
-	/obj/item/lighter,
-	/obj/item/melee/baton,
-	/obj/item/melee/classic_baton,
-	/obj/item/reagent_containers/spray/pepper,
-	/obj/item/restraints/handcuffs,
-	/obj/item/storage/fancy/cigarettes,
-	/obj/item/tank/internals/emergency_oxygen,
-	/obj/item/tank/internals/plasmaman)))
-
-GLOBAL_LIST_INIT(security_vest_allowed, typecacheof(list(
-	/obj/item/ammo_box,
-	/obj/item/ammo_casing,
-	/obj/item/flashlight,
-	/obj/item/gun/ballistic,
-	/obj/item/gun/energy,
-	/obj/item/kitchen/knife/combat,
-	/obj/item/melee/baton,
-	/obj/item/melee/classic_baton/telescopic,
-	/obj/item/reagent_containers/spray/pepper,
-	/obj/item/restraints/handcuffs,
-	/obj/item/tank/internals/emergency_oxygen,
-	/obj/item/tank/internals/plasmaman)))
-
-GLOBAL_LIST_INIT(security_wintercoat_allowed, typecacheof(list(
-	/obj/item/ammo_box,
-	/obj/item/ammo_casing,
-	/obj/item/flashlight,
-	/obj/item/storage/fancy/cigarettes,
-	/obj/item/gun/ballistic,
-	/obj/item/gun/energy,
-	/obj/item/lighter,
-	/obj/item/melee/baton,
-	/obj/item/melee/classic_baton/telescopic,
-	/obj/item/reagent_containers/spray/pepper,
-	/obj/item/restraints/handcuffs,
-	/obj/item/tank/internals/emergency_oxygen,
-	/obj/item/tank/internals/plasmaman,
-	/obj/item/toy)))

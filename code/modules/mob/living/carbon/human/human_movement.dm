@@ -19,23 +19,6 @@
 				return 0
 	return ..()
 
-/mob/living/carbon/human/experience_pressure_difference()
-	playsound(src, 'sound/blank.ogg', 50, TRUE)
-	if(shoes && istype(shoes, /obj/item/clothing))
-		var/obj/item/clothing/S = shoes
-		if (S.clothing_flags & NOSLIP)
-			return 0
-	return ..()
-
-/mob/living/carbon/human/mob_has_gravity()
-	. = ..()
-	if(!.)
-		if(mob_negates_gravity())
-			. = 1
-
-/mob/living/carbon/human/mob_negates_gravity()
-	return ((shoes && shoes.negates_gravity()) || (dna.species.negates_gravity(src)))
-
 /mob/living/carbon/human/Move(NewLoc, direct)
 /*	if(fixedeye || tempfixeye)
 		switch(dir)
@@ -54,28 +37,31 @@
 
 	. = ..()
 	if(loc == NewLoc)
-		if(!has_gravity(loc))
-			return
+
+		if(hostage) // If we have a hostage.
+			hostage.hostagetaker = null
+			hostage = null
+			to_chat(src, "<span class='danger'>I need to stand still to make sure I don't lose concentration on my hostage!</span>")
+
+		if(hostagetaker) // If we are TAKEN hostage. Confusing vars at first but then it makes sense.
+			attackhostage()
 
 		if(wear_armor)
 			if(mobility_flags & MOBILITY_STAND)
-				var/obj/item/clothing/C = wear_armor
-				C.step_action()
+				wear_armor.step_action()
 
 		if(wear_shirt)
 			if(mobility_flags & MOBILITY_STAND)
-				var/obj/item/clothing/C = wear_shirt
-				C.step_action()
+				wear_shirt.step_action()
 
 		if(cloak)
 			if(mobility_flags & MOBILITY_STAND)
-				var/obj/item/clothing/C = cloak
-				C.step_action()
+				var/obj/item/clothing/C = isclothing(cloak) ? cloak : null
+				C?.step_action()
 
 		if(shoes)
-			if(mobility_flags & MOBILITY_STAND)
-				var/obj/item/clothing/shoes/S = shoes
-
+			var/obj/item/clothing/shoes/S = shoes
+			if(mobility_flags & MOBILITY_STAND && istype(S))
 				//Bloody footprints
 				var/turf/T = get_turf(src)
 				if(S.bloody_shoes && S.bloody_shoes[S.blood_state])
@@ -95,20 +81,68 @@
 				//End bloody footprints
 				S.step_action()
 		if(mouth)
-			if(mouth.spitoutmouth && prob(5))
+			if(src.mind?.has_antag_datum(/datum/antagonist/zombie) && (!src.handcuffed) && prob(50))
 				visible_message(span_warning("[src] spits out [mouth]."))
 				dropItemToGround(mouth, silent = FALSE)
-		if(held_items.len)
-			for(var/obj/item/I in held_items)
-				if(I.minstr)
-					var/effective = I.minstr
-					if(I.wielded)
-						effective = max(I.minstr / 2, 1)
-					if(effective > STASTR)
-						if(prob(effective))
-							dropItemToGround(I, silent = FALSE)
 
-/mob/living/carbon/human/Process_Spacemove(movement_dir = 0) //Temporary laziness thing. Will change to handles by species reee.
-	if(dna.species.space_move(src))
+// ===== MOUNTING PONIES =====
+
+/mob/living/carbon/human/buckle_mob(mob/living/M, force = FALSE, check_loc = TRUE)
+	if(!force && !HAS_TRAIT(src, TRAIT_MOUNTABLE))
+		return FALSE
+
+	if(..()) // call parent buckle
+		var/datum/component/riding/human/riding_datum = LoadComponent(/datum/component/riding/human)
+		riding_datum.vehicle_move_delay = 2
+		if(M.mind)
+			var/riding_skill = M.get_skill_level(/datum/skill/misc/riding)
+			if(riding_skill)
+				riding_datum.vehicle_move_delay = max(1, 2 - (riding_skill * 0.2))
 		return TRUE
+	return FALSE
+
+/mob/living/carbon/human/post_buckle_mob(mob/living/M)
+	var/datum/component/riding/human/riding_datum = LoadComponent(/datum/component/riding/human)
+	riding_datum.handle_vehicle_layer()
+	riding_datum.handle_vehicle_offsets()
+
+/mob/living/carbon/human/relaymove(mob/user, direction)
+	if(HAS_TRAIT(src, TRAIT_MOUNTABLE))
+		var/datum/component/riding/riding_datum = GetComponent(/datum/component/riding)
+		if(riding_datum)
+			return riding_datum.handle_ride(user, direction)
+	return ..()
+
+/mob/living/carbon/human/Knockdown(amount, updating = TRUE)
+	. = ..() // parent Knockdown
+	if(length(buckled_mobs))
+		for(var/mob/living/carbon/human/rider in buckled_mobs)
+			unbuckle_mob(rider, TRUE)
+			to_chat(rider, span_warning("You fall off [src] as they collapse!"))
+			to_chat(src, span_warning("[rider] tumbles off you as you fall!"))
+
+/mob/living/carbon/human/attackby(obj/item/I, mob/living/user, params)
+	if(buckled && istype(buckled, /mob/living/carbon/human))
+		var/mob/living/carbon/human/mount = buckled
+		if(HAS_TRAIT(mount, TRAIT_MOUNTABLE))
+			visible_message(span_warning("[user]'s attack is redirected to [mount]'s chest!"))
+			user.zone_selected = BODY_ZONE_CHEST
+			return mount.attackby(I, user, params)
+	return ..()
+
+/mob/living/carbon/human/attack_animal(mob/living/simple_animal/M)
+	if(buckled && istype(buckled, /mob/living/carbon/human))
+		var/mob/living/carbon/human/mount = buckled
+		if(HAS_TRAIT(mount, TRAIT_MOUNTABLE))
+			visible_message(span_warning("[M]'s attack is redirected to [mount]!"))
+			mount.attack_animal(M)
+			return TRUE
+	return ..()
+
+/mob/living/carbon/human/bullet_act(obj/projectile/P)
+	if(buckled && istype(buckled, /mob/living/carbon/human))
+		var/mob/living/carbon/human/mount = buckled
+		if(HAS_TRAIT(mount, TRAIT_MOUNTABLE))
+			visible_message(span_warning("The [P] is redirected to [mount]!"))
+			return mount.bullet_act(P)
 	return ..()

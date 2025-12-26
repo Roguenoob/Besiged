@@ -43,7 +43,7 @@
 	var/wet_loop = TRUE						// Does this belly have a slimy internal loop?
 
 	//I don't think we've ever altered these lists. making them static until someone actually overrides them somewhere.
-	var/tmp/static/list/digest_modes = list(DM_HOLD,DM_DIGEST,DM_HEAL,DM_NOISY,DM_ABSORB,DM_UNABSORB)	// Possible digest modes
+	var/tmp/static/list/digest_modes = list(DM_HOLD,DM_DIGEST,DM_HEAL,DM_NOISY,DM_ABSORB,DM_UNABSORB,DM_MANABURN,DM_STRONGDIGEST)	// Possible digest modes
 
 	var/tmp/mob/living/owner					// The mob whose belly this is.
 	var/tmp/digest_mode = DM_HOLD				// Current mode the belly is set to from digest_modes (+transform_modes if human)
@@ -173,7 +173,6 @@
 	var/mob/living/L //for chat messages and blindness
 	if(isliving(thing))
 		L = thing
-		L.become_blind("belly_[REF(src)]")
 	if(OldLoc in contents)
 		return //Someone dropping something (or being stripdigested)
 
@@ -203,9 +202,6 @@
 
 /obj/belly/Exited(atom/movable/AM, atom/newloc)
 	. = ..()
-	if(isliving(AM))
-		var/mob/living/L = AM
-		L.cure_blind("belly_[REF(src)]")
 
 // Release all contents of this belly into the owning mob's location.
 // If that location is another mob, contents are transferred into whichever of its bellies the owning mob is in.
@@ -251,6 +247,56 @@
 		owner.visible_message("<font color='green'><b>[owner] expels everything from their [lowertext(name)]!</b></font>")
 
 	return count
+
+
+
+//Silent release for post digestion reforming
+/obj/belly/proc/release_specific_contents_digest(var/atom/movable/M, var/silent = FALSE)
+	if (!(M in contents))
+		return FALSE // They weren't in this belly anyway
+
+	M.forceMove(drop_location())  // Move the belly contents into the same location as belly's owner.
+	items_preserved -= M
+
+
+	if(istype(M,/mob/living))
+		var/mob/living/ML = M
+		var/mob/living/OW = owner
+		if(ML.client)
+			ML.stop_sound_channel(CHANNEL_PREYLOOP) //Stop the internal loop, it'll restart if the isbelly check on next tick anyway
+
+
+		if(CHECK_BITFIELD(ML.vore_flags,ABSORBED))
+			DISABLE_BITFIELD(ML.vore_flags,ABSORBED)
+			if(ishuman(M) && ishuman(OW))
+				var/mob/living/carbon/human/Prey = M
+				var/mob/living/carbon/human/Pred = OW
+				var/absorbed_count = 2 //Prey that we were, plus the pred gets a portion
+				for(var/mob/living/P in contents)
+					if(CHECK_BITFIELD(P.vore_flags,ABSORBED))
+						absorbed_count++
+				Pred.reagents.trans_to(Prey, Pred.reagents.total_volume / absorbed_count)
+
+	//Clean up our own business
+	owner.update_icons()
+
+	if(!silent)
+		if(release_sound && !recent_sound)
+			if((world.time + NORMIE_HEARCHECK) > last_hearcheck)
+				LAZYCLEARLIST(hearing_mobs)
+				for(var/mob/living/H in get_hearers_in_view(3, owner))
+					if(!H.client || !(H.client.prefs.cit_toggles & EATING_NOISES))
+						continue
+					LAZYADD(hearing_mobs, H)
+					last_hearcheck = world.time
+		owner.visible_message("<font color='green'><b>[owner] has digested [M] from their [lowertext(name)]!</b></font>")
+
+
+
+
+
+
+
 
 // Release a specific atom from the contents of this belly into the owning mob's location.
 // If that location is another mob, the atom is transferred into whichever of its bellies the owning mob is in.
@@ -462,7 +508,14 @@
 	M.stop_sound_channel(CHANNEL_PREYLOOP)
 
 	// Delete the digested mob
-	qdel(M)
+	release_specific_contents_digest(M)
+	var/mob/dead/observer/G = M.ghostize(TRUE)
+	if(G)
+		G.forceMove(owner)
+	M.x = 1
+	M.y = 1
+	M.z = 1
+	M.alpha = 0 
 
 	//Update owner
 	owner.updateVRPanel()
@@ -497,11 +550,7 @@
 	if(!digested)
 		items_preserved |= item
 	else
-//		owner.adjust_nutrition(5 * digested) // haha no.
-		if(iscyborg(owner))
-			var/mob/living/silicon/robot/R = owner
-			R.cell.charge += (50 * digested)
-
+		return
 //Determine where items should fall out of us into.
 //Typically just to the owner's location.
 /obj/belly/drop_location()
@@ -718,3 +767,6 @@
 		for(var/I in emote_lists[K])
 			dupe.emote_lists[K] += I
 	return dupe
+
+
+	

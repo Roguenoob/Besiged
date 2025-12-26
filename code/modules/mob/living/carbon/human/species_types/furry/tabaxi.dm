@@ -5,20 +5,28 @@
 	name = "Tabaxi"
 	id = "tabaxi"
 
-	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_PRIDE | MIRROR_MAGIC | RACE_SWAP | ERT_SPAWN | SLIME_EXTRACT
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_PRIDE | MIRROR_MAGIC | RACE_SWAP | SLIME_EXTRACT
 	desc = "<b>Tabaxi</b><br>\
-		Tabaxi are taller than most humans at six to seven feet.\
-		Their bodies are slender and covered in spotted or striped fur.\
-		Like most felines, Tabaxi have long tails and retractable claws.\
-		Tabaxi fur color ranges from light yellow to brownish red.\
-		Tabaxi eyes are slit-pupilled and usually green or yellow.\
-		Tabaxi are competent swimmers and climbers as well as speedy runners.\
-		They have a good sense of balance and an acute sense of smell."
+		Tabaxi are taller than most humans at six to seven feet. \
+		Their bodies are slender and covered in spotted or striped fur. \
+		Like most felines, Tabaxi have long tails and retractable claws. \
+		Tabaxi fur color ranges from light yellow to brownish red. \
+		Tabaxi eyes are slit-pupilled and usually green or yellow. \
+		Tabaxi are competent swimmers and climbers as well as speedy runners. \
+		They have a good sense of balance and an acute sense of smell.<br>\
+		(+1 Speed)"
 	skin_tone_wording = "Fur Colors"
 	species_traits = list(EYECOLOR,HAIR,FACEHAIR,LIPS,STUBBLE, MUTCOLORS)
+	///Caustic edit
+	allowed_taur_types = list(
+		/obj/item/bodypart/taur/feline,
+		/obj/item/bodypart/taur/tempest,
+		/obj/item/bodypart/taur/fatfeline,
+	)
+	///Caustic edit end
 	possible_ages = ALL_AGES_LIST
-	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mt.dmi'
-	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fm.dmi'
+	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mta.dmi'
+	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fma.dmi'
 	dam_icon = 'icons/roguetown/mob/bodies/dam/dam_male.dmi'
 	dam_icon_f = 'icons/roguetown/mob/bodies/dam/dam_female.dmi'
 
@@ -34,9 +42,12 @@
 		OFFSET_CLOAK_F = list(0,0), OFFSET_FACEMASK_F = list(0,-1), OFFSET_HEAD_F = list(0,-1), \
 		OFFSET_FACE_F = list(0,-1), OFFSET_BELT_F = list(0,0), OFFSET_BACK_F = list(0,-1), \
 		OFFSET_NECK_F = list(0,-1), OFFSET_MOUTH_F = list(0,-1), OFFSET_PANTS_F = list(0,0), \
-		OFFSET_SHIRT_F = list(0,0), OFFSET_ARMOR_F = list(0,0), OFFSET_UNDIES_F = list(0,-1)
+		OFFSET_SHIRT_F = list(0,0), OFFSET_ARMOR_F = list(0,0), OFFSET_UNDIES_F = list(0,-1), \
+		//Caustic Edit
+		OFFSET_TAUR = list(-16,0), OFFSET_TAUR_F = list(-16,0), \
+		//Caustic End
 		)
-	race_bonus = list(STAT_SPEED = 1, STAT_INTELLIGENCE = -1)
+	race_bonus = list(STAT_SPEED = 1)
 	enflamed_icon = "widefire"
 	organs = list(
 		ORGAN_SLOT_BRAIN = /obj/item/organ/brain,
@@ -44,11 +55,11 @@
 		ORGAN_SLOT_LUNGS = /obj/item/organ/lungs,
 		ORGAN_SLOT_EYES = /obj/item/organ/eyes,
 		ORGAN_SLOT_EARS = /obj/item/organ/ears/cat,
-		ORGAN_SLOT_TONGUE = /obj/item/organ/tongue,
+		ORGAN_SLOT_TONGUE = /obj/item/organ/tongue/wild_tongue,
 		ORGAN_SLOT_LIVER = /obj/item/organ/liver,
 		ORGAN_SLOT_STOMACH = /obj/item/organ/stomach,
 		ORGAN_SLOT_APPENDIX = /obj/item/organ/appendix,
-		ORGAN_SLOT_TAIL = /obj/item/organ/tail/cat,
+		//ORGAN_SLOT_TAIL = /obj/item/organ/tail/cat,  //caustic remove the customizer already gives the organ
 		ORGAN_SLOT_SNOUT = /obj/item/organ/snout/cat,
 		//ORGAN_SLOT_TESTICLES = /obj/item/organ/testicles,
 		//ORGAN_SLOT_PENIS = /obj/item/organ/penis/barbed,
@@ -66,21 +77,26 @@
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
 		/datum/customizer/bodypart_feature/underwear,
+		/datum/customizer/bodypart_feature/legwear,
 		/datum/customizer/organ/snout/tabaxi,
 		/datum/customizer/organ/tail/tabaxi,
+		/datum/customizer/organ/neck_feature/anthro,
 		/datum/customizer/organ/testicles/anthro,
 		/datum/customizer/organ/penis/anthro,
 		/datum/customizer/organ/breasts/animal,
 		/datum/customizer/organ/vagina/animal,
-		/datum/customizer/organ/belly/animal,
 		/datum/customizer/organ/ears/tajaran,
+		//Caustic edit
+		/datum/customizer/organ/belly/animal,
 		/datum/customizer/organ/butt/animal,
+		//Caustic edit end
 		)
 	body_marking_sets = list(
 		/datum/body_marking_set/none,
 		/datum/body_marking_set/bellysocks,
 		/datum/body_marking_set/bellysockstertiary,
 		/datum/body_marking_set/belly,
+		/datum/body_marking_set/gradient,
 	)
 	body_markings = list(
 		/datum/body_marking/flushed_cheeks,
@@ -100,14 +116,21 @@
 		/datum/body_marking/front,
 		/datum/body_marking/tonage,
 		/datum/body_marking/spotted,
+		/datum/body_marking/nose,
+		/datum/body_marking/harlequin,
+		/datum/body_marking/harlequinreversed,
+		/datum/body_marking/bangs,
+		/datum/body_marking/bun,
+		/datum/body_marking/gradient,
 	)
 	languages = list(
-		/datum/language/common,
+		/datum/language/common
 	)
 	descriptor_choices = list(
+		/datum/descriptor_choice/trait,
+		/datum/descriptor_choice/stature,
 		/datum/descriptor_choice/height,
 		/datum/descriptor_choice/body,
-		/datum/descriptor_choice/stature,
 		/datum/descriptor_choice/face,
 		/datum/descriptor_choice/face_exp,
 		/datum/descriptor_choice/fur,

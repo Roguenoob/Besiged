@@ -1,5 +1,5 @@
-GLOBAL_LIST_INIT(moldable_organs, list(BODY_ZONE_PRECISE_GROIN=list(ORGAN_SLOT_PENIS, ORGAN_SLOT_VAGINA, ORGAN_SLOT_TESTICLES, ORGAN_SLOT_BUTT),
-	BODY_ZONE_CHEST=list(ORGAN_SLOT_BREASTS, ORGAN_SLOT_BELLY))) //Vrell - If we want to do this to other organs down the line, we can just add their slots here.
+GLOBAL_LIST_INIT(moldable_organs, list(BODY_ZONE_PRECISE_GROIN=list(ORGAN_SLOT_PENIS, ORGAN_SLOT_VAGINA, ORGAN_SLOT_TESTICLES),
+	BODY_ZONE_CHEST=list(ORGAN_SLOT_BREASTS))) //Vrell - If we want to do this to other organs down the line, we can just add their slots here.
 
 /datum/surgery/organ_manipulation
 	name = "Organ manipulation"
@@ -39,7 +39,6 @@ GLOBAL_LIST_INIT(moldable_organs, list(BODY_ZONE_PRECISE_GROIN=list(ORGAN_SLOT_P
 	accept_hand = TRUE
 	implements = list(
 		/obj/item/organ = 80,
-		/obj/item/organ_storage = 80,
 		/obj/item/reagent_containers/food/snacks/organ = 0,
 	)
 	target_mobtypes = list(/mob/living/carbon/human, /mob/living/carbon/monkey)
@@ -51,6 +50,7 @@ GLOBAL_LIST_INIT(moldable_organs, list(BODY_ZONE_PRECISE_GROIN=list(ORGAN_SLOT_P
 	/// Implements used to extract an organ - This really should be split into two different steps...
 	var/list/implements_extract = list(
 		TOOL_HEMOSTAT = 80,
+		TOOL_IMPROVISED_HEMOSTAT = 70,
 		TOOL_CROWBAR = 65,
 		TOOL_HAND = 60,
 	)
@@ -81,15 +81,6 @@ GLOBAL_LIST_INIT(moldable_organs, list(BODY_ZONE_PRECISE_GROIN=list(ORGAN_SLOT_P
 		to_chat(user, span_warning("[tool] was bitten by someone! It's too damaged to use!"))
 		return FALSE
 
-	if(istype(tool, /obj/item/organ_storage))
-		if(!length(tool.contents))
-			to_chat(user, span_warning("There is nothing inside [tool]!"))
-			return FALSE
-		tool = tool.contents[1]
-		if(!isorgan(tool))
-			to_chat(user, span_warning("I cannot put [tool] inside [target]'s [parse_zone(target_zone)]!"))
-			return FALSE
-
 	var/obj/item/organ/organ_tool = tool
 	if(istype(organ_tool))
 		if(target_zone != organ_tool.zone)
@@ -111,7 +102,8 @@ GLOBAL_LIST_INIT(moldable_organs, list(BODY_ZONE_PRECISE_GROIN=list(ORGAN_SLOT_P
 		for(var/obj/item/organ/found_organ as anything in organs)
 			found_organ.on_find(user)
 			organs -= found_organ
-			organs[found_organ.name] = found_organ
+			if(!(found_organ.organ_flags & ORGAN_SURGERY_HIDDEN))
+				organs[found_organ.name] = found_organ
 
 		var/selected = input(user, "Remove which organ?", "PESTRA") as null|anything in sortList(organs)
 		if(QDELETED(user) || QDELETED(target) || !user.Adjacent(target) || (user.get_active_held_item() != tool))
@@ -128,14 +120,6 @@ GLOBAL_LIST_INIT(moldable_organs, list(BODY_ZONE_PRECISE_GROIN=list(ORGAN_SLOT_P
 	return TRUE
 
 /datum/surgery_step/manipulate_organs/success(mob/user, mob/living/target, target_zone, obj/item/tool, datum/intent/intent)
-	if(istype(tool, /obj/item/organ_storage))
-		tool.icon_state = initial(tool.icon_state)
-		tool.desc = initial(tool.desc)
-		tool.cut_overlays()
-		tool = tool.contents[1]
-		if(!isorgan(tool))
-			return FALSE
-
 	var/obj/item/organ/organ_tool = tool
 	if(istype(organ_tool) && user.temporarilyRemoveItemFromInventory(organ_tool))
 		organ_tool.Insert(target)
@@ -153,6 +137,10 @@ GLOBAL_LIST_INIT(moldable_organs, list(BODY_ZONE_PRECISE_GROIN=list(ORGAN_SLOT_P
 		span_notice("[user] successfully extracts [selected_organ] from [target]'s [parse_zone(target_zone)]!"),
 		span_notice("[user] successfully extracts something from [target]'s [parse_zone(target_zone)]!"))
 	log_combat(user, target, "surgically removed [selected_organ.name] from")
+
+	if(selected_organ == ORGAN_SLOT_BRAIN && isdullahan(target))
+		target.death()
+
 	selected_organ.Remove(target)
 	selected_organ.forceMove(target.drop_location())
 	user.put_in_hands(selected_organ)

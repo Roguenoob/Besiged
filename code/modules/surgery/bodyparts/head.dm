@@ -3,6 +3,7 @@
 	desc = ""
 	icon = 'icons/mob/human_parts.dmi'
 	icon_state = "default_human_head"
+	slot_flags = ITEM_SLOT_HIP
 	max_damage = 200
 	body_zone = BODY_ZONE_HEAD
 	body_part = HEAD
@@ -13,6 +14,7 @@
 	px_y = -8
 	stam_damage_coeff = 1
 	max_stamina_damage = 100
+	max_pain_damage = 125
 	dismember_wound = /datum/wound/dismemberment/head
 
 	var/mob/living/brain/brainmob = null //The current occupant.
@@ -43,9 +45,17 @@
 	//grabtargets for grabs
 	grabtargets = list(BODY_ZONE_HEAD, BODY_ZONE_PRECISE_R_EYE, BODY_ZONE_PRECISE_L_EYE, BODY_ZONE_PRECISE_NOSE, BODY_ZONE_PRECISE_MOUTH, BODY_ZONE_PRECISE_SKULL, BODY_ZONE_PRECISE_EARS, BODY_ZONE_PRECISE_NECK)
 	resistance_flags = FLAMMABLE
+	
+	grid_width = 64
+	grid_height = 64
 
 	/// Brainkill means that this head is considered dead and revival is impossible
 	var/brainkill = FALSE
+
+/obj/item/bodypart/head/examine()
+	. = ..()
+	if(sellprice)
+		. += span_notice("This head seems to be wanted by the Judiciary of Azuria. It can be sold at the merchant or a HEADEATER.")
 
 /obj/item/bodypart/head/grabbedintents(mob/living/user, precise)
 	var/used_limb = precise
@@ -65,7 +75,7 @@
 		if(BODY_ZONE_PRECISE_MOUTH)
 			return list(/datum/intent/grab/move, /datum/intent/grab/twist, /datum/intent/grab/smash)
 		if(BODY_ZONE_PRECISE_NECK)
-			return list(/datum/intent/grab/move, /datum/intent/grab/choke)
+			return list(/datum/intent/grab/move, /datum/intent/grab/choke, /datum/intent/grab/hostage)
 
 /obj/item/bodypart/head/Destroy()
 	QDEL_NULL(brainmob) //order is sensitive, see warning in handle_atom_del() below
@@ -102,7 +112,6 @@
 			if(user)
 				user.visible_message(span_warning("[user] saws [src] open and pulls out a brain!"), span_notice("I saw [src] open and pull out a brain."))
 			if(brainmob)
-				brainmob.container = null
 				brainmob.forceMove(brain)
 				brain.brainmob = brainmob
 				brainmob = null
@@ -196,13 +205,7 @@
 			//Applies the debrained overlay if there is no brain
 			if(!brain)
 				var/image/debrain_overlay = image(layer = -HAIR_LAYER, dir = SOUTH)
-				if(animal_origin == ALIEN_BODYPART)
-					debrain_overlay.icon = 'icons/mob/animal_parts.dmi'
-					debrain_overlay.icon_state = "debrained_alien"
-				else if(animal_origin == LARVA_BODYPART)
-					debrain_overlay.icon = 'icons/mob/animal_parts.dmi'
-					debrain_overlay.icon_state = "debrained_larva"
-				else if(!(NOBLOOD in species_flags_list))
+				if(!(NOBLOOD in species_flags_list))
 					debrain_overlay.icon = 'icons/mob/human_face.dmi'
 					debrain_overlay.icon_state = "debrained"
 				. += debrain_overlay
@@ -223,30 +226,16 @@
 			if(eyes.eye_color)
 				eyes_overlay.color = "#" + eyes.eye_color
 
+/obj/item/bodypart/head/MiddleClick(mob/living/user, params)
+	to_chat(user, span_notice("You contemplate carving what little scraps of meat you can from \the [src], but then think better of it. Probably worth something to someone, somewhere..."))
+	return
+
 /obj/item/bodypart/head/monkey
 	icon = 'icons/mob/animal_parts.dmi'
 	icon_state = "default_monkey_head"
 	animal_origin = MONKEY_BODYPART
 
-/obj/item/bodypart/head/alien
-	icon = 'icons/mob/animal_parts.dmi'
-	icon_state = "alien_head"
-	px_x = 0
-	px_y = 0
-	dismemberable = 0
-	max_damage = 500
-	animal_origin = ALIEN_BODYPART
-
 /obj/item/bodypart/head/devil
 	dismemberable = 0
 	max_damage = 5000
 	animal_origin = DEVIL_BODYPART
-
-/obj/item/bodypart/head/larva
-	icon = 'icons/mob/animal_parts.dmi'
-	icon_state = "larva_head"
-	px_x = 0
-	px_y = 0
-	dismemberable = 0
-	max_damage = 50
-	animal_origin = LARVA_BODYPART

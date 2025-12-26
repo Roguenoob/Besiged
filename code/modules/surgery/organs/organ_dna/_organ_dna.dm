@@ -38,11 +38,13 @@
 
 /datum/organ_dna/penis
 	var/penis_size = DEFAULT_PENIS_SIZE
+	var/functional = TRUE
 
 /datum/organ_dna/penis/imprint_organ(obj/item/organ/organ)
 	..()
 	var/obj/item/organ/penis/penis_organ = organ
 	penis_organ.penis_size = penis_size
+	penis_organ.functional = functional
 
 /datum/organ_dna/testicles
 	var/ball_size = DEFAULT_TESTICLES_SIZE
@@ -72,19 +74,3 @@
 	..()
 	var/obj/item/organ/vagina/vagina_organ = organ
 	vagina_organ.fertility = fertility
-
-/datum/organ_dna/belly
-	var/belly_size = DEFAULT_BELLY_SIZE
-
-/datum/organ_dna/belly/imprint_organ(obj/item/organ/organ)
-	..()
-	var/obj/item/organ/belly/belly_organ = organ
-	belly_organ.belly_size = belly_size
-
-/datum/organ_dna/butt
-	var/organ_size = DEFAULT_BUTT_SIZE
-
-/datum/organ_dna/butt/imprint_organ(obj/item/organ/organ)
-	..()
-	var/obj/item/organ/butt/butt_organ = organ
-	butt_organ.organ_size = organ_size

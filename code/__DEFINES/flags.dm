@@ -56,6 +56,8 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define ADMIN_SPAWNED_1			    (1<<15)
 /// should not get harmed if this gets caught by an explosion?
 #define PREVENT_CONTENTS_EXPLOSION_1 (1<<16)
+#define HOARDMASTER_SPAWNED_1		(1<<17)
+// figure out if thing came from a hoardmaster
 
 //turf-only flags
 #define NOJAUNT_1					(1<<0)
@@ -80,6 +82,7 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define PASSBLOB		(1<<3)
 #define PASSMOB			(1<<4)
 #define PASSCLOSEDTURF	(1<<5)
+/// Let thrown things past us. **ONLY MEANINGFUL ON pass_flags_self!**
 #define LETPASSTHROW	(1<<6)
 
 //Movement Types
@@ -87,7 +90,7 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define FLYING			(1<<1)
 #define VENTCRAWLING	(1<<2)
 #define FLOATING		(1<<3)
-/// When moving, will Bump()/Cross()/Uncross() everything, but won't be stopped.
+/// When moving, will Bump()/Cross() everything, but won't be stopped.
 #define UNSTOPPABLE		(1<<4)
 
 //Fire and Acid stuff, for resistance_flags
@@ -135,8 +138,10 @@ GLOBAL_LIST_INIT(bitflags, list(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 204
 #define MOBILITY_STORAGE		(1<<5)
 /// can pull things
 #define MOBILITY_PULL			(1<<6)
+/// can stand, can be on floor or not. Mostly used for AI. Revisit this bitflag
+#define MOBILITY_CANSTAND		(1<<7)
 
-#define MOBILITY_FLAGS_DEFAULT (MOBILITY_MOVE | MOBILITY_STAND | MOBILITY_PICKUP | MOBILITY_USE | MOBILITY_UI | MOBILITY_STORAGE | MOBILITY_PULL)
+#define MOBILITY_FLAGS_DEFAULT (MOBILITY_MOVE | MOBILITY_STAND | MOBILITY_PICKUP | MOBILITY_USE | MOBILITY_UI | MOBILITY_STORAGE | MOBILITY_PULL | MOBILITY_CANSTAND)
 #define MOBILITY_FLAGS_INTERACTION (MOBILITY_USE | MOBILITY_PICKUP | MOBILITY_UI | MOBILITY_STORAGE)
 
 // radiation

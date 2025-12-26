@@ -6,44 +6,61 @@
 	race = /datum/species/goblin
 	gender = MALE
 	bodyparts = list(/obj/item/bodypart/chest/goblin, /obj/item/bodypart/head/goblin, /obj/item/bodypart/l_arm/goblin,
-					 /obj/item/bodypart/r_arm/goblin, /obj/item/bodypart/r_leg/goblin, /obj/item/bodypart/l_leg/goblin)
+					/obj/item/bodypart/r_arm/goblin, /obj/item/bodypart/r_leg/goblin, /obj/item/bodypart/l_leg/goblin)
 	rot_type = /datum/component/rot/corpse/goblin
 	var/gob_outfit = /datum/outfit/job/roguetown/npc/goblin
 	ambushable = FALSE
 	base_intents = list(INTENT_HELP, INTENT_DISARM, INTENT_GRAB, /datum/intent/unarmed/claw)
-	possible_rmb_intents = list()
-
-/mob/living/carbon/human/species/goblin/npc
-	aggressive = 1
-	mode = AI_IDLE
-	dodgetime = 30 //they can dodge easily, but have a cooldown on it
+	a_intent = INTENT_HELP
+	possible_mmb_intents = list(INTENT_SPECIAL, INTENT_JUMP, INTENT_KICK, INTENT_BITE)
+	possible_rmb_intents = list(/datum/rmb_intent/feint, /datum/rmb_intent/swift, /datum/rmb_intent/riposte, /datum/rmb_intent/weak)
 	flee_in_pain = TRUE
 
+/mob/living/carbon/human/species/goblin/npc
+	aggressive=1
+	mode = NPC_AI_IDLE
+	dodgetime = 30 //they can dodge easily, but have a cooldown on it
+	flee_in_pain = TRUE
+	npc_jump_chance = 60
+	npc_jump_distance = 3 // this might make them concheck more often, but it'll also mean it's easier to kick their legs out from under them
+	rude = TRUE
 	wander = FALSE
 
 /mob/living/carbon/human/species/goblin/npc/ambush
-
 	wander = TRUE
+	attack_speed = 2
 
 /mob/living/carbon/human/species/goblin/hell
 	name = "hell goblin"
 	race = /datum/species/goblin/hell
+
 /mob/living/carbon/human/species/goblin/npc/hell
 	race = /datum/species/goblin/hell
+
 /mob/living/carbon/human/species/goblin/npc/ambush/hell
 	race = /datum/species/goblin/hell
+
 /datum/species/goblin/hell
 	name = "hell goblin"
+	id = "goblin_hell"
 	raceicon = "goblin_hell"
+
+/datum/species/goblin/hell/spec_death(gibbed, mob/living/carbon/human/H)
+	new /obj/item/alch/infernaldust(get_turf(H))
+	H.visible_message("<span class='blue'>Infernal dust falls from [H]!</span>")
 
 /mob/living/carbon/human/species/goblin/cave
 	name = "cave goblin"
 	race = /datum/species/goblin/cave
+
 /mob/living/carbon/human/species/goblin/npc/cave
 	race = /datum/species/goblin/cave
+
 /mob/living/carbon/human/species/goblin/npc/ambush/cave
 	race = /datum/species/goblin/cave
+
 /datum/species/goblin/cave
+	id = "goblin_cave"
 	raceicon = "goblin_cave"
 
 /mob/living/carbon/human/species/goblin/sea
@@ -55,6 +72,7 @@
 	race = /datum/species/goblin/sea
 /datum/species/goblin/sea
 	raceicon = "goblin_sea"
+	id = "goblin_sea"
 
 /mob/living/carbon/human/species/goblin/moon
 	name = "moon goblin"
@@ -69,7 +87,7 @@
 
 /datum/species/goblin/moon/spec_death(gibbed, mob/living/carbon/human/H)
 	new /obj/item/reagent_containers/powder/moondust_purest(get_turf(H))
-	H.visible_message(span_blue("Moondust falls from [H]!"))
+	H.visible_message("<span class='blue'>Moondust falls from [H]!</span>")
 //	qdel(H)
 
 /obj/item/bodypart/chest/goblin
@@ -100,23 +118,19 @@
 	name = "goblin"
 	id = "goblin"
 	species_traits = list(NO_UNDERWEAR,NOEYESPRITES)
-	inherent_traits = list(TRAIT_NOROGSTAM,TRAIT_RESISTCOLD,TRAIT_RESISTHIGHPRESSURE,TRAIT_RESISTLOWPRESSURE,TRAIT_RADIMMUNE,TRAIT_CRITICAL_WEAKNESS)
+	inherent_traits = list(TRAIT_RESISTCOLD, 
+		TRAIT_RESISTHIGHPRESSURE, 
+		TRAIT_RESISTLOWPRESSURE, 
+		TRAIT_RADIMMUNE, 
+		TRAIT_CRITICAL_WEAKNESS, 
+		TRAIT_NASTY_EATER, 
+		TRAIT_LEECHIMMUNE) // For goblin armor
 	no_equip = list(SLOT_SHIRT, SLOT_WEAR_MASK, SLOT_GLOVES, SLOT_SHOES, SLOT_PANTS, SLOT_S_STORE)
 	nojumpsuit = 1
 	sexes = 1
 	offset_features = list(OFFSET_HANDS = list(0,-4), OFFSET_HANDS_F = list(0,-4))
 	damage_overlay_type = ""
-	organs = list(
-		ORGAN_SLOT_BRAIN = /obj/item/organ/brain,
-		ORGAN_SLOT_HEART = /obj/item/organ/heart,
-		ORGAN_SLOT_LUNGS = /obj/item/organ/lungs,
-		ORGAN_SLOT_EYES = /obj/item/organ/eyes,
-		ORGAN_SLOT_EARS = /obj/item/organ/ears,
-		ORGAN_SLOT_TONGUE = /obj/item/organ/tongue,
-		ORGAN_SLOT_LIVER = /obj/item/organ/liver,
-		ORGAN_SLOT_STOMACH = /obj/item/organ/stomach,
-		ORGAN_SLOT_APPENDIX = /obj/item/organ/appendix,
-		)
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | RACE_SWAP | SLIME_EXTRACT
 	var/raceicon = "goblin"
 
 /datum/species/goblin/regenerate_icons(mob/living/carbon/human/H)
@@ -127,7 +141,6 @@
 	H.update_inv_hands()
 	H.update_inv_handcuffed()
 	H.update_inv_legcuffed()
-	H.update_fire()
 	H.update_body()
 	var/mob/living/carbon/human/species/goblin/G = H
 	G.update_wearable()
@@ -183,8 +196,9 @@
 
 	apply_overlay(ARMOR_LAYER)
 
-/mob/living/carbon/human/species/goblin/update_inv_head()
+/mob/living/carbon/human/species/goblin/update_inv_head(hide_nonstandard = FALSE)
 	update_wearable()
+
 /mob/living/carbon/human/species/goblin/update_inv_armor()
 	update_wearable()
 
@@ -193,12 +207,10 @@
 
 /mob/living/carbon/human/species/goblin/Initialize()
 	. = ..()
-	spawn(10)
-		after_creation()
-	//addtimer(CALLBACK(src, PROC_REF(after_creation)), 10)
+	addtimer(CALLBACK(src, PROC_REF(after_creation)), 1 SECONDS)
 
 /mob/living/carbon/human/species/goblin/handle_combat()
-	if(mode == AI_HUNT)
+	if(mode == NPC_AI_HUNT)
 		if(prob(2))
 			emote("laugh")
 	. = ..()
@@ -207,20 +219,21 @@
 	..()
 	gender = MALE
 	if(src.dna && src.dna.species)
-		src.dna.species.soundpack_m = new /datum/voicepack/male/goblin()
-		src.dna.species.soundpack_f = new /datum/voicepack/male/goblin()
+		src.dna.species.soundpack_m = new /datum/voicepack/other/goblin()
+		src.dna.species.soundpack_f = new /datum/voicepack/other/goblin()
 		var/obj/item/headdy = get_bodypart("head")
 		if(headdy)
 			headdy.icon = 'icons/roguetown/mob/monster/goblins.dmi'
 			headdy.icon_state = "[src.dna.species.id]_head"
-			headdy.sellprice = rand(7,40)
+			headdy.sellprice = 20
 	src.grant_language(/datum/language/orcish)
 	var/obj/item/organ/eyes/eyes = src.getorganslot(ORGAN_SLOT_EYES)
 	if(eyes)
 		eyes.Remove(src,1)
 		QDEL_NULL(eyes)
-	eyes = new /obj/item/organ/eyes/night_vision/wild_goblin
+	eyes = new /obj/item/organ/eyes/night_vision/nightmare
 	eyes.Insert(src)
+	src.underwear = "Nude"
 	if(src.charflaw)
 		QDEL_NULL(src.charflaw)
 	update_body()
@@ -229,10 +242,14 @@
 	real_name = "goblin"
 	ADD_TRAIT(src, TRAIT_NOMOOD, TRAIT_GENERIC)
 	ADD_TRAIT(src, TRAIT_NOHUNGER, TRAIT_GENERIC)
-	ADD_TRAIT(src, TRAIT_NOROGSTAM, TRAIT_GENERIC)
-//	ADD_TRAIT(src, TRAIT_NOBREATH, TRAIT_GENERIC)
-//	blue breathes underwater, need a new specific one for this maybe organ cheque
-//	ADD_TRAIT(src, TRAIT_TOXIMMUNE, TRAIT_GENERIC)
+	ADD_TRAIT(src, TRAIT_CRITICAL_WEAKNESS, TRAIT_GENERIC)
+	ADD_TRAIT(src, TRAIT_BREADY, TRAIT_GENERIC)
+	ADD_TRAIT(src, TRAIT_LEECHIMMUNE, INNATE_TRAIT)
+	if(prob(80)) // It is funnier that way, I swear
+		ADD_TRAIT(src, TRAIT_HEAVYARMOR, TRAIT_GENERIC)
+	if(is_species(src, /datum/species/goblin/sea))
+		ADD_TRAIT(src, TRAIT_NOBREATH, TRAIT_GENERIC)
+	ADD_TRAIT(src, TRAIT_TOXIMMUNE, TRAIT_GENERIC)
 	if(gob_outfit)
 		var/datum/outfit/O = new gob_outfit
 		if(O)
@@ -240,10 +257,13 @@
 
 /datum/component/rot/corpse/goblin/process()
 	var/amt2add = 10 //1 second
+	var/time_elapsed = last_process ? (world.time - last_process)/10 : 1
 	if(last_process)
 		amt2add = ((world.time - last_process)/10) * amt2add
 	last_process = world.time
 	amount += amt2add
+	if(has_world_trait(/datum/world_trait/pestra_mercy))
+		amount -= 5 * time_elapsed
 	var/mob/living/carbon/C = parent
 	if(!C)
 		qdel(src)
@@ -265,7 +285,7 @@
 			if(B.rotted)
 				var/turf/open/T = C.loc
 				if(istype(T))
-					T.add_pollutants(/datum/pollutant/rot, 1)
+					T.pollute_turf(/datum/pollutant/rot, 1)
 	if(should_update)
 		if(amount > 20 MINUTES)
 			C.update_body()
@@ -274,22 +294,28 @@
 		else if(amount > 12 MINUTES)
 			C.update_body()
 
-/////
-////
-////
-//// OUTFGITS						//////////////////
-////
-///
+
+//////////////////   OUTFITS	//////////////////
 
 /datum/outfit/job/roguetown/npc/goblin/pre_equip(mob/living/carbon/human/H)
 	..()
 	H.STASTR = 8
+	var/chance_zjumper = 5
+	var/chance_treeclimber = 30
 	if(is_species(H, /datum/species/goblin/moon))
 		H.STASPD = 16
+		chance_zjumper = 20
+		chance_treeclimber = 70
 	else
 		H.STASPD = 14
+	if(prob(chance_zjumper))
+		ADD_TRAIT(H, TRAIT_ZJUMP, TRAIT_GENERIC)
+		H.find_targets_above = TRUE
+	if(prob(chance_treeclimber))
+		H.tree_climber = TRUE
+		H.find_targets_above = TRUE // so they can taunt
 	H.STACON = 6
-	H.STAEND = 15
+	H.STAWIL = 15
 	if(is_species(H, /datum/species/goblin/moon))
 		H.STAINT = 8
 	else
@@ -322,7 +348,7 @@
 				head = /obj/item/clothing/head/roguetown/helmet/leather/goblin
 		if(5) //heavy armored sword/flail/shields
 			if(prob(30))
-				armor = /obj/item/clothing/suit/roguetown/armor/plate/half/iron/goblin
+				armor = /obj/item/clothing/suit/roguetown/armor/plate/cuirass/iron/goblin
 			else
 				armor = /obj/item/clothing/suit/roguetown/armor/leather/goblin
 			if(prob(80))
@@ -335,16 +361,18 @@
 				r_hand = /obj/item/rogueweapon/mace/spiked
 			if(prob(20))
 				r_hand = /obj/item/rogueweapon/flail
-			l_hand = /obj/item/rogueweapon/shield/wood
-
-
-////
-////
-/// INVADER ZIM
-///
-///
-///
-
+				l_hand = /obj/item/rogueweapon/shield/wood
+	H.adjust_skillrank(/datum/skill/combat/polearms, 2, TRUE)
+	H.adjust_skillrank(/datum/skill/combat/maces, 2, TRUE)
+	H.adjust_skillrank(/datum/skill/combat/axes, 2, TRUE)
+	H.adjust_skillrank(/datum/skill/combat/swords, 2, TRUE)
+	H.adjust_skillrank(/datum/skill/combat/shields, 2, TRUE)
+	H.adjust_skillrank(/datum/skill/combat/unarmed, 2, TRUE)
+	H.adjust_skillrank(/datum/skill/combat/wrestling, 2, TRUE) // Trash mob
+	H.adjust_skillrank(/datum/skill/misc/swimming, 2, TRUE)
+	H.adjust_skillrank(/datum/skill/misc/climbing, 2, TRUE)
+        
+//////////////////   INVADER ZIM	//////////////////
 
 /obj/structure/gob_portal
 	name = "Gob Portal"
@@ -363,7 +391,7 @@
 
 /obj/structure/gob_portal/Initialize()
 	. = ..()
-	soundloop = new(list(src), FALSE)
+	soundloop = new(src, FALSE)
 	soundloop.start()
 	spawn_gob()
 
@@ -373,7 +401,7 @@
 	if(!in_range(src, user))
 		return
 	if(gobs >= (maxgobs+1))
-		to_chat(user, span_danger("Too many Gobs."))
+		to_chat(user, "<span class='danger'>Too many Gobs.</span>")
 		return
 	gobs++
 	var/mob/living/carbon/human/species/goblin/npc/N = new (get_turf(src))
@@ -396,9 +424,11 @@
 	if(moon_goblins == 1)
 		new /mob/living/carbon/human/species/goblin/npc/moon(get_turf(src))
 	else
-		new /mob/living/carbon/human/species/goblin/npc(get_turf(src))
+		new /mob/living/carbon/human/species/goblin/npc/hell(get_turf(src))
 	gobs++
 	update_icon()
+	if(living_player_count() < 10)
+		maxgobs = 1
 	if(gobs < maxgobs)
 		spawn_gob()
 
@@ -409,12 +439,8 @@
 		return
 	spawning = TRUE
 	update_icon()
-	spawn(2 SECONDS)
-		creategob()
-	//addtimer(CALLBACK(src, PROC_REF(creategob)), 4 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(creategob)), 2 SECONDS)
 
 /obj/structure/gob_portal/Destroy()
 	soundloop.stop()
 	. = ..()
-
-

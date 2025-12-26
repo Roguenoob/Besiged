@@ -2,6 +2,8 @@
 	resistance_flags = FLAMMABLE
 	max_integrity = 150
 	anchored = TRUE
+	layer = LYING_MOB_LAYER
+	plane = GAME_PLANE
 
 /obj/structure/flora/Initialize()
 	. = ..()
@@ -58,63 +60,9 @@
 /obj/structure/flora/stump
 	name = "stump"
 	desc = "" //running naked through the trees
-	icon = 'icons/obj/flora/pinetrees.dmi'
 	icon_state = "tree_stump"
 	density = FALSE
 	pixel_x = -16
-
-/obj/structure/flora/tree/pine
-	name = "pine tree"
-	desc = ""
-	icon = 'icons/obj/flora/pinetrees.dmi'
-	icon_state = "pine_1"
-	var/list/icon_states = list("pine_1", "pine_2", "pine_3")
-
-/obj/structure/flora/tree/pine/Initialize()
-	. = ..()
-
-	if(islist(icon_states && icon_states.len))
-		icon_state = pick(icon_states)
-
-/obj/structure/flora/tree/pine/xmas
-	name = "xmas tree"
-	desc = ""
-	icon_state = "pine_c"
-	icon_states = null
-
-/obj/structure/flora/tree/pine/xmas/presents
-	icon_state = "pinepresents"
-	desc = ""
-	var/gift_type = /obj/item/a_gift/anything
-	var/unlimited = FALSE
-	var/static/list/took_presents //shared between all xmas trees
-
-/obj/structure/flora/tree/pine/xmas/presents/Initialize()
-	. = ..()
-	if(!took_presents)
-		took_presents = list()
-
-/obj/structure/flora/tree/pine/xmas/presents/attack_hand(mob/living/user)
-	. = ..()
-	if(.)
-		return
-	if(!user.ckey)
-		return
-
-	if(took_presents[user.ckey] && !unlimited)
-		to_chat(user, span_warning("There are no presents with your name on."))
-		return
-	to_chat(user, span_warning("After a bit of rummaging, you locate a gift with your name on it!"))
-
-	if(!unlimited)
-		took_presents[user.ckey] = TRUE
-
-	var/obj/item/G = new gift_type(src)
-	user.put_in_hands(G)
-
-/obj/structure/flora/tree/pine/xmas/presents/unlimited
-	desc = ""
-	unlimited = TRUE
 
 /obj/structure/flora/tree/dead
 	icon = 'icons/obj/flora/deadtrees.dmi'
@@ -130,18 +78,6 @@
 	. = ..()
 	icon_state = pick("palm1","palm2")
 	pixel_x = 0
-
-/obj/structure/festivus
-	name = "festivus pole"
-	icon = 'icons/obj/flora/pinetrees.dmi'
-	icon_state = "festivus_pole"
-	desc = ""
-
-/obj/structure/festivus/anchored
-	name = "suplexed rod"
-	desc = ""
-	icon_state = "anchored_rod"
-	anchored = TRUE
 
 /obj/structure/flora/tree/dead/Initialize()
 	icon_state = "tree_[rand(1, 6)]"
@@ -163,6 +99,25 @@
 	pixel_y = 0
 	pixel_x = -32
 	icon = 'icons/obj/flora/jungletreesmall.dmi'
+
+
+/obj/structure/flora/tree/evil/Initialize()
+	. = ..()
+	icon_state = "wv[rand(1,2)]"
+	soundloop = new(src, FALSE)
+	soundloop.start()
+
+/obj/structure/flora/tree/evil/Destroy()
+	soundloop.stop()
+	if(controller)
+		controller.endvines()
+		controller.tree = null
+		controller = null
+	. = ..()
+
+/obj/structure/flora/tree/evil
+	var/datum/looping_sound/boneloop/soundloop
+	var/datum/vine_controller/controller
 
 //grass
 /obj/structure/flora/grass
@@ -340,10 +295,9 @@
 /obj/item/twohanded/required/kirbyplants/Initialize()
 	. = ..()
 	AddComponent(/datum/component/tactical)
-	addtimer(CALLBACK(src, TYPE_PROC_REF(/datum, AddComponent), /datum/component/beauty, 500), 0)
+	addtimer(CALLBACK(src, TYPE_PROC_REF(/datum, _AddComponent), /datum/component/beauty, 500), 0)
 
 /obj/item/twohanded/required/kirbyplants/random
-	icon = 'icons/obj/flora/_flora.dmi'
 	icon_state = "random_plant"
 	var/list/static/states
 
@@ -376,7 +330,7 @@
 	desc = ""
 	icon_state = "plant-09"
 	light_color = "#2cb2e8"
-	light_range = 3
+	light_outer_range = 3
 
 
 //a rock is flora according to where the icon file is

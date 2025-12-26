@@ -5,6 +5,8 @@
 	icon_state = "lottery"
 	density = FALSE
 	pixel_y = 32
+	light_outer_range = 5
+	light_color = "#1b7bf1"
 	var/gamblingprice = 0
 	var/checkchatter = 0
 	var/chatterbox = 0
@@ -33,14 +35,17 @@
 
 	if(src.stopgambling == 1)
 		return
-
+	if(istype(P, /obj/item/roguecoin/aalloy))
+		return
+	if(istype(P, /obj/item/roguecoin/inqcoin))	
+		return
 	if(istype(P, /obj/item/roguecoin))
 		if(src.gamblingprice + (P.sellprice * P.quantity) > src.maxtithing)
 			say("This puts the starting tithe over [src.maxtithing] mammons.")
 			playsound(src, 'sound/misc/machineno.ogg', 100, FALSE, -1)
 			return
 		if(src.gamblingprice + (P.sellprice * P.quantity) < src.mintithing)
-			say("This is is below [src.mintithing] mammons.")
+			say("This is below [src.mintithing] mammons.")
 			playsound(src, 'sound/misc/machineno.ogg', 100, FALSE, -1)
 			return
 
@@ -147,6 +152,8 @@
 		if(coin_amt < 1)
 			return
 		if(!Adjacent(user))
+			return
+		if(src.stopgambling == 1) // double check because it's possible to have input field open before starting gambling
 			return
 		if((coin_amt*mod) > gamblingprice)
 			playsound(src, 'sound/misc/machineno.ogg', 100, FALSE, -1)

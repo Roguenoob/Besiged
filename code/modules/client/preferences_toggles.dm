@@ -49,6 +49,39 @@
 		else
 			to_chat(src, "Screen shake disabled.")
 
+/client/verb/masked_examine()
+	set category = "Options"
+	set name = "Toggle Masked Examine"
+	if(prefs)
+		prefs.masked_examine = !prefs.masked_examine
+		prefs.save_preferences()
+		if(!prefs.masked_examine)
+			to_chat(src, "Your character information will be viewable when masked.")
+		else
+			to_chat(src, "Your character information will no longer be viewable when masked.")
+
+/client/verb/mute_animal_emotes()
+	set category = "Options"
+	set name = "Toggle Animal Noise Emotes"
+	if(prefs)
+		prefs.mute_animal_emotes = !prefs.mute_animal_emotes
+		prefs.save_preferences()
+		if(prefs.mute_animal_emotes)
+			to_chat(src, "You can no longer hear animal sound emotes.")
+		else
+			to_chat(src, "You will now hear animal sound emotes.")
+
+/client/verb/autoconsume()
+	set category = "Options"
+	set name = "Toggle AutoConsume"
+	if(prefs)
+		prefs.autoconsume = !prefs.autoconsume
+		prefs.save_preferences()
+		if(prefs.autoconsume)
+			to_chat(src, "You will now try to repeatedly consume/feed food/drinks")
+		else
+			to_chat(src, "You will no longer try to repeatedly consume/feed food/drinks")
+
 /client/verb/toggle_ERP() // Alters if other people can use the ERP panel ON you.
 	set category = "Options"
 	set name = "Toggle ERP Panel"
@@ -59,6 +92,61 @@
 			to_chat(src, "Others can play with you.")
 		else
 			to_chat(src, "Others can't touch you.")
+
+/client/verb/toggle_compliance_notifs() // The messages need to be on-by-default while this is in its early stages.
+	set category = "Options"
+	set name = "Compliance Notifs"
+	if(prefs)
+		prefs.compliance_notifs = !prefs.compliance_notifs
+		prefs.save_preferences()
+		if(prefs.compliance_notifs)
+			to_chat(src, "You will receive chat notifications when enabling or disabling Compliance Mode.")
+		else
+			to_chat(src, "You will no longer be notified in chat when toggling Compliance Mode.")
+
+/client/verb/toggle_examine_blocks()
+	set category = "Options"
+	set name = "Toggle Examine Blocks"
+	if(prefs)
+		prefs.no_examine_blocks = !prefs.no_examine_blocks
+		prefs.save_preferences()
+		if(prefs.no_examine_blocks)
+			to_chat(src, "You will no longer see examined items in boxes.")
+		else
+			to_chat(src, "You will now see examined items in boxes.")
+
+/client/verb/toggle_autopunctuation()
+	set category = "Options"
+	set name = "Toggle Autopunctuation"
+	if(prefs)
+		prefs.no_autopunctuate = !prefs.no_autopunctuate
+		prefs.save_preferences()
+		if(prefs.no_autopunctuate)
+			to_chat(src, "Your messages will no longer be automatically punctuated.")
+		else
+			to_chat(src, "Your messages will now be automatically punctuated.")
+
+/client/verb/toggle_language_fonts()
+	set category = "Options"
+	set name = "Toggle Language Fonts"
+	if(prefs)
+		prefs.no_language_fonts = !prefs.no_language_fonts
+		prefs.save_preferences()
+		if(prefs.no_language_fonts)
+			to_chat(src, "You will no longer see languages in their stylized fonts.")
+		else
+			to_chat(src, "You will now see languages in their stylized fonts.")
+
+/client/verb/toggle_language_icon()
+	set category = "Options"
+	set name = "Toggle Language Icon"
+	if(prefs)
+		prefs.no_language_icon = !prefs.no_language_icon
+		prefs.save_preferences()
+		if(prefs.no_language_icon)
+			to_chat(src, "You will no longer see the language icon in front of a language.")
+		else
+			to_chat(src, "You will now see the language icon in front of a language.")
 
 /client/verb/toggle_lobby_music()
 	set name = "Toggle Lobby Music"
@@ -93,6 +181,43 @@
 	set desc = ""
 	if(mob)
 		SEND_SOUND(mob, sound(null))
+
+/client/verb/cmode_strip()
+	set name = "Combat Mode Stripping"
+	set category = "Options"
+	set desc = ""
+	if(prefs)
+		prefs.toggles ^= CMODE_STRIPPING
+		prefs.save_preferences()
+	to_chat(src, "You will [prefs.toggles & CMODE_STRIPPING ? "" : "not"] be able to open the strip menu in combat mode.")
+
+/client/verb/toggle_xptext() // Whether the user can see the balloon XP pop ups.
+	set category = "Options"
+	set name = "Toggle XP Text"
+	if(prefs)
+		prefs.floating_text_toggles ^= XP_TEXT
+		prefs.save_preferences()
+	to_chat(src, "You will[prefs.floating_text_toggles & XP_TEXT ? "" : " not"] see XP pop ups.")
+
+/client/verb/toggle_floatingtext() // Whether the user can see the balloon pop ups at all.
+	set category = "Options"
+	set name = "Toggle Floating Text"
+	if(prefs)
+		prefs.floating_text_toggles ^= FLOATING_TEXT
+		prefs.save_preferences()
+	to_chat(src, "You will [prefs.floating_text_toggles & FLOATING_TEXT ? "see" : "not see any"] floating text.")
+
+/client/verb/toggle_deadchat() // Whether the user can see DSAY or not.
+	set name = "Show/Hide Deadchat"
+	set category = "Options"
+	set desc ="Toggles seeing deadchat"
+
+	if(prefs)
+		prefs.chat_toggles ^= CHAT_DSAY
+		prefs.save_preferences()
+	to_chat(src, "You will [(prefs.chat_toggles & CHAT_DSAY) ? "now" : "no longer"] see deadchat.")
+	if(holder)
+		SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Deadchat Visibility", "[prefs.chat_toggles & CHAT_DSAY ? "Enabled" : "Disabled"]"))
 
 /*
 //toggles
@@ -493,23 +618,13 @@ GLOBAL_LIST_INIT(ghost_orbits, list(GHOST_ORBIT_CIRCLE,GHOST_ORBIT_TRIANGLE,GHOS
 	set name = "Show/Hide Radio Chatter"
 	set category = "Prefs - Admin"
 	set desc = ""
+	set hidden = 1
 	if(!holder)
 		return
 	prefs.chat_toggles ^= CHAT_RADIO
 	prefs.save_preferences()
 	to_chat(usr, "You will [(prefs.chat_toggles & CHAT_RADIO) ? "now" : "no longer"] see radio chatter from nearby radios or speakers")
 	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Radio Chatter", "[prefs.chat_toggles & CHAT_RADIO ? "Enabled" : "Disabled"]")) //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
-
-/client/proc/deadchat()
-	set name = "Show/Hide Deadchat"
-	set category = "Prefs - Admin"
-	set desc ="Toggles seeing deadchat"
-	if(!holder)
-		return
-	prefs.chat_toggles ^= CHAT_DEAD
-	prefs.save_preferences()
-	to_chat(src, "You will [(prefs.chat_toggles & CHAT_DEAD) ? "now" : "no longer"] see deadchat.")
-	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Deadchat Visibility", "[prefs.chat_toggles & CHAT_DEAD ? "Enabled" : "Disabled"]")) //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 /client/proc/toggleprayers()
 	set name = "Show/Hide Prayers"
@@ -523,7 +638,7 @@ GLOBAL_LIST_INIT(ghost_orbits, list(GHOST_ORBIT_CIRCLE,GHOST_ORBIT_TRIANGLE,GHOS
 	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Prayer Visibility", "[prefs.chat_toggles & CHAT_PRAYER ? "Enabled" : "Disabled"]")) //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 /client/proc/toggle_prayer_sound()
-	set name = "Hear/Silence Prayer Sounds"
+	set name = "Toggle Prayer Sounds"
 	set category = "Prefs - Admin"
 	set desc = ""
 	if(!holder)
@@ -534,7 +649,7 @@ GLOBAL_LIST_INIT(ghost_orbits, list(GHOST_ORBIT_CIRCLE,GHOST_ORBIT_TRIANGLE,GHOS
 	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Prayer Sounds", "[usr.client.prefs.toggles & SOUND_PRAYERS ? "Enabled" : "Disabled"]"))
 
 /client/proc/colorasay()
-	set name = "Set Admin Say Color"
+	set name = "Set Asay Color"
 	set category = "Prefs - Admin"
 	set desc = ""
 	if(!holder)
@@ -561,14 +676,56 @@ GLOBAL_LIST_INIT(ghost_orbits, list(GHOST_ORBIT_CIRCLE,GHOST_ORBIT_TRIANGLE,GHOS
 	prefs.asaycolor = initial(prefs.asaycolor)
 	prefs.save_preferences()
 
-	
-/client/proc/togglebluehighlight()
-	set name = "Toggle Blue OOC"
-	set desc = ""
+/client/proc/hearallasghost()
 	set category = "Prefs - Admin"
+	set name = "HearAllAsAdmin"
 	if(!holder)
 		return
-	prefs.toggles ^= TOGGLE_BLUE_OOC
+	if(!prefs)
+		return
+	prefs.chat_toggles ^= CHAT_GHOSTEARS
+//	prefs.chat_toggles ^= CHAT_GHOSTSIGHT
+	prefs.chat_toggles ^= CHAT_GHOSTWHISPER
 	prefs.save_preferences()
-	to_chat(usr, "You will [(prefs.toggles & TOGGLE_BLUE_OOC) ? "now" : "no longer"] send OOC messages with blue-colored text.")
-	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Blue OOC", "[usr.client.prefs.toggles & TOGGLE_BLUE_OOC ? "Enabled" : "Disabled"]"))
+	if(prefs.chat_toggles & CHAT_GHOSTEARS)
+		to_chat(src, span_notice("I will hear all now."))
+	else
+		to_chat(src, span_info("I will hear like a mortal."))
+
+/client/proc/hearglobalLOOC()
+	set category = "Prefs - Admin"
+	set name = "Show/Hide Global LOOC"
+	if(!holder)
+		return
+	if(!prefs)
+		return
+	prefs.admin_chat_toggles ^= CHAT_ADMINLOOC
+	prefs.save_preferences()
+	if(prefs.admin_chat_toggles & CHAT_ADMINLOOC)
+		to_chat(src, span_notice("I will now hear all LOOC chatter."))
+	else
+		to_chat(src, span_info("I will now only hear LOOC chatter around me."))
+
+/client/proc/togglespawnmessages()
+	set category = "Prefs - Admin"
+	set name = "Show/Hide Spawn Logs"
+	if(!holder)
+		return
+	if(!prefs)
+		return
+	prefs.admin_chat_toggles ^= CHAT_ADMINSPAWN
+	prefs.save_preferences()
+	to_chat(src, "You will [prefs.admin_chat_toggles & CHAT_ADMINSPAWN ? "see" : "not see any"] spawn logs.")
+
+/client/verb/full_examine()
+	set category = "Options"
+	set name = "Toggle Full Examine"
+	if(prefs)
+		prefs.full_examine = !prefs.full_examine
+		prefs.save_preferences()
+		if(prefs.full_examine)
+			to_chat(src, "Examines will be fully shown.")
+		else
+			to_chat(src, "Examines will have some information behind dropdowns.")
+
+#undef TOGGLE_CHECKBOX

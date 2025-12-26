@@ -75,9 +75,9 @@
 		return 0
 	if(lifetime<1)
 		return 0
-	if(C.internal != null || C.has_smoke_protection())
-		return 0
 	if(C.smoke_delay)
+		return 0
+	if(istype(C.wear_mask, /obj/item/clothing/mask/rogue/facemask/steel/confessor))
 		return 0
 	C.smoke_delay++
 	addtimer(CALLBACK(src, PROC_REF(remove_smoke_delay), C), 10)
@@ -148,75 +148,110 @@
 		M.emote("cough")
 		return 1
 
-/obj/effect/particle_effect/smoke/bad/CanPass(atom/movable/mover, turf/target)
-	if(istype(mover, /obj/projectile/beam))
-		var/obj/projectile/beam/B = mover
-		B.damage = (B.damage/2)
-	return 1
-
-
 
 /datum/effect_system/smoke_spread/bad
 	effect_type = /obj/effect/particle_effect/smoke/bad
 
 /////////////////////////////////////////////
-// Nanofrost smoke
+// Poison gas
 /////////////////////////////////////////////
 
-/obj/effect/particle_effect/smoke/freezing
-	name = "nanofrost smoke"
-	color = "#B2FFFF"
-	opaque = 0
+/obj/effect/particle_effect/smoke/poison_gas
+	color = "#369c50"
+	lifetime = 10
 
-/datum/effect_system/smoke_spread/freezing
-	effect_type = /obj/effect/particle_effect/smoke/freezing
-	var/blast = 0
-	var/temperature = 2
-	var/weldvents = TRUE
-	var/distcheck = TRUE
+/obj/effect/particle_effect/smoke/poison_gas/smoke_mob(mob/living/carbon/M)
+	if(..())
+		if(HAS_TRAIT(M, TRAIT_HOLDBREATH))
+			return 0
+		M.adjustToxLoss(20, 0)
+		M.emote("cough")
+		return 1
 
-/datum/effect_system/smoke_spread/freezing/proc/Chilled(atom/A)
-	if(isopenturf(A))
-		var/turf/open/T = A
-		if(T.air)
-			var/datum/gas_mixture/G = T.air
-			if(!distcheck || get_dist(T, location) < blast) // Otherwise we'll get silliness like people using Nanofrost to kill people through walls with cold air
-				G.temperature = temperature
-			T.air_update_turf()
-			for(var/obj/effect/hotspot/H in T)
-				qdel(H)
-			var/list/G_gases = G.gases
-			if(G_gases[/datum/gas/plasma])
-				G.assert_gas(/datum/gas/nitrogen)
-				G_gases[/datum/gas/nitrogen][MOLES] += (G_gases[/datum/gas/plasma][MOLES])
-				G_gases[/datum/gas/plasma][MOLES] = 0
-				G.garbage_collect()
-		if (weldvents)
-			for(var/obj/machinery/atmospherics/components/unary/U in T)
-				if(!isnull(U.welded) && !U.welded) //must be an unwelded vent pump or vent scrubber.
-					U.welded = TRUE
-					U.update_icon()
-					U.visible_message(span_danger("[U] was frozen shut!"))
-		for(var/mob/living/L in T)
-			L.ExtinguishMob()
-		for(var/obj/item/Item in T)
-			Item.extinguish()
+/datum/effect_system/smoke_spread/poison_gas
+	effect_type = /obj/effect/particle_effect/smoke/poison_gas
 
-/datum/effect_system/smoke_spread/freezing/set_up(radius = 5, loca, blast_radius = 0)
-	..()
-	blast = blast_radius
+/////////////////////////////////////////////
+// HEALING_GAS
+/////////////////////////////////////////////
 
-/datum/effect_system/smoke_spread/freezing/start()
-	if(blast)
-		for(var/turf/T in RANGE_TURFS(blast, location))
-			Chilled(T)
-	..()
 
-/datum/effect_system/smoke_spread/freezing/decon
-	temperature = 293.15
-	distcheck = FALSE
-	weldvents = FALSE
+/obj/effect/particle_effect/smoke/healing_gas
+  color = "#da4011"
+  lifetime = 15
 
+/obj/effect/particle_effect/smoke/healing_gas/smoke_mob(mob/living/carbon/M)
+	if(..())
+		if(HAS_TRAIT(M, TRAIT_HOLDBREATH))
+			return 0
+		M.adjustBruteLoss(-5, 0)
+		M.adjustFireLoss(-2, 0)
+		M.adjustOxyLoss(-1, 0)
+		M.adjustToxLoss(-1, 0)
+		M.emote("cough")
+		return 1
+
+/datum/effect_system/smoke_spread/healing_gas
+	effect_type = /obj/effect/particle_effect/smoke/healing_gas
+
+
+/////////////////////////////////////////////
+// FIRE_GAS
+/////////////////////////////////////////////
+
+/obj/effect/particle_effect/smoke/fire_gas
+	color = "#d1b411"
+	lifetime = 10
+
+/obj/effect/particle_effect/smoke/fire_gas/smoke_mob(mob/living/carbon/M)
+	if(..())
+		M.adjustFireLoss(-3, 0)
+		M.adjust_fire_stacks(3)
+		M.ignite_mob()
+		M.emote("scream")
+		return 1
+
+/datum/effect_system/smoke_spread/fire_gas
+	effect_type = /obj/effect/particle_effect/smoke/fire_gas
+
+/////////////////////////////////////////////
+// BLIND_GAS
+/////////////////////////////////////////////
+
+/obj/effect/particle_effect/smoke/blind_gas
+	color = "#292822"
+	lifetime = 5
+
+/obj/effect/particle_effect/smoke/blind_gas/smoke_mob(mob/living/carbon/M)
+	if(..())
+		if(HAS_TRAIT(M, TRAIT_HOLDBREATH))
+			return 0
+		M.adjust_blurriness(3)
+		M.adjust_blindness(3)
+		M.emote("cry")
+		return 1
+
+/datum/effect_system/smoke_spread/blind_gas
+	effect_type = /obj/effect/particle_effect/smoke/blind_gas
+
+
+/////////////////////////////////////////////
+// MUTE_GAS
+/////////////////////////////////////////////
+
+/obj/effect/particle_effect/smoke/mute_gas
+	color = "#529bfc"
+	lifetime = 10
+
+/obj/effect/particle_effect/smoke/mute_gas/smoke_mob(mob/living/carbon/M)
+	if(..())
+		if(HAS_TRAIT(M, TRAIT_HOLDBREATH))
+			return 0
+		M.silent = max(M.silent, 8)
+		return 1
+
+/datum/effect_system/smoke_spread/mute_gas
+	effect_type = /obj/effect/particle_effect/smoke/mute_gas
 
 /////////////////////////////////////////////
 // Sleep smoke
@@ -228,6 +263,8 @@
 
 /obj/effect/particle_effect/smoke/sleeping/smoke_mob(mob/living/carbon/M)
 	if(..())
+		if(HAS_TRAIT(M, TRAIT_HOLDBREATH))
+			return 0
 		M.Sleeping(200)
 		M.emote("cough")
 		return 1
@@ -262,11 +299,8 @@
 		return 0
 	if(!istype(M))
 		return 0
-	var/mob/living/carbon/C = M
-	if(C.internal != null || C.has_smoke_protection())
-		return 0
 	var/fraction = 1/initial(lifetime)
-	reagents.copy_to(C, fraction*reagents.total_volume)
+	reagents.copy_to(M, fraction*reagents.total_volume)
 	reagents.reaction(M, INGEST, fraction)
 	return 1
 
@@ -309,12 +343,10 @@
 			var/more = ""
 			if(M)
 				more = "[ADMIN_LOOKUPFLW(M)] "
-			if(!istype(carry.my_atom, /obj/machinery/plumbing))
-				message_admins("Smoke: ([ADMIN_VERBOSEJMP(location)])[contained]. Key: [more ? more : carry.my_atom.fingerprintslast].")
+			message_admins("Smoke: ([ADMIN_VERBOSEJMP(location)])[contained]. Key: [more ? more : carry.my_atom.fingerprintslast].")
 			log_game("A chemical smoke reaction has taken place in ([where])[contained]. Last touched by [carry.my_atom.fingerprintslast].")
 		else
-			if(!istype(carry.my_atom, /obj/machinery/plumbing))
-				message_admins("Smoke: ([ADMIN_VERBOSEJMP(location)])[contained]. No associated key.")
+			message_admins("Smoke: ([ADMIN_VERBOSEJMP(location)])[contained]. No associated key.")
 			log_game("A chemical smoke reaction has taken place in ([where])[contained]. No associated key.")
 
 
@@ -353,3 +385,11 @@
 	smoke.effect_type = smoke_type
 	smoke.set_up(range, location)
 	smoke.start()
+
+/datum/effect_system/smoke_spread/fast
+	effect_type = /obj/effect/particle_effect/smoke/fast
+
+// Very quick smoke meant for artillery fireball
+/obj/effect/particle_effect/smoke/fast
+	lifetime = 1
+

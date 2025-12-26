@@ -41,6 +41,18 @@ Credit dupes that require a lot of manual work shouldn't be removed, unless they
 		randomize_price()
 	return sellprice
 
+// For appraisal purposes only - calculates total value including contents
+// Used by SEEPRICES trait for examining containers
+/atom/movable/proc/appraise_price()
+	var/total_sellprice = 0
+	if(length(src.contents))
+		for(var/obj/item/I in src.contents)
+			if(I)
+				total_sellprice += I.appraise_price()
+		return total_sellprice + get_real_price()
+	else
+		return get_real_price()
+
 /atom/movable/proc/pre_sell()
 	return
 
@@ -160,10 +172,7 @@ Credit dupes that require a lot of manual work shouldn't be removed, unless they
 
 	report.total_value[src] += the_cost
 
-	if(istype(O, /datum/export/material))
-		report.total_amount[src] += amount*MINERAL_MATERIAL_AMOUNT
-	else
-		report.total_amount[src] += amount
+	report.total_amount[src] += amount
 
 	if(!dry_run)
 		if(apply_elastic)

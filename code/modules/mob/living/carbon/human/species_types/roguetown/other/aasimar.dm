@@ -5,27 +5,27 @@
 	name = "Aasimar"
 	id = "aasimar"
 	desc = "<b>Aasimar</b><br>\
-	Aasimar are born of a rare union between Humans and Angels. \
-	They bear the mark of their celestial touch through many varying physical features. \
-	Their looks resemble the traditional characteristics of whichever of the Gods the Angel parent was associated with. \
-	Most commonly, Aasimar are similar to Humans, albeit taller, and possess uncanny beauty. \
-	They have strangely colored skin and are more physically frail than the average Human. \
+	Aasimar are born of a rare union between Humens and Angels. \
+	They bear the mark of their celestial touch through their many varying physical features. \
+	Their looks resemble the traditional characteristics of whichever of the Gods their Angel parent was associated with. \
+	Most commonly, Aasimar are similar to Humens, albeit taller, and commonly possess an uncanny beauty. \
+	When compared to the average Humen, they have strangely colored skin and are more physically frail. \
 	Because of their upbringing, they make for natural conduits for godly powers. \
-	Azure Peak's populace holds them with a mixture of uneasy fear or, and respect. \
-	It is also widely believed that an Aasimars death is a bad omen... \
-	+1 Fortune, -1 Perception."
+	Azure Peak's populace holds them with a mixture of uneasy mixture of fear and respect. \
+	Due to their celestial nature, it is widely believed that an Aasimar's death is a bad omen...<br>\
+	(+1 Stat of their choice, or Lack of Hunger & Thirst)"
 
 	skin_tone_wording = "Craft"
+	max_age = "???"
 
 	species_traits = list(EYECOLOR,HAIR,FACEHAIR,LIPS,STUBBLE,OLDGREY)
 	inherent_traits = list(TRAIT_NOMOBSWAP)
 	default_features = MANDATORY_FEATURE_LIST
-	use_skintones = 1
-	skinned_type = /obj/item/stack/sheet/animalhide/human
+	use_skintones = TRUE
 	disliked_food = NONE
 	liked_food = NONE
 	possible_ages = ALL_AGES_LIST
-	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | ERT_SPAWN | RACE_SWAP | SLIME_EXTRACT
+	changesource_flags = MIRROR_BADMIN | WABBAJACK | MIRROR_MAGIC | MIRROR_PRIDE | RACE_SWAP | SLIME_EXTRACT
 	limbs_icon_m = 'icons/roguetown/mob/bodies/m/mt.dmi'
 	limbs_icon_f = 'icons/roguetown/mob/bodies/f/fm.dmi'
 	dam_icon = 'icons/roguetown/mob/bodies/dam/dam_male.dmi'
@@ -44,7 +44,7 @@
 		OFFSET_NECK_F = list(0,-1), OFFSET_MOUTH_F = list(0,-1), OFFSET_PANTS_F = list(0,0), \
 		OFFSET_SHIRT_F = list(0,0), OFFSET_ARMOR_F = list(0,0), OFFSET_UNDIES_F = list(0,-1), \
 		)
-	race_bonus = list(STAT_FORTUNE = 1, STAT_PERCEPTION = -1)
+	race_bonus = list()
 	enflamed_icon = "widefire"
 	customizers = list(
 		/datum/customizer/organ/eyes/humanoid,
@@ -53,13 +53,26 @@
 		/datum/customizer/bodypart_feature/accessory,
 		/datum/customizer/bodypart_feature/face_detail,
 		/datum/customizer/bodypart_feature/underwear,
+		/datum/customizer/bodypart_feature/legwear,
 		/datum/customizer/organ/testicles/anthro,
 		/datum/customizer/organ/penis/anthro,
 		/datum/customizer/organ/breasts/human,
-		/datum/customizer/organ/vagina/human,
+		/datum/customizer/organ/vagina/human_anthro,
+		/datum/customizer/organ/wings/anthro,
+		/datum/customizer/organ/ears/elf,
+		//Caustic edit
 		/datum/customizer/organ/belly/human,
 		/datum/customizer/organ/butt/human,
+		//Caustic edit end
 		)
+	body_marking_sets = list(
+		/datum/body_marking_set/none,
+		/datum/body_marking_set/belly,
+		/datum/body_marking_set/bellysocks,
+		/datum/body_marking_set/tiger,
+		/datum/body_marking_set/tiger_dark,
+		/datum/body_marking_set/gradient,
+	)
 	body_markings = list(
 		/datum/body_marking/flushed_cheeks, //Azure > Hearth
 		/datum/body_marking/eyeliner,
@@ -68,6 +81,15 @@
 	languages = list(
 		/datum/language/common,
 		/datum/language/celestial
+	)
+
+	custom_selection = list(
+		"+1 FOR" = STATKEY_LCK,
+		"+1 INT" = STATKEY_INT,
+		"+1 CON" = STATKEY_CON,
+		"+1 WIL" = STATKEY_WIL,
+		"+1 PER" = STATKEY_PER,
+		"No Hunger & Thirst" = TRAIT_NOHUNGER
 	)
 
 /datum/species/aasimar/on_species_gain(mob/living/carbon/C, datum/species/old_species)
@@ -96,6 +118,12 @@
 		"Olympia" = SKIN_COLOR_OLYMPIA,
 		"Necral" = SKIN_COLOR_NECRAL,
 		"Abyssal" = SKIN_COLOR_ABYSSAL,
+		//Caustic edit
+		"Ruinous" = SKIN_COLOR_RUINOUS,
+		"Godshadowed" = SKIN_COLOR_GODSHADOWED,
+		"Rememberance" = SKIN_COLOR_REMEMBERANCE,
+		"Contemplative" = SKIN_COLOR_CONTEMPLATIVE
+		//Caustic edit end
 	)
 
 /datum/species/aasimar/get_hairc_list()

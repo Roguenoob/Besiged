@@ -1,5 +1,3 @@
-
-
 //IMPORTANT: Multiple animate() calls do not stack well, so try to do them all at once if you can.
 /mob/living/carbon/update_transform(forcepixel)
 	var/matrix/ntransform = matrix(transform) //aka transform.Copy()
@@ -26,14 +24,18 @@
 	if(changed)
 //		animate(src, transform = ntransform, time = (lying_prev == 0 || !lying) ? 2 : 0, pixel_y = final_pixel_y, dir = final_dir, easing = (EASE_IN|EASE_OUT))
 		transform = ntransform
-		pixel_x = get_standard_pixel_x_offset()
-		pixel_y = final_pixel_y
+		// Only reset pixel_x if we're not in a custom pixel shift
+		if(!is_shifted)
+			pixel_x = get_standard_pixel_x_offset()
+			pixel_y = final_pixel_y
 		dir = final_dir
 		setMovetype(movement_type & ~FLOATING)  // If we were without gravity, the bouncing animation got stopped, so we make sure we restart it in next life().
 		update_vision_cone()
 	else
-		pixel_x = get_standard_pixel_x_offset()
-		pixel_y = get_standard_pixel_y_offset(lying)
+		// Only reset pixel_x if we're not in a custom pixel shift
+		if(!is_shifted)
+			pixel_x = get_standard_pixel_x_offset()
+			pixel_y = get_standard_pixel_y_offset(lying)
 
 /mob/living
 	var/list/overlays_standing[TOTAL_LAYERS]
@@ -58,7 +60,6 @@
 	update_inv_hands()
 	update_inv_handcuffed()
 	update_inv_legcuffed()
-	update_fire()
 
 /*
 /proc/get_inhand_sprite(/obj/item/I, layer)
@@ -69,7 +70,7 @@
 	return mutable_appearance(GLOB.inhand_icons[index], layer = -layer)
 
 /proc/generate_inhand_icon(/obj/item/I)
-	testing("GDC [index]")
+
 	if(sleevetype)
 		var/icon/dismembered		= icon("icon"=icon, "icon_state"=t_color)
 		var/icon/r_mask				= icon("icon"='icons/roguetown/clothing/onmob/helpers/dismemberment.dmi', "icon_state"="r_[sleevetype]")
@@ -83,10 +84,10 @@
 			if(3)
 				dismembered.Blend(r_mask, ICON_MULTIPLY)
 		dismembered 			= fcopy_rsc(dismembered)
-		testing("GDC added [index]")
+
 		GLOB.dismembered_clothing_icons[index] = dismembered*/
 
-/mob/living/carbon/update_inv_hands()
+/mob/living/carbon/update_inv_hands(hide_experimental = FALSE)
 	remove_overlay(HANDS_LAYER)
 	remove_overlay(HANDS_BEHIND_LAYER)
 	if (handcuffed)
@@ -125,7 +126,7 @@
 
 		var/mutable_appearance/inhand_overlay
 		var/mutable_appearance/behindhand_overlay
-		if(I.experimental_inhand)
+		if(I.experimental_inhand && !hide_experimental)
 			var/used_prop
 			var/list/prop
 			if(I.altgripped)
@@ -152,7 +153,12 @@
 
 			inhand_overlay = center_image(inhand_overlay, I.inhand_x_dimension, I.inhand_y_dimension)
 			behindhand_overlay = center_image(behindhand_overlay, I.inhand_x_dimension, I.inhand_y_dimension)
-
+			if(I.icon_y_offset)
+				behindhand_overlay.pixel_y += I.icon_y_offset
+				inhand_overlay.pixel_y += I.icon_y_offset
+			if(I.icon_x_offset)
+				behindhand_overlay.pixel_x += I.icon_x_offset
+				inhand_overlay.pixel_x += I.icon_x_offset
 			if(ishuman(src))
 				var/mob/living/carbon/human/H = src
 				if(H.dna && H.dna.species)
@@ -195,15 +201,6 @@
 	overlays_standing[HANDS_LAYER] = hands
 	apply_overlay(HANDS_BEHIND_LAYER)
 	apply_overlay(HANDS_LAYER)
-
-/mob/living/carbon/update_fire(fire_icon = "Generic_mob_burning")
-	remove_overlay(FIRE_LAYER)
-	if(on_fire || islava(loc))
-		var/mutable_appearance/new_fire_overlay = mutable_appearance('icons/mob/OnFire.dmi', fire_icon, -FIRE_LAYER)
-		new_fire_overlay.appearance_flags = RESET_COLOR
-		overlays_standing[FIRE_LAYER] = new_fire_overlay
-
-	apply_overlay(FIRE_LAYER)
 
 /mob/living/carbon/update_warning(datum/intent/I)
 	remove_overlay(HALO_LAYER) //yoink
@@ -284,9 +281,18 @@
 		overlays_standing[BACK_LAYER] = back.build_worn_icon(default_layer = BACK_LAYER, default_icon_file = 'icons/mob/clothing/back.dmi')
 		update_hud_back(back)
 
+	if(backl)
+		overlays_standing[BACK_LAYER] = backl.build_worn_icon(default_layer = BACK_LAYER, default_icon_file = 'icons/mob/clothing/back.dmi')
+		update_hud_backl(back)
+	
+	if(backr)
+		overlays_standing[BACK_LAYER] = backr.build_worn_icon(default_layer = BACK_LAYER, default_icon_file = 'icons/mob/clothing/back.dmi')
+		update_hud_backl(back)
+
+
 	apply_overlay(BACK_LAYER)
 
-/mob/living/carbon/update_inv_head()
+/mob/living/carbon/update_inv_head(hide_nonstandard = FALSE)
 	remove_overlay(HEAD_LAYER)
 
 	if(!get_bodypart(BODY_ZONE_HEAD)) //Decapitated
@@ -297,6 +303,9 @@
 		inv.update_icon()
 
 	if(head)
+		if(hide_nonstandard && (head.worn_x_dimension != 32 || head.worn_y_dimension != 32))
+			update_hud_head(head)
+			return
 		overlays_standing[HEAD_LAYER] = head.build_worn_icon(default_layer = HEAD_LAYER, default_icon_file = 'icons/roguetown/clothing/onmob/head.dmi')
 		update_hud_head(head)
 
@@ -306,7 +315,7 @@
 /mob/living/carbon/update_inv_handcuffed()
 	remove_overlay(HANDCUFF_LAYER)
 	if(handcuffed)
-		var/mutable_appearance/inhand_overlay = mutable_appearance('icons/roguetown/mob/bodies/cuffed.dmi', "[handcuffed.name]up", -HANDCUFF_LAYER)
+		var/mutable_appearance/inhand_overlay = mutable_appearance('icons/roguetown/mob/bodies/cuffed.dmi', "[handcuffed.icon_state]up", -HANDCUFF_LAYER)
 		if(ishuman(src))
 			var/mob/living/carbon/human/H = src
 			if(H.dna && H.dna.species.sexes)
@@ -444,20 +453,25 @@
 //produces a key based on the mob's limbs
 
 /mob/living/carbon/proc/generate_icon_render_key()
+	. = list()
 	for(var/X in bodyparts)
 		var/obj/item/bodypart/BP = X
-		. += "-[BP.body_zone]"
-		if(BP.use_digitigrade)
-			. += "-digitigrade[BP.use_digitigrade]"
+		. += BP.body_zone
+		switch(BP.use_digitigrade)
+			if(FULL_DIGITIGRADE)
+				. += "digitigrade_full"
+			if(SQUISHED_DIGITIGRADE)
+				. += "digitigrade_squashed"
 		if(BP.animal_origin)
-			. += "-[BP.animal_origin]"
+			. += BP.animal_origin
 		if(BP.status == BODYPART_ORGANIC)
-			. += "-organic"
+			. += "organic"
 		else
-			. += "-robotic"
+			. += "robotic"
 
 	if(HAS_TRAIT(src, TRAIT_HUSK))
-		. += "-husk"
+		. += "husk"
+	return jointext(., "-")
 
 
 //change the mob's icon to the one matching its key

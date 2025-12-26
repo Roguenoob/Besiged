@@ -26,6 +26,20 @@
 	/// Associated maniac key
 	var/inscryption_key
 
+	food_type = /obj/item/reagent_containers/food/snacks/organ/heart
+
+/obj/item/organ/heart/Destroy()
+	for(var/datum/culling_duel/D in GLOB.graggar_cullings)
+		var/obj/item/organ/heart/d_challenger_heart = D.challenger_heart?.resolve()
+		var/obj/item/organ/heart/d_target_heart = D.target_heart?.resolve()
+		if(src == d_challenger_heart)
+			D.handle_heart_destroyed("challenger")
+			continue
+		else if(src == d_target_heart)
+			D.handle_heart_destroyed("target")
+			continue
+	return ..()
+
 /obj/item/organ/heart/examine(mob/user)
 	. = ..()
 	var/datum/antagonist/maniac/dreamer = user.mind?.has_antag_datum(/datum/antagonist/maniac)
@@ -81,7 +95,7 @@
 		if(C)
 			var/datum/objective/hearteating/H = locate(/datum/objective/hearteating) in C.objectives
 			if(H)
-				testing("heartseaten++")
+
 				H.hearts_eaten++
 				nothing = TRUE
 				S.eat_effect = /datum/status_effect/buff/foodbuff*/
@@ -93,8 +107,8 @@
 	..()
 	if(owner.client && beating)
 		failed = FALSE
-		var/sound/slowbeat = sound('sound/blank.ogg', repeat = TRUE)
-		var/sound/fastbeat = sound('sound/blank.ogg', repeat = TRUE)
+		var/sound/slowbeat = sound('sound/health/slowbeat.ogg', repeat = TRUE)
+		var/sound/fastbeat = sound('sound/health/fastbeat.ogg', repeat = TRUE)
 		var/mob/living/carbon/H = owner
 
 
@@ -120,6 +134,11 @@
 				span_danger("I feel a terrible pain in my chest, as if my heart has stopped!"))
 		owner.set_heartattack(TRUE)
 		failed = TRUE
+/obj/item/organ/heart/construct
+	name = "construct core"
+	desc = "Swirling with a blessing of Astrata and pulsing with lux inside. This allows a construct to move."
+	icon_state = "heartcon-on"
+	icon_base = "heartcon"
 
 /obj/item/organ/heart/cursed
 	name = "cursed heart"
@@ -200,56 +219,3 @@
 /datum/client_colour/cursed_heart_blood
 	priority = 100 //it's an indicator you're dying, so it's very high priority
 	colour = "red"
-
-/obj/item/organ/heart/cybernetic
-	name = "cybernetic heart"
-	desc = ""
-	icon_state = "heart-c"
-	organ_flags = ORGAN_SYNTHETIC
-	maxHealth = 1.1 * STANDARD_ORGAN_THRESHOLD
-
-	var/dose_available = TRUE
-	var/rid = /datum/reagent/medicine/epinephrine
-	var/ramount = 10
-
-/obj/item/organ/heart/cybernetic/emp_act(severity)
-	. = ..()
-	if(. & EMP_PROTECT_SELF)
-		return
-	Stop()
-	addtimer(CALLBACK(src, PROC_REF(Restart)), 20/severity SECONDS)
-	damage += 100/severity
-
-/obj/item/organ/heart/cybernetic/on_life()
-	. = ..()
-	if(dose_available && owner.health <= owner.crit_threshold && !owner.reagents.has_reagent(rid))
-		owner.reagents.add_reagent(rid, ramount)
-		used_dose()
-
-/obj/item/organ/heart/cybernetic/proc/used_dose()
-	dose_available = FALSE
-
-/obj/item/organ/heart/cybernetic/upgraded
-	name = "upgraded cybernetic heart"
-	desc = ""
-	icon_state = "heart-c-u"
-	maxHealth = 2 * STANDARD_ORGAN_THRESHOLD
-
-/obj/item/organ/heart/cybernetic/upgraded/used_dose()
-	. = ..()
-	addtimer(VARSET_CALLBACK(src, dose_available, TRUE), 5 MINUTES)
-
-/obj/item/organ/heart/freedom
-	name = "heart of freedom"
-	desc = ""
-	organ_flags = ORGAN_SYNTHETIC //the power of freedom prevents heart attacks
-	var/min_next_adrenaline = 0
-
-/obj/item/organ/heart/freedom/on_life()
-	. = ..()
-	if(owner.health < 5 && world.time > min_next_adrenaline)
-		min_next_adrenaline = world.time + rand(250, 600) //anywhere from 4.5 to 10 minutes
-		to_chat(owner, span_danger("I feel myself dying, but you refuse to give up!"))
-		owner.heal_overall_damage(15, 15, 0, BODYPART_ORGANIC)
-		if(owner.reagents.get_reagent_amount(/datum/reagent/medicine/ephedrine) < 20)
-			owner.reagents.add_reagent(/datum/reagent/medicine/ephedrine, 10)

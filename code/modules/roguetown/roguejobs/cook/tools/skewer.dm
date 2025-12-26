@@ -11,4 +11,3 @@
 	sharpness = IS_BLUNT
 	//dropshrink = 0.8
 	slot_flags = null
-	improvised = TRUE

@@ -56,6 +56,7 @@
 		span_notice("[user] clamps the bleeders in [target]'s [parse_zone(target_zone)]."))
 	var/obj/item/bodypart/bodypart = target.get_bodypart(check_zone(target_zone))
 	bodypart?.add_embedded_object(tool, crit_message = FALSE)
+	notify_embed(user, tool, target, target_zone)
 	return TRUE
 
 /// Retracting
@@ -85,6 +86,7 @@
 		span_notice("[user] retract [target]'s [parse_zone(target_zone)]."))
 	var/obj/item/bodypart/bodypart = target.get_bodypart(check_zone(target_zone))
 	bodypart?.add_embedded_object(tool, crit_message = FALSE)
+	notify_embed(user, tool, target, target_zone)
 	return TRUE
 
 /// Cauterize
@@ -103,6 +105,12 @@
 	success_sound = 'sound/surgery/cautery2.ogg'
 
 /datum/surgery_step/cauterize/validate_bodypart(mob/user, mob/living/carbon/target, obj/item/bodypart/bodypart, target_zone)
+	// If you have medicine expert, you can caut thru armor. Also fails if they're in cmode.
+	if(HAS_TRAIT(user, TRAIT_MEDICINE_EXPERT) && (target.cmode == 0))
+		ignore_clothes = TRUE
+	else // IDK if this is necessary but probably good 4 clarification.
+		ignore_clothes = FALSE
+
 	. = ..()
 	if(!.)
 		return
@@ -123,7 +131,10 @@
 		for(var/datum/wound/bleeder in bodypart.wounds)
 			bleeder.cauterize_wound()
 		bodypart.receive_damage(burn = 25) //painful, but the wounds go away eh?
-	target.emote("scream")
+	if (target.has_status_effect(/datum/status_effect/buff/ozium))
+		target.emote ("groan")
+	if (!target.has_status_effect(/datum/status_effect/buff/ozium))
+		target.emote("scream")
 	return TRUE
 
 /// Saw bone
@@ -180,8 +191,9 @@
 				fracture_type = /datum/wound/fracture/chest
 			if(BODY_ZONE_PRECISE_GROIN)
 				fracture_type = /datum/wound/fracture/groin
+		if (target.has_status_effect(/datum/status_effect/buff/ozium))
+			target.emote ("groan")
 		bodypart.add_wound(fracture_type)
-	target.emote("scream")
 	return TRUE
 
 /// Drill bone

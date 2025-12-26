@@ -9,13 +9,11 @@
 #define isatom(A) (isloc(A))
 
 #define isweakref(D) (istype(D, /datum/weakref))
-
+#define isdatum(D) (istype(D, /datum))
 //Turfs
 //#define isturf(A) (istype(A, /turf)) This is actually a byond built-in. Added here for completeness sake.
 
 GLOBAL_LIST_INIT(turfs_without_ground, typecacheof(list(
-	/turf/open/space,
-	/turf/open/chasm,
 	/turf/open/lava,
 	/turf/open/water,
 	/turf/open/transparent/openspace
@@ -24,12 +22,14 @@ GLOBAL_LIST_INIT(turfs_without_ground, typecacheof(list(
 GLOBAL_LIST_INIT(our_forest_sex, typecacheof(list(
 	/area/rogue/outdoors/woods,
 	/area/rogue/indoors/shelter/woods,
-	/area/rogue/outdoors/river,
 	/area/rogue/outdoors/bog,
 	/area/rogue/indoors/shelter/bog,
 	/area/rogue/outdoors/rtfield,
 	/area/rogue/indoors/shelter/rtfield
 	)))
+
+
+#define isclient(A) istype(A, /client)
 
 #define isforestsex(A) (is_type_in_typecache(A, GLOB.our_forest_sex))
 
@@ -62,6 +62,8 @@ GLOBAL_LIST_INIT(our_forest_sex, typecacheof(list(
 //Mobs
 #define isliving(A) (istype(A, /mob/living))
 
+#define issimple(A) (istype(A, /mob/living/simple_animal))
+
 #define isbrain(A) (istype(A, /mob/living/brain))
 
 //Carbon mobs
@@ -69,22 +71,10 @@ GLOBAL_LIST_INIT(our_forest_sex, typecacheof(list(
 
 #define ishuman(A) (istype(A, /mob/living/carbon/human))
 
+#define isanimagus(A) (istype(A, /mob/living/carbon/human/species/animagus))
+
 //Human sub-species
-#define isabductor(A) (is_species(A, /datum/species/abductor))
-#define isgolem(A) (is_species(A, /datum/species/golem))
-#define islizard(A) (is_species(A, /datum/species/lizard))
-#define isplasmaman(A) (is_species(A, /datum/species/plasmaman))
-#define ispodperson(A) (is_species(A, /datum/species/pod))
-#define isflyperson(A) (is_species(A, /datum/species/fly))
-#define isjellyperson(A) (is_species(A, /datum/species/jelly))
-#define isslimeperson(A) (is_species(A, /datum/species/jelly/slime))
-#define isluminescent(A) (is_species(A, /datum/species/jelly/luminescent))
-#define iszombie(A) (is_species(A, /datum/species/zombie))
-#define isskeleton(A) (is_species(A, /datum/species/skeleton))
-#define ismoth(A) (is_species(A, /datum/species/moth))
 #define ishumanbasic(A) (is_species(A, /datum/species/human))
-#define isfelinid(A) (is_species(A, /datum/species/human/felinid))
-#define isethereal(A) (is_species(A, /datum/species/ethereal))
 #define isvampire(A) (is_species(A,/datum/species/vampire))
 
 //RT species
@@ -96,50 +86,31 @@ GLOBAL_LIST_INIT(our_forest_sex, typecacheof(list(
 #define iswoodelf(A) (is_species(A, /datum/species/elf/wood))
 #define ishalfelf(A) (is_species(A, /datum/species/human/halfelf))
 #define istiefling(A) (is_species(A, /datum/species/tieberian))
+#define isdullahan(A) (is_species(A, /datum/species/dullahan))
 #define ishalforc(A) (is_species(A, /datum/species/halforc))
-#define isargonian(A) (is_species(A, /datum/species/lizard/brazil))
+#define islizard(A) (is_species(A, /datum/species/lizardfolk))
 #define isgoblinp(A) (is_species(A, /datum/species/goblinp))
-#define isanthrom(A) (is_species(A, /datum/species/anthromacro))
-#define isdemim(A) (is_species(A, /datum/species/demimacro))
 #define iskobold(A) (is_species(A, /datum/species/kobold))
+#define isaasimar(A) (is_species(A, /datum/species/aasimar))
+#define ishalfkin(A) (is_species(A, /datum/species/demihuman))
+#define iswildkin(A) (is_species(A, /datum/species/anthromorph))
+#define isconstruct(A) (is_species(A, /datum/species/construct/metal))	//Specified 'M' due to redefine lower
 #define isvermin(A) (is_species(A, /datum/species/anthromorphsmall))
+#define isaxian(A) (is_species(A, /datum/species/akula))
+#define isdracon(A) (is_species(A, /datum/species/dracon))
+#define islupian(A) (is_species(A, /datum/species/lupian))
+#define ismoth(A) (is_species(A, /datum/species/moth))
+#define istabaxi(A) (is_species(A, /datum/species/tabaxi))
+#define isvulp(A) (is_species(A, /datum/species/vulpkanin))
+
 
 //more carbon mobs
 #define ismonkey(A) (istype(A, /mob/living/carbon/monkey))
-
-#define isalien(A) (istype(A, /mob/living/carbon/alien))
-
-#define islarva(A) (istype(A, /mob/living/carbon/alien/larva))
-
-#define isalienadult(A) (istype(A, /mob/living/carbon/alien/humanoid) || istype(A, /mob/living/simple_animal/hostile/alien))
-
-#define isalienhunter(A) (istype(A, /mob/living/carbon/alien/humanoid/hunter))
-
-#define isaliensentinel(A) (istype(A, /mob/living/carbon/alien/humanoid/sentinel))
-
-#define isalienroyal(A) (istype(A, /mob/living/carbon/alien/humanoid/royal))
-
-#define isalienqueen(A) (istype(A, /mob/living/carbon/alien/humanoid/royal/queen))
-
-#define istruedevil(A) (istype(A, /mob/living/carbon/true_devil))
-
-//Silicon mobs
-#define issilicon(A) (istype(A, /mob/living/silicon))
-
-#define issiliconoradminghost(A) (istype(A, /mob/living/silicon) || IsAdminGhost(A))
-
-#define iscyborg(A) (istype(A, /mob/living/silicon/robot))
-
-#define isAI(A) (istype(A, /mob/living/silicon/ai))
-
-#define ispAI(A) (istype(A, /mob/living/silicon/pai))
 
 //Simple animals
 #define isanimal(A) (istype(A, /mob/living/simple_animal))
 
 #define isrevenant(A) (istype(A, /mob/living/simple_animal/revenant))
-
-#define isbot(A) (istype(A, /mob/living/simple_animal/bot))
 
 #define isshade(A) (istype(A, /mob/living/simple_animal/shade))
 
@@ -148,8 +119,6 @@ GLOBAL_LIST_INIT(our_forest_sex, typecacheof(list(
 #define iscow(A) (istype(A, /mob/living/simple_animal/cow))
 
 #define isslime(A) (istype(A, /mob/living/simple_animal/slime))
-
-#define isdrone(A) (istype(A, /mob/living/simple_animal/drone))
 
 #define iscat(A) (istype(A, /mob/living/simple_animal/pet/cat))
 
@@ -163,7 +132,7 @@ GLOBAL_LIST_INIT(our_forest_sex, typecacheof(list(
 
 #define isguardian(A) (istype(A, /mob/living/simple_animal/hostile/guardian))
 
-#define isconstruct(A) (istype(A, /mob/living/simple_animal/hostile/construct))
+#define isconstructm(A) (istype(A, /mob/living/simple_animal/hostile/construct))
 
 #define ismegafauna(A) (istype(A, /mob/living/simple_animal/hostile/megafauna))
 
@@ -196,7 +165,7 @@ GLOBAL_LIST_INIT(our_forest_sex, typecacheof(list(
 
 #define ismecha(A) (istype(A, /obj/mecha))
 
-#define is_cleanable(A) (istype(A, /obj/effect/decal/cleanable) || istype(A, /obj/effect/rune)) //if something is cleanable
+#define is_cleanable(A) (istype(A, /obj/effect/decal/cleanable)) //if something is cleanable
 
 #define isorgan(A) (istype(A, /obj/item/organ))
 
@@ -205,9 +174,6 @@ GLOBAL_LIST_INIT(our_forest_sex, typecacheof(list(
 #define iscash(A) (istype(A, /obj/item/coin) || istype(A, /obj/item/stack/spacecash) || istype(A, /obj/item/holochip))
 
 GLOBAL_LIST_INIT(pointed_types, typecacheof(list(
-	/obj/item/pen,
-	/obj/item/screwdriver,
-	/obj/item/reagent_containers/syringe,
 	/obj/item/kitchen/fork)))
 
 #define is_pointed(W) (is_type_in_typecache(W, GLOB.pointed_types))
@@ -218,27 +184,14 @@ GLOBAL_LIST_INIT(pointed_types, typecacheof(list(
 
 #define isgun(A) (istype(A, /obj/item/gun))
 
-//Assemblies
-#define isassembly(O) (istype(O, /obj/item/assembly))
-
-#define isigniter(O) (istype(O, /obj/item/assembly/igniter))
-
-#define isprox(O) (istype(O, /obj/item/assembly/prox_sensor))
-
-#define issignaler(O) (istype(O, /obj/item/assembly/signaler))
-
-GLOBAL_LIST_INIT(glass_sheet_types, typecacheof(list(
-	/obj/item/stack/sheet/glass,
-	/obj/item/stack/sheet/rglass,
-	/obj/item/stack/sheet/plasmaglass,
-	/obj/item/stack/sheet/plasmarglass,
-	/obj/item/stack/sheet/titaniumglass,
-	/obj/item/stack/sheet/plastitaniumglass)))
-
-#define is_glass_sheet(O) (is_type_in_typecache(O, GLOB.glass_sheet_types))
 
 #define iseffect(O) (istype(O, /obj/effect))
 
 #define isblobmonster(O) (istype(O, /mob/living/simple_animal/hostile/blob))
 
 #define isshuttleturf(T) (length(T.baseturfs) && (/turf/baseturf_skipover/shuttle in T.baseturfs))
+
+GLOBAL_VAR_INIT(magic_appearance_detecting_image, new /image) // appearances are awful to detect safely, but this seems to be the best way ~ninjanomnom
+#define isimage(thing) (istype(thing, /image))
+#define isappearance(thing) (!isimage(thing) && !ispath(thing) && istype(GLOB.magic_appearance_detecting_image, thing))
+#define isappearance_or_image(thing) (isimage(thing) || (!ispath(thing) && istype(GLOB.magic_appearance_detecting_image, thing)))

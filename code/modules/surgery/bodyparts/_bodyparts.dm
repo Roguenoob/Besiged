@@ -32,6 +32,7 @@
 	var/stamina_dam = 0
 	var/max_stamina_damage = 0
 	var/max_damage = 0
+	var/max_pain_damage = 100
 
 	var/cremation_progress = 0 //Gradually increases while burning when at full damage, destroys the limb when at 100
 
@@ -50,6 +51,7 @@
 	var/species_icon = ""
 
 	var/animal_origin = null //for nonhuman bodypart (e.g. monkey)
+	var/prosthetic_prefix = "pr" // for unique prosthetic icons on mob
 	var/dismemberable = 1 //whether it can be dismembered with a weapon.
 	var/disableable = 1
 
@@ -84,12 +86,23 @@
 	var/skeletonized = FALSE
 
 	var/fingers = TRUE
+	var/organ_slowdown = 0 // Its here because this is first shared definition between two leg organ paths
+	var/is_prosthetic = FALSE
 
 	/// Visaul markings to be rendered alongside the bodypart
 	var/list/markings
 	var/list/aux_markings
 	/// Visual features of the bodypart, such as hair and accessories
 	var/list/bodypart_features
+
+	/// Whether the bodypart has unlimited bleeding.
+	var/unlimited_bleeding = FALSE
+	
+	/// Cached variable that reflects how much bleeding our wounds are applying to the limb. Handled inside each individual wound.
+	var/bleeding = 0
+
+	grid_width = 32
+	grid_height = 64
 
 	resistance_flags = FLAMMABLE
 
@@ -133,13 +146,24 @@
 /obj/item/bodypart/grabbedintents(mob/living/user, precise)
 	return list(/datum/intent/grab/move, /datum/intent/grab/twist, /datum/intent/grab/smash)
 
+/obj/item/bodypart/l_arm/grabbedintents(mob/living/user, precise)
+	var/used_limb = precise
+	if(used_limb == BODY_ZONE_PRECISE_L_HAND)
+		return list(/datum/intent/grab/move, /datum/intent/grab/twist, /datum/intent/grab/smash, /datum/intent/grab/disarm)
+	else
+		return list(/datum/intent/grab/move, /datum/intent/grab/twist, /datum/intent/grab/smash)
+
+/obj/item/bodypart/r_arm/grabbedintents(mob/living/user, precise)
+	var/used_limb = precise
+	if(used_limb == BODY_ZONE_PRECISE_R_HAND)
+		return list(/datum/intent/grab/move, /datum/intent/grab/twist, /datum/intent/grab/smash, /datum/intent/grab/disarm)
+	else
+		return list(/datum/intent/grab/move, /datum/intent/grab/twist, /datum/intent/grab/smash)
+
 /obj/item/bodypart/chest/grabbedintents(mob/living/user, precise)
 	if(precise == BODY_ZONE_PRECISE_GROIN)
 		return list(/datum/intent/grab/move, /datum/intent/grab/twist, /datum/intent/grab/shove)
 	return list(/datum/intent/grab/move, /datum/intent/grab/shove)
-
-/obj/item/bodypart/blob_act()
-	take_damage(max_damage)
 
 /obj/item/bodypart/Destroy()
 	if(owner)
@@ -153,7 +177,7 @@
 
 /obj/item/bodypart/onbite(mob/living/carbon/human/user)
 	if((user.mind && user.mind.has_antag_datum(/datum/antagonist/zombie)) || istype(user.dna.species, /datum/species/werewolf))
-		if(user.has_status_effect(/datum/status_effect/debuff/silver_curse))
+		if(owner.has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder) || owner.has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder/blessed))
 			to_chat(user, span_notice("My power is weakened, I cannot heal!"))
 			return
 		if(do_after(user, 50, target = src))
@@ -175,11 +199,11 @@
 				return
 			var/used_time = 210
 			if(user.mind)
-				used_time -= (user.mind.get_skill_level(/datum/skill/labor/butchering) * 30)
+				used_time -= (user.get_skill_level(/datum/skill/labor/butchering) * 30)
 			visible_message("[user] begins to butcher \the [src].")
 			playsound(src, 'sound/foley/gross.ogg', 100, FALSE)
 			var/steaks = 1
-			switch(user.mind.get_skill_level(/datum/skill/labor/butchering))
+			switch(user.get_skill_level(/datum/skill/labor/butchering))
 				if(3)
 					steaks = 2
 				if(4 to 5)
@@ -235,7 +259,7 @@
 		playsound(get_turf(src), 'sound/blank.ogg', 50, TRUE, -1)
 	pixel_x = rand(-3, 3)
 	pixel_y = rand(-3, 3)
-	if(!skeletonized)
+	if(!skeletonized && owner && !(NOBLOOD in owner.dna?.species?.species_traits))
 		new /obj/effect/decal/cleanable/blood/splatter(get_turf(src))
 
 //empties the bodypart from its organs and other things inside it
@@ -320,10 +344,6 @@
 	if(!brute && !burn && !stamina)
 		return FALSE
 
-	switch(animal_origin)
-		if(ALIEN_BODYPART,LARVA_BODYPART) //aliens take double burn //nothing can burn with so much snowflake code around
-			burn *= 2
-
 	//cap at maxdamage
 	if(brute_dam + brute > max_damage)
 		brute_dam = max_damage
@@ -359,6 +379,8 @@
 //Damage cannot go below zero.
 //Cannot remove negative damage (i.e. apply damage)
 /obj/item/bodypart/proc/heal_damage(brute, burn, stamina, required_status, updating_health = TRUE)
+	if((HAS_TRAIT(owner, TRAIT_SILVER_WEAK) && !owner.has_status_effect(STATUS_EFFECT_ANTIMAGIC)) && owner.has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder) || owner.has_status_effect(/datum/status_effect/fire_handler/fire_stacks/sunder/blessed))
+		return
 	update_HP()
 	if(required_status && (status != required_status)) //So we can only heal certain kinds of limbs, ie robotic vs organic.
 		return
@@ -396,6 +418,8 @@
 	if((rotted || skeletonized) && !(owner.mob_biotypes & MOB_UNDEAD))
 		return BODYPART_DISABLED_ROT
 	for(var/datum/wound/ouchie as anything in wounds)
+		if(isnull(ouchie) || !istype(ouchie, /datum/wound))
+			continue
 		if(!ouchie.disabling)
 			continue
 		return BODYPART_DISABLED_WOUND
@@ -468,7 +492,7 @@
 		C = owner
 		no_update = FALSE
 
-	if(HAS_TRAIT(C, TRAIT_HUSK) && is_organic_limb())
+	if((C) && HAS_TRAIT(C, TRAIT_HUSK) && is_organic_limb())
 		species_id = "husk" //overrides species_id
 		dmg_overlay_type = "" //no damage overlay shown when husked
 		should_draw_gender = FALSE
@@ -510,10 +534,7 @@
 		else
 			species_color = ""
 
-		if(!dropping_limb && H.dna.check_mutation(HULK))
-			mutation_color = "00aa00"
-		else
-			mutation_color = ""
+		mutation_color = ""
 
 		dmg_overlay_type = S.damage_overlay_type
 
@@ -617,7 +638,7 @@
 
 	else
 		limb.icon = species_icon
-		limb.icon_state = "pr_[body_zone]"
+		limb.icon_state = "[prosthetic_prefix]_[body_zone]"
 		if(aux_zone)
 			if(!hideaux)
 				aux = image(limb.icon, "pr_[aux_zone]", -aux_layer, image_dir)
@@ -671,23 +692,28 @@
 /obj/item/bodypart/deconstruct(disassembled = TRUE)
 	drop_organs()
 	return ..()
+
 /obj/item/bodypart/chest
 	name = BODY_ZONE_CHEST
 	desc = ""
 	icon_state = "default_human_chest"
-	max_damage = 200
+	max_damage = 300
 	body_zone = BODY_ZONE_CHEST
 	body_part = CHEST
 	px_x = 0
 	px_y = 0
 	stam_damage_coeff = 1
 	max_stamina_damage = 120
+	max_pain_damage = 150
 	var/obj/item/cavity_item
 	subtargets = list(BODY_ZONE_CHEST, BODY_ZONE_PRECISE_STOMACH, BODY_ZONE_PRECISE_GROIN)
 	grabtargets = list(BODY_ZONE_CHEST, BODY_ZONE_PRECISE_STOMACH, BODY_ZONE_PRECISE_GROIN)
 	offset = OFFSET_ARMOR
 	offset_f = OFFSET_ARMOR_F
 	dismemberable = FALSE
+
+	grid_width = 64
+	grid_height = 96
 
 /obj/item/bodypart/chest/set_disabled(new_disabled)
 	. = ..()
@@ -712,31 +738,17 @@
 	icon_state = "default_monkey_chest"
 	animal_origin = MONKEY_BODYPART
 
-/obj/item/bodypart/chest/alien
-	icon = 'icons/mob/animal_parts.dmi'
-	icon_state = "alien_chest"
-	dismemberable = 0
-	max_damage = 500
-	animal_origin = ALIEN_BODYPART
-
 /obj/item/bodypart/chest/devil
 	dismemberable = 0
 	max_damage = 5000
 	animal_origin = DEVIL_BODYPART
-
-/obj/item/bodypart/chest/larva
-	icon = 'icons/mob/animal_parts.dmi'
-	icon_state = "larva_chest"
-	dismemberable = 0
-	max_damage = 50
-	animal_origin = LARVA_BODYPART
 
 /obj/item/bodypart/l_arm
 	name = "left arm"
 	desc = ""
 	icon_state = "default_human_l_arm"
 	attack_verb = list("slapped", "punched")
-	max_damage = 100
+	max_damage = 200
 	max_stamina_damage = 50
 	body_zone = BODY_ZONE_L_ARM
 	body_part = ARM_LEFT
@@ -783,15 +795,6 @@
 	px_x = -5
 	px_y = -3
 
-/obj/item/bodypart/l_arm/alien
-	icon = 'icons/mob/animal_parts.dmi'
-	icon_state = "alien_l_arm"
-	px_x = 0
-	px_y = 0
-	dismemberable = 0
-	max_damage = 100
-	animal_origin = ALIEN_BODYPART
-
 /obj/item/bodypart/l_arm/devil
 	dismemberable = 0
 	max_damage = 5000
@@ -802,7 +805,7 @@
 	desc = ""
 	icon_state = "default_human_r_arm"
 	attack_verb = list("slapped", "punched")
-	max_damage = 100
+	max_damage = 200
 	body_zone = BODY_ZONE_R_ARM
 	body_part = ARM_RIGHT
 	aux_zone = BODY_ZONE_PRECISE_R_HAND
@@ -849,15 +852,6 @@
 	px_x = 5
 	px_y = -3
 
-/obj/item/bodypart/r_arm/alien
-	icon = 'icons/mob/animal_parts.dmi'
-	icon_state = "alien_r_arm"
-	px_x = 0
-	px_y = 0
-	dismemberable = 0
-	max_damage = 100
-	animal_origin = ALIEN_BODYPART
-
 /obj/item/bodypart/r_arm/devil
 	dismemberable = 0
 	max_damage = 5000
@@ -868,7 +862,7 @@
 	desc = ""
 	icon_state = "default_human_l_leg"
 	attack_verb = list("kicked", "stomped")
-	max_damage = 100
+	max_damage = 200
 	body_zone = BODY_ZONE_L_LEG
 	body_part = LEG_LEFT
 	body_damage_coeff = 1
@@ -907,15 +901,6 @@
 	animal_origin = MONKEY_BODYPART
 	px_y = 4
 
-/obj/item/bodypart/l_leg/alien
-	icon = 'icons/mob/animal_parts.dmi'
-	icon_state = "alien_l_leg"
-	px_x = 0
-	px_y = 0
-	dismemberable = 0
-	max_damage = 100
-	animal_origin = ALIEN_BODYPART
-
 /obj/item/bodypart/l_leg/devil
 	dismemberable = 0
 	max_damage = 5000
@@ -927,7 +912,7 @@
 	// alternative spellings of 'pokey' are availible
 	icon_state = "default_human_r_leg"
 	attack_verb = list("kicked", "stomped")
-	max_damage = 100
+	max_damage = 200
 	body_zone = BODY_ZONE_R_LEG
 	body_part = LEG_RIGHT
 	body_damage_coeff = 1
@@ -965,15 +950,6 @@
 	icon_state = "default_monkey_r_leg"
 	animal_origin = MONKEY_BODYPART
 	px_y = 4
-
-/obj/item/bodypart/r_leg/alien
-	icon = 'icons/mob/animal_parts.dmi'
-	icon_state = "alien_r_leg"
-	px_x = 0
-	px_y = 0
-	dismemberable = 0
-	max_damage = 100
-	animal_origin = ALIEN_BODYPART
 
 /obj/item/bodypart/r_leg/devil
 	dismemberable = 0

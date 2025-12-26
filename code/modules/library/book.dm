@@ -28,6 +28,14 @@
 	var/textper = 100
 	var/our_font = "Rosemary Roman"
 	var/override_find_book = FALSE
+	grid_width = 32
+	grid_height = 64
+
+//Destroyer of knowledge - for storytellers
+/obj/item/book/fire_act()
+	record_round_statistic(STATS_BOOKS_BURNED)
+	..()
+
 
 /obj/item/book/attack_self(mob/user)
 	if(!user.can_read(src))
@@ -78,6 +86,7 @@
 	if(!user.hud_used.reads)
 		return
 	if(!user.can_read(src))
+		user.adjust_experience(/datum/skill/misc/reading, 4, FALSE)
 		return
 	if(in_range(user, src) || isobserver(user))
 		if(!pages.len)

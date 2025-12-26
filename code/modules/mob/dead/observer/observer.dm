@@ -11,6 +11,7 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 	layer = GHOST_LAYER
 	stat = DEAD
 	density = FALSE
+	sight = SEE_TURFS | SEE_MOBS | SEE_OBJS
 	see_invisible = SEE_INVISIBLE_OBSERVER
 	see_in_dark = 100
 	lighting_alpha = LIGHTING_PLANE_ALPHA_MOSTLY_INVISIBLE
@@ -18,10 +19,6 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 	hud_type = /datum/hud/ghost
 	movement_type = GROUND | FLYING
 	var/draw_icon = FALSE
-	light_system = MOVABLE_LIGHT
-	light_range = 1
-	light_power = 2
-	light_on = FALSE
 	var/can_reenter_corpse
 	var/datum/hud/living/carbon/hud = null // hud
 	var/bootime = 0
@@ -38,7 +35,7 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 	var/data_huds_on = 0 //Are data HUDs currently enabled?
 	var/health_scan = FALSE //Are health scans currently enabled?
 	var/gas_scan = FALSE //Are gas scans currently enabled?
-	var/list/datahuds = list(DATA_HUD_SECURITY_ADVANCED, DATA_HUD_MEDICAL_ADVANCED, DATA_HUD_DIAGNOSTIC_ADVANCED) //list of data HUDs shown to ghosts.
+	var/list/datahuds = list() //list of data HUDs shown to ghosts.
 	var/ghost_orbit = GHOST_ORBIT_CIRCLE
 
 	//These variables store hair data if the ghost originates from a species with head and/or facial hair.
@@ -63,6 +60,7 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 	var/deadchat_name
 	var/datum/spawners_menu/spawners_menu
 	var/ghostize_time = 0
+	move_resist = INFINITY
 
 /mob/dead/observer/rogue
 //	see_invisible = SEE_INVISIBLE_LIVING
@@ -78,23 +76,18 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 /mob/dead/observer/rogue/nodraw
 	draw_icon = FALSE
 	icon = 'icons/roguetown/mob/misc.dmi'
-	icon_state = "ghost"
-	alpha = 100
-
-/mob/dead/observer/rogue/Move(n, direct)
-	if(world.time < next_gmove)
-		return
-	next_gmove = world.time + 2
-
-	setDir(direct)
-
-	. = ..()
+	icon_state = "hollow"
+	alpha = 150
 
 /mob/dead/observer/screye
 //	see_invisible = SEE_INVISIBLE_LIVING
 	sight = 0
 	see_in_dark = 0
 	hud_type = /datum/hud/obs
+
+/mob/dead/observer/screye/blackmirror
+	sight = SEE_TURFS | SEE_MOBS | SEE_OBJS
+	see_in_dark = 100
 
 /mob/dead/observer/screye/Move(n, direct)
 	return
@@ -109,9 +102,10 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 		/mob/dead/observer/proc/open_spawners_menu,
 		/mob/dead/observer/proc/tray_view)
 
-	if(!(istype(src, /mob/dead/observer/rogue/arcaneeye)))
-		client?.verbs += GLOB.ghost_verbs
-		to_chat(src, span_danger("Click the <b>SKULL</b> on the left of your HUD to respawn."))
+	if(!istype(src, /mob/dead/observer/rogue/arcaneeye))
+		if(!istype(src, /mob/dead/observer/screye))
+			client?.verbs += GLOB.ghost_verbs
+			to_chat(src, span_danger("Click the <b>SKULL</b> on the left of your HUD to respawn."))
 
 	if(icon_state in GLOB.ghost_forms_with_directions_list)
 		ghostimage_default = image(src.icon,src,src.icon_state + "")
@@ -126,18 +120,18 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 
 	updateallghostimages()
 
-	testing("BEGIN LOC [loc]")
+
 
 	var/turf/T
 	var/mob/body = loc
 	if(ismob(body))
 		T = get_turf(body)				//Where is the body located?
-		testing("body [body] loc [body.loc]")
+
 		if(!T)
-			testing("no t yyy")
+
 			if(istype(body, /mob/living/brain))
 				var/obj/Y = body.loc
-				testing("Y [Y] loc [Y.loc]")
+
 				T = get_turf(Y)
 
 		gender = body.gender
@@ -187,12 +181,8 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 	update_icon()
 
 	if(!T)
-		testing("NO T")
-		var/list/turfs = get_area_turfs(/area/shuttle/arrival)
-		if(turfs.len)
-			T = pick(turfs)
-		else
-			T = SSmapping.get_station_center()
+
+		T = SSmapping.get_station_center()
 
 	forceMove(T)
 
@@ -211,7 +201,7 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 			continue
 		var/datum/atom_hud/alternate_appearance/AA = v
 		AA.onNewMob(src)
-
+	become_hearing_sensitive()
 	. = ..()
 
 	grant_all_languages()
@@ -221,12 +211,10 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 /mob/dead/observer/Login()
 	. = ..()
 	if(!(istype(src, /mob/dead/observer/rogue/arcaneeye)))
+		if(istype(src, /mob/dead/observer/screye))
+			return
 		client?.verbs += GLOB.ghost_verbs
 		to_chat(src, span_danger("Click the <b>SKULL</b> on the left of your HUD to respawn."))
-
-/mob/dead/observer/get_photo_description(obj/item/camera/camera)
-	if(!invisibility || camera.see_ghosts)
-		return "You can also see a g-g-g-g-ghooooost!"
 
 /mob/dead/observer/narsie_act()
 	var/old_color = color
@@ -250,7 +238,6 @@ GLOBAL_VAR_INIT(observer_default_invisibility, INVISIBILITY_OBSERVER)
 
 /mob/dead/CanPass(atom/movable/mover, turf/target)
 	return 1
-
 
 /mob/dead/observer/rogue/CanPass(atom/movable/mover, turf/target)
 	if(!isinhell)
@@ -361,7 +348,7 @@ Transfer_mind is there to check if mob is being deleted/not going to have a body
 Works together with spawning an observer, noted above.
 */
 
-/mob/proc/ghostize(can_reenter_corpse = TRUE, force_respawn = FALSE, drawskip = FALSE, admin = FALSE)
+/mob/proc/ghostize(can_reenter_corpse = 1, force_respawn = FALSE, admin = FALSE, drawskip, ignore_zombie = FALSE)
 	if(!key)
 		return
 	stop_sound_channel(CHANNEL_HEARTBEAT) //Stop heartbeat sounds because You Are A Ghost Now
@@ -370,7 +357,6 @@ Works together with spawning an observer, noted above.
 		SSdroning.kill_rain(client)
 		SSdroning.kill_loop(client)
 		SSdroning.kill_droning(client)
-		SSdroning.kill_ambient_loop(client)
 //		var/S = sound('sound/ambience/creepywind.ogg', repeat = 1, wait = 0, volume = client.prefs.musicvol, channel = CHANNEL_MUSIC)
 //		play_priomusic(S)
 	var/mob/dead/observer/ghost	// Transfer safety to observer spawning proc.
@@ -388,13 +374,18 @@ Works together with spawning an observer, noted above.
 	ghost.key = key
 	return ghost
 
-/mob/living/carbon/human/ghostize(can_reenter_corpse = 1, force_respawn = FALSE, drawskip = FALSE, admin = FALSE)
-	if(mind)
-		var/datum/antagonist/zombie/zomble = mind.has_antag_datum(/datum/antagonist/zombie)
-		if(zomble)
+/mob/living/carbon/human/ghostize(can_reenter_corpse = 1, force_respawn = FALSE, admin = FALSE, drawskip = FALSE, ignore_zombie = FALSE)
+	if(mind && !ignore_zombie)
+		if(mind.has_antag_datum(/datum/antagonist/zombie))
 			if(force_respawn)
 				mind.remove_antag_datum(/datum/antagonist/zombie)
 				return ..()
+			//var/datum/antagonist/zombie/Z = mind.has_antag_datum(/datum/antagonist/zombie)
+			//Caustic edit
+			//if(!Z.revived)
+			//	mind.remove_antag_datum(/datum/antagonist/zombie)
+			//	return ..()
+			//Caustic edit end
 	return ..()
 
 /mob/proc/scry_ghost()
@@ -405,7 +396,6 @@ Works together with spawning an observer, noted above.
 			SSdroning.kill_rain(client)
 			SSdroning.kill_loop(client)
 			SSdroning.kill_droning(client)
-			SSdroning.kill_ambient_loop(client)
 		var/mob/dead/observer/screye/ghost = new(src)	// Transfer safety to observer spawning proc.
 		ghost.ghostize_time = world.time
 		SStgui.on_transfer(src, ghost) // Transfer NanoUIs.
@@ -485,7 +475,6 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 	SSdroning.kill_rain(src.client)
 	SSdroning.kill_loop(src.client)
 	SSdroning.kill_droning(src.client)
-	SSdroning.kill_ambient_loop(client)
 	remove_client_colour(/datum/client_colour/monochrome)
 	client.change_view(CONFIG_GET(string/default_view))
 	client?.verbs -= GLOB.ghost_verbs
@@ -526,7 +515,6 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 	SSdroning.kill_rain(src.client)
 	SSdroning.kill_loop(src.client)
 	SSdroning.kill_droning(src.client)
-	SSdroning.kill_ambient_loop(client)
 	remove_client_colour(/datum/client_colour/monochrome)
 	if(!client)
 		log_game("[key_name(src)] AM failed due to disconnect.")
@@ -658,6 +646,7 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 
 /mob/dead/observer/orbit()
 	setDir(2)//reset dir so the right directional sprites show up
+	pixel_x = 25 //it's coal sire but it works to properly orbit around your target instead of a tile off to the side
 	return ..()
 
 /mob/dead/observer/stop_orbit(datum/component/orbiter/orbits)
@@ -665,7 +654,7 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 	//restart our floating animation after orbit is done.
 	pixel_y = 0
 	pixel_x = 0
-//	animate(src, pixel_y = 2, time = 10, loop = -1)
+	animate(src, pixel_y = 2, time = 10, loop = -1)
 
 /mob/dead/observer/verb/jumptomob() //Moves the ghost instead of just changing the ghosts's eye -Nodrak
 	set category = "Ghost"
@@ -795,7 +784,7 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 		return
 	var/bt = world.time
 	SEND_SOUND(src, sound('sound/misc/notice (2).ogg'))
-	if(alert(src, "A lich has summoned you to destroy ROGUETOWN!", "Join the Horde", "Yes", "No") == "Yes")
+	if(alert(src, "You have been summoned you to destroy Azuria!", "Join the Horde", "Yes", "No") == "Yes")
 		if(world.time > bt + 5 MINUTES)
 			to_chat(src, span_warning("Too late."))
 			return FALSE
@@ -839,10 +828,6 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 	if(!target)
 		return FALSE
 
-	if(ismegafauna(target))
-		to_chat(src, span_warning("This creature is too powerful for you to possess!"))
-		return FALSE
-
 	if(can_reenter_corpse && mind?.current)
 		if(alert(src, "Your soul is still tied to your former life as [mind.current.name], if you go forward there is no going back to that life. Are you sure you wish to continue?", "Move On", "Yes", "No") == "No")
 			return FALSE
@@ -852,15 +837,6 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 
 	target.key = key
 	target.faction = list("neutral")
-	return TRUE
-
-//this is a mob verb instead of atom for performance reasons
-//see /mob/verb/examinate() in mob.dm for more info
-//overridden here and in /mob/living for different point span classes and sanity checks
-/mob/dead/observer/pointed(atom/A as mob|obj|turf in view(client.view, src))
-	if(!..())
-		return FALSE
-	usr.visible_message(span_deadsay("<b>[src]</b> points to [A]."))
 	return TRUE
 
 /mob/dead/observer/verb/view_manifest()
@@ -1060,21 +1036,6 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 			mob_eye.hud_used.show_hud(mob_eye.hud_used.hud_version, src)
 			observetarget = mob_eye
 
-/mob/dead/observer/verb/register_pai_candidate()
-	set category = "Ghost"
-	set name = "pAI Setup"
-	set desc = ""
-	set hidden = 1
-	if(!check_rights(R_WATCH))
-		return
-	register_pai()
-
-/mob/dead/observer/proc/register_pai()
-	if(isobserver(src))
-		SSpai.recruitWindow(src)
-	else
-		to_chat(usr, span_warning("Can't become a pAI candidate while not dead!"))
-
 /mob/dead/observer/CtrlShiftClick(mob/user)
 	if(isobserver(user) && check_rights(R_SPAWN))
 		change_mob_type( /mob/living/carbon/human , null, null, TRUE) //always delmob, ghosts shouldn't be left lingering
@@ -1086,11 +1047,10 @@ This is the proc mobs get to turn into a ghost. Forked from ghostize due to comp
 
 /mob/dead/observer/proc/set_invisibility(value)
 	invisibility = value
-	set_light_on(!value ? TRUE : FALSE)
-
-// Ghosts have no momentum, being massless ectoplasm
-/mob/dead/observer/Process_Spacemove(movement_dir)
-	return 1
+	if(!value)
+		set_light(1, 1, 2)
+	else
+		set_light(0, 0, 0)
 
 /mob/dead/observer/vv_edit_var(var_name, var_value)
 	. = ..()

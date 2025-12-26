@@ -10,7 +10,7 @@ GLOBAL_LIST_EMPTY_TYPED(schizohelps, /datum/schizohelp)
 	if(!msg)
 		return
 
-	to_chat(src, span_info("<i>You meditate...</i>\n[msg]"))
+	to_chat(src, span_info("<i>You ask the mentors...</i>\n[msg]"))
 	var/datum/schizohelp/ticket = new(src)
 	var/display_name = get_schizo_name()
 	var/message = span_info("<i>[display_name] meditates...</i>\n[msg]")
@@ -93,6 +93,7 @@ GLOBAL_LIST_EMPTY_TYPED(schizohelps, /datum/schizohelp)
 /datum/schizohelp/proc/answer_schizo(answer, mob/voice)
 	if(QDELETED(src) || !voice.client)
 		return
+	answer = copytext(sanitize(answer), 1, MAX_MESSAGE_LEN)
 	to_chat(owner, "<i>I hear a voice in my head...\n<b>[answer]</i></b>")
 
 	for(var/client/listener in (GLOB.clients - owner.client))

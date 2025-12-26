@@ -6,12 +6,13 @@
 	total_positions = 0
 	spawn_positions = 0
 
-	allowed_races = RACES_ALL_KINDS
+	allowed_races = ACCEPTED_RACES
 	allowed_ages = ALL_AGES_LIST
 	outfit = /datum/outfit/job/roguetown/vagrant
+	job_traits = list(TRAIT_HOMESTEAD_EXPERT)
 	bypass_lastclass = TRUE
 	bypass_jobban = FALSE
-	min_pq = -30
+	min_pq = null //-30
 	max_pq = null
 
 	tutorial = "The stench of your piss-laden clothes doesn't bug you anymore, the glances of disgust and loathing others give you is just a friendly greeting after all! The only reason you've not been killed already is because Volfs are known to be repelled by the stench of decaying flesh. You're going to be a solemn reminder what happens when something unwanted is born into this world."
@@ -56,17 +57,16 @@
 		shoes = /obj/item/clothing/shoes/roguetown/shalal // wise boots
 		r_hand = /obj/item/rogueweapon/woodstaff/wise // dog beating staff
 		l_hand = /obj/item/rogueweapon/huntingknife/idagger/steel/special // dog butchering knife
-		if(H.mind)
-			H.mind.adjust_skillrank(/datum/skill/misc/sneaking, rand(2,5), TRUE)
-			H.mind.adjust_skillrank(/datum/skill/misc/stealing, 5, TRUE)
-			H.mind.adjust_skillrank(/datum/skill/misc/climbing, rand(2,5), TRUE)
-			H.mind.adjust_skillrank(/datum/skill/misc/reading, 4, TRUE) //very good reading he is wise
-			H.mind.adjust_skillrank(/datum/skill/combat/polearms, rand(2,5), TRUE) // dog beating staff
-			H.STASTR = rand(1, 20)
-			H.STAINT = rand(5, 20)
-			H.STALUC = rand(1, 20)
-		H.change_stat("constitution", -rand(0, 2))
-		H.change_stat("endurance", -rand(0, 2))
+		H.adjust_skillrank(/datum/skill/misc/sneaking, rand(2,5), TRUE)
+		H.adjust_skillrank(/datum/skill/misc/stealing, 5, TRUE)
+		H.adjust_skillrank(/datum/skill/misc/climbing, rand(2,5), TRUE)
+		H.adjust_skillrank(/datum/skill/misc/reading, 4, TRUE) //very good reading he is wise
+		H.adjust_skillrank(/datum/skill/combat/polearms, rand(2,5), TRUE) // dog beating staff
+		H.STASTR = rand(1, 20)
+		H.STAINT = rand(5, 20)
+		H.STALUC = rand(1, 20)
+		H.change_stat(STATKEY_CON, -rand(0, 2))
+		H.change_stat(STATKEY_WIL, -rand(0, 2))
 		H.real_name = "[H.real_name] the Wise"
 		H.name = "[H.name] the Wise"
 		H.facial_hairstyle = "Knowledge"
@@ -93,9 +93,9 @@
 		gloves = /obj/item/clothing/gloves/roguetown/fingerless
 	else
 		gloves = null
-	if(H.gender == FEMALE)
+	if(should_wear_femme_clothes(H))
 		armor = /obj/item/clothing/suit/roguetown/shirt/rags
-	else
+	else if(should_wear_masc_clothes(H))
 		armor = null
 		pants = /obj/item/clothing/under/roguetown/tights/vagrant
 		if(prob(50))
@@ -104,10 +104,10 @@
 		if(prob(50))
 			shirt = /obj/item/clothing/suit/roguetown/shirt/undershirt/vagrant/l
 	if(H.mind)
-		H.mind.adjust_skillrank(/datum/skill/misc/sneaking, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/misc/stealing, 3, TRUE)
-		H.mind.adjust_skillrank(/datum/skill/misc/climbing, rand(1,5), TRUE)
-		H.mind.adjust_skillrank(/datum/skill/misc/lockpicking, pick (1,2,3,4,5), TRUE) // thug lyfe
+		H.adjust_skillrank(/datum/skill/misc/sneaking, rand(1,5), TRUE)
+		H.adjust_skillrank(/datum/skill/misc/stealing, 3, TRUE)
+		H.adjust_skillrank(/datum/skill/misc/climbing, rand(1,5), TRUE)
+		H.adjust_skillrank(/datum/skill/misc/lockpicking, pick (1,2,3,4,5), TRUE) // thug lyfe
 		H.STALUC = rand(1, 20)
 	if(prob(5))
 		r_hand = /obj/item/rogueweapon/mace/woodclub
@@ -117,10 +117,11 @@
 		l_hand = /obj/item/rogueweapon/mace/woodclub
 	else
 		l_hand = null
-	H.change_stat("strength", -1)
-	H.change_stat("intelligence", -4)
-	H.change_stat("constitution", -3)
-	H.change_stat("endurance", -3)
+	H.change_stat(STATKEY_STR, -1)
+	H.change_stat(STATKEY_INT, -4)
+	H.change_stat(STATKEY_CON, -3)
+	H.change_stat(STATKEY_WIL, -3)
+	H.grant_language(/datum/language/thievescant)
 	ADD_TRAIT(H, TRAIT_NOSTINK, TRAIT_GENERIC)
 	ADD_TRAIT(H, TRAIT_NASTY_EATER, TRAIT_GENERIC)
 

@@ -21,7 +21,7 @@
 	///contins a number of how many times a message identical to last_message was sent.
 	var/last_message_count = 0
 	///How many messages sent in the last 10 seconds
-	var/total_message_count = 0
+	var/total_message_count = 01
 	///Next tick to reset the total message counter
 	var/total_count_reset = 0
 	///Internal counter for clients sending irc relay messages via ahelp to prevent spamming. Set to a number every time an admin reply is sent, decremented for every client send.
@@ -49,6 +49,7 @@
 	var/list/nextspooky = 0
 
 	var/patreonlevel = -1
+	var/is_donator = FALSE
 
 		////////////
 		//SECURITY//
@@ -83,9 +84,6 @@
 
 	///Used for ip intel checking to identify evaders, disabled because of issues with traffic
 	var/ip_intel = "Disabled"
-
-	///datum that controls the displaying and hiding of tooltips
-	var/datum/tooltip/tooltips
 
 	///Last ping of the client
 	var/lastping = 0
@@ -140,12 +138,17 @@
 	var/list/open_popups = list()
 
 	var/loop_sound = FALSE
-	var/ambient_loop_sound = FALSE
 	var/rain_sound = FALSE
 	var/last_droning_sound
-	var/last_ambient_droning_sound
 	var/sound/droning_sound
-	var/sound/ambient_sound
+	
+	// List of all asset filenames sent to this client by the asset cache, along with their assoicated md5s
+	var/list/sent_assets = list()
+	/// List of all completed blocking send jobs awaiting acknowledgement by send_asset
+	var/list/completed_asset_jobs = list()
+	/// Last asset send job id.
+	var/last_asset_job = 0
+	var/last_completed_asset_job = 0
 
 /client/proc/update_weather(force)
 	if(!mob)
@@ -162,12 +165,7 @@
 	if(PMW && A)
 		if(A.outdoors)
 			PMW.filters = list()
-			for(var/W in current_weathers)
-				for(var/datum/weather/WE in SSweather.curweathers)
-					if(WE.type == W)
-						PMW.alpha = WE.weather_alpha
 		else
-			PMW.alpha = 255
 			if(!PMW.filters || !islist(PMW.filters) || !PMW.filters.len)
 				PMW.filters = filter(type="alpha", render_source = "*rainzone", flags = MASK_INVERSE)
 
